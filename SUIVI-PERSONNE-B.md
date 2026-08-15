@@ -14,8 +14,8 @@
 | `backend/app/schemas/project.py` | ✅ fait |
 | `backend/app/schemas/task.py` | ✅ fait |
 | `backend/app/schemas/common.py` | ✅ fait (pas dans la fiche d'origine, ajouté pour l'enveloppe `{success, data}`) |
-| `backend/app/routers/projects.py` | 🔄 en cours |
-| `backend/app/routers/tasks.py` | ⬜ à faire (semaine 3) |
+| `backend/app/routers/projects.py` | ✅ fait |
+| `backend/app/routers/tasks.py` | ✅ fait |
 | `backend/app/routers/gdpr.py` | ⬜ à faire (semaine 4) |
 | `backend/tests/test_projects.py` | ⬜ à faire |
 | `backend/tests/test_tasks.py` | ⬜ à faire |
