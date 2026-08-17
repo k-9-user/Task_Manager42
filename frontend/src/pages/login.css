@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Nabla&display=swap');
+
+body{
+	margin: 0px;
+	font-family: "nabla", sans-serif;
+
+}
+
+.login-page{
+	height:  100vh;
+	display: flex;
+	justify-content: center;
+	/* align-items: center; */
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+}
+
+.login-box input{
+	padding: 12px;
+	font-size: 16px;
+}
+
+.login-box button{
+	padding: 12px;
+	font-size: 16px;
+	cursor: pointer;
+}
