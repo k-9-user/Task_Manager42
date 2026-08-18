@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
+import Profile from "./pages/Profile";
 import Projects from "./pages/Projects";
 import Register from "./pages/Register";
 import Navbar from "./components/Navbar";
@@ -16,6 +17,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/Profile" element={<Profile />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/register" element={<Register />} />
       </Routes>
