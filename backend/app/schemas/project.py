@@ -35,7 +35,7 @@ class ProjectCreate(BaseModel):
     """
 
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=5000)
 
 
 class ProjectUpdate(BaseModel):
@@ -47,7 +47,7 @@ class ProjectUpdate(BaseModel):
     """
 
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=5000)
 
 
 # ---------------------------------------------------------------------------

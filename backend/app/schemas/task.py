@@ -34,7 +34,7 @@ class TaskCreate(BaseModel):
     """
 
     title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=5000)
     assignee_id: Optional[uuid.UUID] = None
     due_date: Optional[date] = None
 

@@ -11,6 +11,7 @@ déclare pas de `prefix` global comme `routers/projects.py` : chaque route
 écrit son chemin complet.
 """
 
+import html
 import uuid
 from typing import Optional
 
@@ -20,9 +21,10 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.database import get_db
+from app.models.notification import Notification, NotificationType
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
-from app.routers.projects import _get_membership_or_404, _require_role
+from app.routers.projects import _get_membership_or_404, _require_role, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.task import TaskCreate, TaskListResponse, TaskResponse, TaskUpdate
 
@@ -53,6 +55,37 @@ def _assert_valid_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="L'utilisateur assigné doit être membre du projet",
         )
+
+
+def _notify(
+    db: Session,
+    *,
+    user_id: uuid.UUID,
+    type_: NotificationType,
+    content: str,
+    task_id: uuid.UUID,
+    project_id: uuid.UUID,
+) -> None:
+    """Module bonus — cf 02-fiche-personne-B.md : "juste un insert en DB à
+    chaque action existante, pas de nouvelle logique complexe". Pas de commit
+    ici : la notification part dans la même transaction que l'action qui la
+    déclenche (create_task/update_task committent déjà juste après).
+
+    Ne crée rien si le destinataire est inactif depuis 6 mois (cf
+    `_user_is_notifiable`)."""
+
+    if not _user_is_notifiable(db, user_id):
+        return
+
+    db.add(
+        Notification(
+            user_id=user_id,
+            type=type_,
+            content=content,
+            related_task_id=task_id,
+            related_project_id=project_id,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +161,18 @@ def create_task(
         due_date=payload.due_date,
     )
     db.add(task)
+    db.flush()
+
+    if task.assignee_id is not None:
+        _notify(
+            db,
+            user_id=task.assignee_id,
+            type_=NotificationType.TASK_ASSIGNED,
+            content=f"Tu as été assigné à la tâche « {html.escape(task.title)} »",
+            task_id=task.id,
+            project_id=project_id,
+        )
+
     db.commit()
     db.refresh(task)
 
@@ -158,8 +203,36 @@ def update_task(
     if updates.get("assignee_id") is not None:
         _assert_valid_assignee(db, task.project_id, updates["assignee_id"])
 
+    reassigned_to = (
+        updates["assignee_id"]
+        if "assignee_id" in updates
+        and updates["assignee_id"] is not None
+        and updates["assignee_id"] != task.assignee_id
+        else None
+    )
+    status_changed = "status" in updates and updates["status"] != task.status
+
     for field, value in updates.items():
         setattr(task, field, value)
+
+    if reassigned_to is not None:
+        _notify(
+            db,
+            user_id=reassigned_to,
+            type_=NotificationType.TASK_ASSIGNED,
+            content=f"Tu as été assigné à la tâche « {html.escape(task.title)} »",
+            task_id=task.id,
+            project_id=task.project_id,
+        )
+    elif status_changed and task.assignee_id is not None:
+        _notify(
+            db,
+            user_id=task.assignee_id,
+            type_=NotificationType.TASK_STATUS_CHANGED,
+            content=f"La tâche « {task.title} » est passée au statut « {task.status.value} »",
+            task_id=task.id,
+            project_id=task.project_id,
+        )
 
     db.commit()
     db.refresh(task)

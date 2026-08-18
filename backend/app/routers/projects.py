@@ -9,7 +9,9 @@ Tant que A n'a pas livré ces fichiers, l'import de ce module échouera —
 c'est attendu (cf SUIVI-PERSONNE-B.md et 02-fiche-personne-B.md).
 """
 
+import html
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -17,8 +19,10 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
 from app.database import get_db
+from app.models.notification import Notification, NotificationType
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
+from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project import (
     ProjectCreate,
@@ -75,6 +79,31 @@ def _require_role(membership: ProjectMember, *allowed: ProjectRole) -> None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Permission refusée"
         )
+
+
+# Module bonus notifications : on n'en crée pas pour un compte inactif depuis
+# trop longtemps (évite d'accumuler des notifs qui ne seront jamais lues).
+NOTIFICATION_INACTIVITY_THRESHOLD = timedelta(days=182)  # ~6 mois
+
+
+def _user_is_notifiable(db: Session, user_id: uuid.UUID) -> bool:
+    """Faux si le compte est inactif depuis plus de 6 mois.
+
+    ⚠️ Approximation : le contrat commun n'a pas de champ `last_active_at` /
+    `last_login_at` sur `users`, donc on utilise `User.updated_at` comme
+    proxy — imprécis (ne bouge que si le profil est modifié, pas à chaque
+    connexion/action), mais c'est la seule donnée dispo sans changer le
+    schéma DB. À valider en équipe si un vrai champ de dernière activité
+    serait préférable (impliquerait de le rajouter au contrat, côté A).
+
+    `User.updated_at` est *timezone-aware* (`DateTime(timezone=True)` chez
+    A) — on compare donc avec un "now" timezone-aware aussi, sinon
+    `TypeError: can't subtract offset-naive and offset-aware datetimes`."""
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        return False
+    return datetime.now(timezone.utc) - user.updated_at <= NOTIFICATION_INACTIVITY_THRESHOLD
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +281,7 @@ def add_member(
     )
     db.add(new_member)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         # soit `user_id` n'existe pas (FK), soit il est déjà membre
         # (contrainte unique project_id+user_id) — cf models/project_member.py
@@ -261,6 +290,22 @@ def add_member(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Utilisateur introuvable ou déjà membre de ce projet",
         )
+
+    # Module bonus notifications (cf 02-fiche-personne-B.md) : juste un
+    # insert en DB, pas de nouvelle logique complexe. Sauf si le destinataire
+    # est inactif depuis 6 mois (cf _user_is_notifiable).
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if _user_is_notifiable(db, payload.user_id):
+        db.add(
+            Notification(
+                user_id=payload.user_id,
+                type=NotificationType.PROJECT_INVITE,
+                content=f"Tu as été ajouté au projet « {html.escape(project.name)} »",
+                related_task_id=None,
+                related_project_id=project_id,
+            )
+        )
+    db.commit()
     db.refresh(new_member)
 
     return SuccessEnvelope(data=ProjectMemberResponse.model_validate(new_member))
