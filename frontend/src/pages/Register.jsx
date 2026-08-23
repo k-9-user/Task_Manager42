@@ -47,7 +47,7 @@ function Register()
 				<input type="password" placeholder='Mot de passe' required value={password} onChange={(e) => setPassword(e.target.value)} />
 				<input type="password" placeholder='Confirmer le mot de passe' required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
 				<button>Creer mon compte</button>
-				<p><Link to="/Login"> Retour</Link></p>
+				<p><Link to="/login"> Retour</Link></p>
 			</form>
 		</div>
 	);

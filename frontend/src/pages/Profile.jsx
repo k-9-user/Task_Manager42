@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 
 
-//const USE_MOCK = true; // a retirer
-//
-//const mockUser = {
-//  username: "Pingouin",
-//  email: "tintin@test.com",
-//  avatar_url: "https://api.dicebear.com/10.x/bottts/svg",
-//};
+const USE_MOCK = true; // a retirer
+
+const mockUser = {
+  username: "Pingouin",
+  email: "tintin@test.com",
+  avatar_url: "https://api.dicebear.com/10.x/bottts/svg",
+};
 
 function Profile() {
 	const [user, setUser] = useState(null);
