@@ -1,0 +1,25 @@
+import { apiFetch } from "./api";
+
+export function getProjectTasks(projectID) {
+	return apiFetch(`/api/projects/${projectID}/tasks`);
+}
+
+export function createTask(projectID, title, description) {
+	return apiFetch(`/api/projects/${projectID}/tasks`,
+		{
+			method: "POST",
+			body: JSON.stringify({title, description }),
+		}
+	);
+}
+
+export function updateTaskStatus( taskID, status)
+{
+	return apiFetch(`/api/tasks/${taskID}`,
+		{
+			method: "PUT",
+			body: JSON.stringify({ status }),
+			
+		}
+	);
+}

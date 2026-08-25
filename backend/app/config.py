@@ -11,7 +11,7 @@ ROOT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 class Settings(BaseSettings):
     database_url: str = Field(min_length=1)
-    jwt_secret: str = Field(min_length=1)
+    jwt_secret: str = Field(min_length=32)
     jwt_expiration: int = Field(default=3600, gt=0)
     oauth_google_client_id: str = ""
     oauth_google_client_secret: str = ""
