@@ -2,19 +2,29 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import jwt
+from argon2 import Type
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
 from pwdlib.exceptions import UnknownHashError
+from pwdlib.hashers.argon2 import Argon2Hasher
 
 from app.config import get_settings
 
-# Move to secrets
 ALGORITHM = "HS256"
 
-_password_hash = PasswordHash.recommended()
-_dummy_password_hash = _password_hash.hash(
-    "dummy-password-used-only-to-equalize-login-verification"
+_password_hash = PasswordHash(
+    (
+        Argon2Hasher(
+            memory_cost=65_536,
+            time_cost=3,
+            parallelism=4,
+            salt_len=16,
+            hash_len=32,
+            type=Type.ID,
+        ),
+    )
 )
+_dummy_password_hash = _password_hash.hash("dummy-password-equalizer")
 
 
 def hash_password(password: str) -> str:
@@ -23,6 +33,12 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, password_hash: str) -> bool:
     return _password_hash.verify(password, password_hash)
+
+
+def verify_password_and_update(
+    password: str, password_hash: str
+) -> tuple[bool, str | None]:
+    return _password_hash.verify_and_update(password, password_hash)
 
 
 def verify_password_or_dummy(password: str, password_hash: str | None) -> bool:
@@ -54,7 +70,7 @@ def create_access_token(
     }
     return jwt.encode(
         payload,
-        get_settings().jwt_secret,
+        get_settings().jwt_secret.get_secret_value(),
         algorithm=ALGORITHM,
     )
 
@@ -63,7 +79,7 @@ def decode_access_token(token: str) -> str:
     try:
         payload = jwt.decode(
             token,
-            get_settings().jwt_secret,
+            get_settings().jwt_secret.get_secret_value(),
             algorithms=[ALGORITHM],
             options={"require": ["sub", "iat", "exp"]},
         )

@@ -1,13 +1,22 @@
 import enum
 import uuid
 
-from sqlalchemy import CheckConstraint, Column, DateTime, Enum, String, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Enum,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
 
 
 DEFAULT_AVATAR_URL = "/static/default-avatar.png"
+ADMIN_INVARIANT_LOCK_KEY = 0x544D3432
 
 
 class UserRole(str, enum.Enum):
@@ -21,6 +30,21 @@ class User(Base):
         CheckConstraint(
             "oauth_provider IS NULL OR oauth_provider IN ('google', 'github')",
             name="ck_users_oauth_provider",
+        ),
+        CheckConstraint(
+            "(oauth_provider IS NULL AND oauth_id IS NULL) OR "
+            "(oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)",
+            name="ck_users_oauth_pair",
+        ),
+        CheckConstraint(
+            "password_hash IS NOT NULL OR "
+            "(oauth_provider IS NOT NULL AND oauth_id IS NOT NULL)",
+            name="ck_users_auth_method",
+        ),
+        UniqueConstraint(
+            "oauth_provider",
+            "oauth_id",
+            name="uq_users_oauth_identity",
         ),
     )
 
