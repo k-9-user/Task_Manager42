@@ -70,8 +70,28 @@ function AdminUsers ()
 					<tr>
 						<th>Nom d'utilisateur</th>
 						<th>Email</th>
+						<th>Role</th>
+						<th>Action</th>
 					</tr>
 				</thread>
+				<tbody>
+					{Users.map((user) => 
+					(
+						<tr key={user.id}>
+							<td>{user.username}</td>
+							<td>{user.email}</td>
+							<td>
+								<select value={user.role} onChange={(e) => handleRolechange(iduser, e.target.value)}>
+									<option value="user">Utilisateur</option>
+									<option value="admin">administrateur</option>
+								</select>
+							</td>
+							<td>
+								<button onClick={() => handledelete(user.id)}>Supprimer</button>
+							</td>
+						</tr>
+					))}
+				</tbody>
 			</table>
 		</div>
 	);
