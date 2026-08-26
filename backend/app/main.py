@@ -8,6 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.routers.auth import router as auth_router
+from app.routers.health import router as health_router
 from app.routers.users import router as users_router
 
 
@@ -29,6 +30,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(health_router)
 
 
 @app.exception_handler(StarletteHTTPException)
