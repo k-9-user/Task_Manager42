@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
+import PrivateRoute from "./pages/PrivateRoute";
 import Profile from "./pages/Profile";
 import ProjectDetail from "./pages/ProjectDetail";
 import Projects from "./pages/Projects";
@@ -22,7 +23,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/Profile" element={<Profile />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
         <Route path="/register" element={<Register />} />
       </Routes>
       <Footer />
