@@ -1,4 +1,3 @@
-import re
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -7,9 +6,6 @@ USERNAME_MIN_LENGTH = 3
 USERNAME_MAX_LENGTH = 50
 USERNAME_PATTERN = r"^[A-Za-z0-9._-]+$"
 AVATAR_MAX_LENGTH = 2048
-
-_USERNAME_RE = re.compile(USERNAME_PATTERN, re.ASCII)
-
 
 def normalize_email(value: Any) -> Any:
     if isinstance(value, str):
@@ -20,14 +16,7 @@ def normalize_email(value: Any) -> Any:
 def validate_username(value: Any) -> Any:
     if not isinstance(value, str):
         return value
-
-    username = value.strip()
-    if not (
-        USERNAME_MIN_LENGTH <= len(username) <= USERNAME_MAX_LENGTH
-        and _USERNAME_RE.fullmatch(username) is not None
-    ):
-        raise ValueError("username must be 3-50 ASCII letters, numbers, dots, underscores, or hyphens")
-    return username
+    return value.strip()
 
 
 def validate_avatar(value: Any) -> Any:

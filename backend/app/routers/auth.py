@@ -1,5 +1,4 @@
 import logging
-import secrets
 from collections.abc import Mapping
 from typing import Annotated, Any
 
@@ -9,23 +8,19 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from joserfc.errors import JoseError
 from pydantic import ValidationError as PydanticValidationError
-from pwdlib.exceptions import UnknownHashError
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.oauth import (
-    create_google_oauth,
     get_google_oauth_client,
     google_username_candidates,
-    is_google_oauth_configured,
     validate_google_claims,
 )
 from app.auth.security import (
     create_access_token,
     hash_password,
     verify_password_and_update,
-    verify_password_or_dummy,
 )
 from app.config import get_settings
 from app.database import get_db
@@ -59,25 +54,23 @@ def _auth_response(user: User) -> AuthResponse:
 
 
 def _lock_admin_invariants(db: Session) -> None:
+    """Serialize account bootstrap and admin-count mutations in PostgreSQL."""
+
     db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
 
 
 def _new_user_role_locked(db: Session) -> UserRole:
+    """Choose a new account role while the admin invariant lock is held."""
+
     first_user_id = db.scalar(select(User.id).limit(1))
     return UserRole.ADMIN if first_user_id is None else UserRole.USER
 
 
 def get_google_client(request: Request) -> Any:
-    settings = get_settings()
-    if not is_google_oauth_configured(settings):
-        request.session.clear()
-        logger.warning("google_oauth_failed category=configuration")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Google OAuth unavailable",
-        )
+    """Resolve the configured Google client or return a stable 503 response."""
+
     try:
-        return get_google_oauth_client(create_google_oauth(settings))
+        return get_google_oauth_client()
     except RuntimeError as exc:
         request.session.clear()
         logger.warning("google_oauth_failed category=configuration")
@@ -89,6 +82,7 @@ def get_google_client(request: Request) -> Any:
 
 @router.post(
     "/register",
+    summary="Register an account",
     response_model=AuthResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
@@ -100,6 +94,8 @@ def register(
     payload: UserRegister,
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthResponse:
+    """Create a local account and issue its bearer token."""
+
     email = str(payload.email)
     password_hash = hash_password(payload.password.get_secret_value())
     _lock_admin_invariants(db)
@@ -133,11 +129,17 @@ def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email or username already exists",
         ) from exc
+    if user.role == UserRole.ADMIN:
+        logger.info(
+            "bootstrap_admin_created user_id=%s auth_method=local",
+            user.id,
+        )
     return _auth_response(user)
 
 
 @router.post(
     "/login",
+    summary="Log in with email",
     response_model=AuthResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -148,21 +150,15 @@ def login(
     payload: UserLogin,
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthResponse:
+    """Verify local credentials and issue a bearer token."""
+
     email = str(payload.email)
     user = db.scalar(select(User).where(func.lower(User.email) == email))
-    password_hash = user.password_hash if user is not None else None
     password = payload.password.get_secret_value()
-    updated_hash: str | None = None
-    if password_hash is None:
-        password_is_valid = verify_password_or_dummy(password, None)
-    else:
-        try:
-            password_is_valid, updated_hash = verify_password_and_update(
-                password,
-                password_hash,
-            )
-        except UnknownHashError:
-            password_is_valid = verify_password_or_dummy(password, password_hash)
+    password_is_valid, updated_hash = verify_password_and_update(
+        password,
+        user.password_hash if user is not None else None,
+    )
     if user is None or not password_is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -178,6 +174,7 @@ def login(
 
 @router.get(
     "/oauth/google",
+    summary="Start Google OAuth",
     responses={
         status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
@@ -187,14 +184,13 @@ async def google_oauth_login(
     request: Request,
     google_client: Annotated[Any, Depends(get_google_client)],
 ) -> RedirectResponse:
+    """Redirect the browser into Google's secured OIDC authorization flow."""
+
     settings = get_settings()
     try:
         return await google_client.authorize_redirect(
             request,
             settings.oauth_google_redirect_uri,
-            state=secrets.token_urlsafe(32),
-            nonce=secrets.token_urlsafe(32),
-            code_verifier=secrets.token_urlsafe(64),
         )
     except (httpx.HTTPError, RuntimeError) as exc:
         request.session.clear()
@@ -207,6 +203,7 @@ async def google_oauth_login(
 
 @router.get(
     "/oauth/google/callback",
+    summary="Complete Google OAuth",
     response_model=AuthResponse,
     responses={
         status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
@@ -220,6 +217,8 @@ async def google_oauth_callback(
     google_client: Annotated[Any, Depends(get_google_client)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthResponse:
+    """Validate Google's OIDC response and return the normal auth envelope."""
+
     try:
         token = await google_client.authorize_access_token(
             request,
@@ -246,7 +245,13 @@ async def google_oauth_callback(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Google OAuth unavailable",
         ) from exc
-    except (OAuthError, JoseError, PydanticValidationError, TypeError, ValueError) as exc:
+    except (
+        OAuthError,
+        JoseError,
+        PydanticValidationError,
+        TypeError,
+        ValueError,
+    ) as exc:
         logger.warning("google_oauth_failed category=protocol_or_claims")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -321,4 +326,9 @@ async def google_oauth_callback(
             status_code=status.HTTP_409_CONFLICT,
             detail="Google account could not be created",
         ) from exc
+    if user.role == UserRole.ADMIN:
+        logger.info(
+            "bootstrap_admin_created user_id=%s auth_method=google",
+            user.id,
+        )
     return _auth_response(user)

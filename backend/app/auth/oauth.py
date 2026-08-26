@@ -1,15 +1,16 @@
-from __future__ import annotations
-
 import logging
 import re
 from base64 import urlsafe_b64encode
 from collections.abc import Mapping
+from functools import lru_cache
 from hashlib import sha256
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.config import get_settings
 
 
 GOOGLE_CLIENT_NAME = "google"
@@ -26,6 +27,12 @@ _GOOGLE_SETTING_NAMES = (
 _USERNAME_MAX_LENGTH = 50
 _PRIMARY_USERNAME_SUFFIX_LENGTH = 16
 _UNSAFE_USERNAME_CHARACTERS = re.compile(r"[^a-z0-9]+")
+
+# Authlib 1.7 logs the PKCE verifier at DEBUG; keep that secret out of logs even
+# when an operator temporarily lowers the application's global log threshold.
+logging.getLogger("authlib.integrations.base_client.sync_app").setLevel(
+    logging.WARNING
+)
 
 
 class GoogleClaims(BaseModel):
@@ -114,9 +121,11 @@ def is_google_oauth_configured(settings: object) -> bool:
     return all(_setting_text(settings, name) for name in _GOOGLE_SETTING_NAMES)
 
 
-def create_google_oauth(settings: object) -> OAuth:
-    """Create an Authlib registry containing the fixed Google OIDC client."""
+@lru_cache
+def get_google_oauth_client() -> Any:
+    """Return the process-wide configured Google OIDC client."""
 
+    settings = get_settings()
     if not is_google_oauth_configured(settings):
         raise RuntimeError("Google OAuth is not configured")
 
@@ -131,12 +140,6 @@ def create_google_oauth(settings: object) -> OAuth:
             "code_challenge_method": "S256",
         },
     )
-    return registry
-
-
-def get_google_oauth_client(registry: OAuth) -> Any:
-    """Return the registered Google remote client for use by route handlers."""
-
     client = registry.create_client(GOOGLE_CLIENT_NAME)
     if client is None:
         raise RuntimeError("Google OAuth client is not registered")
@@ -170,16 +173,3 @@ def google_username_candidates(email: str, sub: str) -> tuple[str, ...]:
     full_digest = urlsafe_b64encode(digest).decode("ascii").rstrip("=")
     fallback = f"g_{full_digest}"
     return primary, fallback
-
-
-__all__ = [
-    "GOOGLE_CLIENT_NAME",
-    "GOOGLE_DISCOVERY_URL",
-    "GOOGLE_SCOPE",
-    "GoogleClaims",
-    "create_google_oauth",
-    "get_google_oauth_client",
-    "google_username_candidates",
-    "is_google_oauth_configured",
-    "validate_google_claims",
-]

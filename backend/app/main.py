@@ -11,6 +11,9 @@ from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 
 
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger().setLevel(logging.WARNING)
+logging.getLogger("app").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -58,7 +61,7 @@ async def unexpected_exception_handler(
     exc: Exception,
 ) -> JSONResponse:
     logger.error(
-        "Unhandled %s during %s %s",
+        "unexpected_request_error exception=%s method=%s path=%s",
         type(exc).__name__,
         request.method,
         request.url.path,

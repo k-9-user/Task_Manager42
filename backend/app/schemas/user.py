@@ -117,7 +117,7 @@ class UsersResponse(BaseModel):
 
 
 class DeleteData(BaseModel):
-    success: Literal[True] = True
+    pass
 
 
 class DeleteResponse(BaseModel):

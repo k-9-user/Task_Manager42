@@ -40,6 +40,8 @@ def _revalidate_admin_locked(
     current_admin: User,
     target_id: UUID,
 ) -> User:
+    """Reload the actor after locking so stale admin authority cannot be used."""
+
     actor_id = current_admin.id
     refreshed_admin = db.scalar(
         select(User)
@@ -72,17 +74,21 @@ def _revalidate_admin_locked(
 
 @router.get(
     "/me",
+    summary="Get current user",
     response_model=CurrentUserResponse,
     responses={status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse}},
 )
 def get_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> CurrentUserResponse:
+    """Return the profile associated with the bearer token."""
+
     return _user_response(current_user)
 
 
 @router.put(
     "/me",
+    summary="Update current user",
     response_model=CurrentUserResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -95,8 +101,15 @@ def update_me(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CurrentUserResponse:
+    """Update the current user's public profile fields."""
+
     if payload.username is not None and payload.username != current_user.username:
-        username_exists = db.scalar(select(User.id).where(User.username == payload.username, User.id != current_user.id,))
+        username_exists = db.scalar(
+            select(User.id).where(
+                User.username == payload.username,
+                User.id != current_user.id,
+            )
+        )
         if username_exists is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -121,6 +134,7 @@ def update_me(
 
 @router.get(
     "",
+    summary="List users",
     response_model=UsersResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -129,12 +143,13 @@ def update_me(
     },
 )
 def list_users(
-    current_admin: Annotated[User, Depends(require_admin)],
+    _current_admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> UsersResponse:
-    del current_admin
+    """Return one bounded page of users to an administrator."""
+
     total = db.scalar(select(func.count()).select_from(User)) or 0
     offset = (page - 1) * limit
     if offset > POSTGRESQL_MAX_BIGINT:
@@ -156,6 +171,7 @@ def list_users(
 
 @router.put(
     "/{user_id}/role",
+    summary="Change a user role",
     response_model=CurrentUserResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -171,6 +187,8 @@ def update_user_role(
     current_admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
 ) -> CurrentUserResponse:
+    """Change an app-wide role while preserving at least one administrator."""
+
     db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
     current_admin = _revalidate_admin_locked(db, current_admin, user_id)
     target = db.get(User, user_id)
@@ -181,17 +199,6 @@ def update_user_role(
         )
     actor_id = current_admin.id
     target_id = target.id
-
-    if target_id == actor_id and payload.role != UserRole.ADMIN:
-        logger.warning(
-            "admin_role_change_denied actor_id=%s target_id=%s reason=self_demotion",
-            actor_id,
-            target_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Administrators cannot demote themselves",
-        )
 
     if target.role == payload.role:
         return _user_response(target)
@@ -225,7 +232,9 @@ def update_user_role(
 
 @router.delete(
     "/{user_id}",
+    summary="Delete a user",
     response_model=DeleteResponse,
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
         status.HTTP_403_FORBIDDEN: {"model": ErrorResponse},
@@ -239,6 +248,8 @@ def delete_user(
     current_admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
 ) -> DeleteResponse:
+    """Delete an account while preserving at least one administrator."""
+
     db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
     current_admin = _revalidate_admin_locked(db, current_admin, user_id)
     target = db.get(User, user_id)
@@ -249,17 +260,6 @@ def delete_user(
         )
     actor_id = current_admin.id
     target_id = target.id
-
-    if target_id == actor_id:
-        logger.warning(
-            "admin_delete_denied actor_id=%s target_id=%s reason=self_delete",
-            actor_id,
-            target_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Administrators cannot delete themselves",
-        )
 
     if target.role == UserRole.ADMIN:
         admin_count = db.scalar(

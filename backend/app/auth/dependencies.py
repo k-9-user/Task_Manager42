@@ -1,5 +1,4 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -41,7 +40,7 @@ def get_current_user(
     except InvalidTokenError as exc:
         raise _credentials_exception() from exc
 
-    user = db.get(User, UUID(subject))
+    user = db.get(User, subject)
     if user is None:
         raise _credentials_exception()
     return user
