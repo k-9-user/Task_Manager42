@@ -23,3 +23,11 @@ export function updateTaskStatus( taskID, status)
 		}
 	);
 }
+
+export function searchtask (query, status="")
+{
+	const params = new URLSearchParams({q : query});
+	if (status)
+		params.append("status", status);
+	return apiFetch(`/api/search/tasks?${params.toString()}`);
+}

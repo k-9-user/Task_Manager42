@@ -19,6 +19,7 @@ function Navbar()
 						<Link to="/login"> Se connecter</Link>
 					)
 				}
+				<Link to="/Search">Rechercher</Link>
 			</div>
 		</nav>
 	);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getUser, userrole, userdelete, deleteuser} from "../services/userservice";
+import { getUser, userrole, deleteuser} from "../services/userservice.js";
 
 function AdminUsers ()
 {

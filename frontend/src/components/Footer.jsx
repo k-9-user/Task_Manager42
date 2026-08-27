@@ -5,8 +5,9 @@ function Footer() {
 		<footer className="footer">
 			<p>&copy; 2026 Task Manager</p>
 			<div className="footer-links">
-				<Link to="/privacy">Politique de confidentialité</Link>
-				<Link to="/terms">Conditions d'utilisation</Link>
+				<Link to="/PrivacyPolicy">Politique de confidentialité</Link>
+				<p>				</p>
+				<Link to="/TermsOfService">Conditions d'utilisation</Link>
 			</div>
 		</footer>
 	);
