@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { getUser, userrole, deleteuser} from "../services/userservice.js";
+import { useTranslation } from "react-i18next";
 
 function AdminUsers ()
 {
 	const [Users, setUsers] = useState([]);
 	const [ loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const { t } = useTranslation();
 
 	useEffect(() =>
 	{
@@ -59,19 +61,19 @@ function AdminUsers ()
 	}
 
 	if (loading)
-		return (<p> Chargement ...</p>);
+		return (<p>{t("loading.load")}</p>);
 	if (error)
-		return (<p className="error">Erreur : {error} </p>);
+		return (<p className="error">{t("error.err")} : {error} </p>);
 	return (
 		<div className="admin-user-page">
-			<h1>Gestion des utilisateurs</h1>
+			<h1>{t("admin.usermanag")}</h1>
 			<table>
 				<thread>
 					<tr>
-						<th>Nom d'utilisateur</th>
+						<th>{t("login.username")}</th>
 						<th>Email</th>
-						<th>Role</th>
-						<th>Action</th>
+						<th>{t("admin.role")}</th>
+						<th>{t("admin.action")}</th>
 					</tr>
 				</thread>
 				<tbody>
@@ -82,12 +84,12 @@ function AdminUsers ()
 							<td>{user.email}</td>
 							<td>
 								<select value={user.role} onChange={(e) => handleRolechange(iduser, e.target.value)}>
-									<option value="user">Utilisateur</option>
-									<option value="admin">administrateur</option>
+									<option value="user">{t("admin.user")}</option>
+									<option value="admin">{t("admin.admin")}</option>
 								</select>
 							</td>
 							<td>
-								<button onClick={() => handledelete(user.id)}>Supprimer</button>
+								<button onClick={() => handledelete(user.id)}>{t("admin.delete")}</button>
 							</td>
 						</tr>
 					))}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
+import { useTranslation } from "react-i18next";
 
 
 const USE_MOCK = true; // a retirer
@@ -14,6 +15,7 @@ function Profile() {
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
+	const { t } = useTranslation();
 
 	useEffect(() => {
 	  async function fetchProfile() {
@@ -34,13 +36,15 @@ function Profile() {
 	fetchProfile();
 	}, []);
 
-	if(loading) return <p>Chargement...</p>;
-	if (error) return <p className="error">Erreur : {error}</p>;
+	if(loading)
+		return <p>{t("loading.load")}</p>;
+	if (error)
+		return <p className="error">{t("error.err")} : {error}</p>;
 
 	return (
 		<div className="profile-page">
-			<h1>Mon profil</h1>
-			<p>Nom d'utilsateur : {user.username} </p>
+			<h1>{t("random.myprofile")}</h1>
+			<p>{t("login.username")} : {user.username} </p>
 			<p>Email : {user.email}</p>
 			<img src={user.avatar_url} alt="avatar" />
 		</div>

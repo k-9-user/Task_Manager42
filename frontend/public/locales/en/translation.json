@@ -1,0 +1,53 @@
+{
+	"navbar":
+	{
+		"projects": "Projects",
+		"login": "Log in",
+		"logout": "Log out",
+		"search": "To Search"
+	},
+	"login":
+	{
+		"title": "Transcendance",
+		"username": "Username",
+		"password": "Password",
+		"submit": "Log in",
+		"noAccount": "No account?",
+		"register": "Sign up"
+	},
+	"register":
+	{
+		"confirmpassword": "Confirm pasword",
+		"createcount": "Creat my account",
+		"return": "return"
+	},
+	"loading":
+	{
+		"load": "loading ..."
+	},
+	"error":
+	{
+		"err": "Error"
+	},
+	"admin":
+	{
+		"usermanag": "User management",
+		"role": "role",
+		"action": "action",
+		"user": "User",
+		"admin": "Administrator",
+		"rmuser": "Delete this user ?",
+		"delete": "Delete"
+	},
+	"projects":
+	{
+		"title": "Projects",
+		"namePlaceholder": "Project name",
+		"create": "Create"
+	},
+	"random":
+	{
+		"myprofile": "My profile",
+		"projet": "Projet"
+	}
+}

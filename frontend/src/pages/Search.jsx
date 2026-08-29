@@ -15,24 +15,26 @@ function Search ()
 		e.preventDefault();
 
 		if (!query.trim())
+		{
 			setError("Entrez un mot pour rechercher");
-		return ;
-	}
-	setloading(true);
-	setError("");
-	setsearched(true);
-	try
-	{
-		const data = searchtask(query, status);
-		setresults(data.tasks);
-	}
-	catch (err)
-	{
-		setError(err.message);
-	}
-	finally
-	{
-		setloading(false);
+			return ;
+		}
+		setloading(true);
+		setError("");
+		setsearched(true);
+		try
+		{
+			const data = await searchtask(query, status);
+			setresults(data.task);
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+		finally
+		{
+			setloading(false);
+		}
 	}
 	return (
 		<div className="Search-page">
@@ -40,7 +42,7 @@ function Search ()
 			<form onSubmit={handlesearch} className="search-form">
 				<input type="text" placeholder="Recherche" value={query} onChange={(e) => setquery(e.target.value)}/>
 				<select value={status} onChange={(e) => setstatus(e.target.value)}>
-					<option value="Tout les status"></option>
+					<option value="">Tout les status</option>
 					<option value="todo">A faire</option>
 					<option value="in_progress">En cours</option>
 					<option value="done">Termine</option>
@@ -50,7 +52,9 @@ function Search ()
 			 {error && <p className="error">{error}</p>}
 			 {loading && <p>Recherche en cours ...</p>}
 
-			 {!loading && searched && results.lenght === 0 && (<p>Aucun resultat trouve</p>)}
+			 {error && <p className="error">Impossible de contacter le serveur : {error}</p>}
+
+			 {!loading && !error && searched && results.length === 0 && (<p>Aucun resultat trouve</p>)}
 
 			 <ul className="search-results">
 				{

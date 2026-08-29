@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Register()
 {
@@ -9,6 +11,7 @@ function Register()
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState("");
+	const { t } = useTranslation();
 
 	function handleSubmit (e) {
 		e.preventDefault();
@@ -40,14 +43,14 @@ function Register()
 	return (
 		<div className='register-page'>
 			<form className='register-box' onSubmit={handleSubmit}>
-				<h1>Creer un compte</h1>
+				<h1>{t("login.register")}</h1>
 				{error && <p className='error'>{error}</p>}
-				<input type="text" placeholder="Nom d'utilisateur" required value={username} onChange={(e) => setUsername(e.target.value)} />
+				<input type="text" placeholder={t("login.username")} required value={username} onChange={(e) => setUsername(e.target.value)} />
 				<input type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-				<input type="password" placeholder='Mot de passe' required value={password} onChange={(e) => setPassword(e.target.value)} />
-				<input type="password" placeholder='Confirmer le mot de passe' required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-				<button>Creer mon compte</button>
-				<p><Link to="/login"> Retour</Link></p>
+				<input type="password" placeholder={t("login.password")} required value={password} onChange={(e) => setPassword(e.target.value)} />
+				<input type="password" placeholder={t("register.confirmpassword")} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+				<button>{t("register.createcount")}</button>
+				<p><Link to="/login">{t("register.return")}</Link></p>
 			</form>
 		</div>
 	);

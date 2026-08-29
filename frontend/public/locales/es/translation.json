@@ -1,0 +1,53 @@
+{
+	"navbar":
+	{
+		"projects": "Proyectos",
+		"login": "Iniciar sesión",
+		"logout": "Cerrar sesión",
+		"search": "Bucar"
+	},
+	"login":
+	{
+		"title": "Transcendance",
+		"username": "Nombre de usuario",
+		"password": "Contraseña",
+		"submit": "Iniciar sesión",
+		"noAccount": "¿Sin cuenta?",
+		"register": "Registrarse"
+	},
+	"register":
+	{
+		"confirmpassword": "Confirmar la contraseña",
+		"createcount": "Crear mi cuenta",
+		"return": "volver"
+	},
+	"loading":
+	{
+		"load": "Carga ..."
+	},
+	"error":
+	{
+		"err": "Error"
+	},
+	"admin":
+	{
+		"usermanag": "gestión de usuarios",
+		"role": "función",
+		"action": "acción",
+		"user": "usuario",
+		"admin": "administrador",
+		"rmuser": "¿Quieres eliminar a este usuario?",
+		"delete": "Eliminar"
+	},
+	"projects":
+	{
+		"title": "Proyectos",
+		"namePlaceholder": "Nombre del proyecto",
+		"create": "Crear"
+	},
+	"random":
+	{
+		"myprofile": "Mi perfil",
+		"projet": "proyecto"
+	}
+}

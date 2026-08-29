@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import TaskBoard from "../components/TaskBoard";
 import { getProjectTasks, updateTaskStatus } from "../services/taskService.js";
+import { useTranslation } from "react-i18next";
 
 const USE_MOCK = true;
 
@@ -14,6 +15,7 @@ function ProjectDetail()
 	const [tasks, setTasks] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const { t } = useTranslation();
 
 	useEffect(() =>
 	{ async function fetchTasks()
@@ -37,13 +39,13 @@ function ProjectDetail()
 			}
 		}
 		fetchTasks();
-  	}, [id]);
+	}, [id]);
 
 	async function handleStatusChange(taskId, newStatus)
 	{
-    	setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+		setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
 
-    	if (!USE_MOCK)
+		if (!USE_MOCK)
 		{
 			try
 			{
@@ -57,11 +59,11 @@ function ProjectDetail()
 	}
 	
 	if (loading)
-		return (<p>Chargement...</p>);
+		return (<p>{t("loading.load")}</p>);
 	else if (error)
-		return (<p className="error">Erreur : {error}</p>);
+		return (<p className="error">{t("error.err")} : {error}</p>);
 	return (<div className="project-detail-page">
-		<h1>Projet #{id}</h1>
+		<h1>{t("random.projet")} #{id}</h1>
 		<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} />
 	</div>
 	);
