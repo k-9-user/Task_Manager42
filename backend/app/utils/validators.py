@@ -1,5 +1,5 @@
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 USERNAME_MIN_LENGTH = 3
@@ -58,6 +58,9 @@ def validate_avatar(value: Any) -> Any:
         and not parsed.netloc
         and avatar.startswith("/")
         and not avatar.startswith("//")
+        and not parsed.query
+        and not parsed.fragment
+        and not {".", ".."}.intersection(unquote(parsed.path).split("/"))
     )
     if not is_https_url and not is_root_relative:
         raise ValueError("avatar must be a safe HTTPS URL or root-relative path")

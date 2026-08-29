@@ -104,17 +104,6 @@ def update_me(
     """Update the current user's public profile fields."""
 
     if payload.username is not None and payload.username != current_user.username:
-        username_exists = db.scalar(
-            select(User.id).where(
-                User.username == payload.username,
-                User.id != current_user.id,
-            )
-        )
-        if username_exists is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Username already taken",
-            )
         current_user.username = payload.username
 
     if payload.avatar is not None:
