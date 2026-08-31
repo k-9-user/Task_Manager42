@@ -22,7 +22,7 @@ function ProjectDetail()
 		{
 			try {
 				if (USE_MOCK)
-			    	setTasks(mockTasks);
+					setTasks(mockTasks);
 				else
 				{
 					const data = await getProjectTasks(id);

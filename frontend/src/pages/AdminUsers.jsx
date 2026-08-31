@@ -46,7 +46,7 @@ function AdminUsers ()
 
 	async function handledelete(iduser)
 	{
-		if (!confirm("Supprimer cet utilisateur ?"))
+		if (!confirm(t("admin.rmuser")))
 			return ;
 		setUsers(Users.filter((u) => u.id !== iduser));
 

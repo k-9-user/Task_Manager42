@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { searchtask } from "../services/taskService";
+import { useTranslation } from "react-i18next";
 
 function Search ()
 {
@@ -9,6 +10,7 @@ function Search ()
 	const [loading, setloading] = useState(false);
 	const [error, setError] = useState("");
 	const [searched, setsearched] = useState(false);
+	const { t } = useTranslation();
 
 	async function handlesearch(e)
 	{
@@ -16,7 +18,7 @@ function Search ()
 
 		if (!query.trim())
 		{
-			setError("Entrez un mot pour rechercher");
+			setError(t("random.mrecherche"));
 			return ;
 		}
 		setloading(true);
@@ -38,23 +40,23 @@ function Search ()
 	}
 	return (
 		<div className="Search-page">
-			<h1>Recherche</h1>
+			<h1>{t("random.recherche")}</h1>
 			<form onSubmit={handlesearch} className="search-form">
-				<input type="text" placeholder="Recherche" value={query} onChange={(e) => setquery(e.target.value)}/>
+				<input type="text" placeholder={t("random.recherche")} value={query} onChange={(e) => setquery(e.target.value)}/>
 				<select value={status} onChange={(e) => setstatus(e.target.value)}>
-					<option value="">Tout les status</option>
-					<option value="todo">A faire</option>
-					<option value="in_progress">En cours</option>
-					<option value="done">Termine</option>
+					<option value="">{t("random.ttstatus")}</option>
+					<option value="todo">{t("random.afaire")}</option>
+					<option value="in_progress">{t("random.encours")}</option>
+					<option value="done">{t("random.termine")}</option>
 				</select>
-				<button type="submit">Rechercher</button>
+				<button type="submit">{t("navbar.search")}</button>
 			 </form>
 			 {error && <p className="error">{error}</p>}
-			 {loading && <p>Recherche en cours ...</p>}
+			 {loading && <p>{t("random.rechercheencours")}.</p>}
 
-			 {error && <p className="error">Impossible de contacter le serveur : {error}</p>}
+			 {error && <p className="error">{t("random.impossibleserv")}{error}</p>}
 
-			 {!loading && !error && searched && results.length === 0 && (<p>Aucun resultat trouve</p>)}
+			 {!loading && !error && searched && results.length === 0 && (<p>{t("noresult")}</p>)}
 
 			 <ul className="search-results">
 				{

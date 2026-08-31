@@ -48,6 +48,16 @@
 	"random":
 	{
 		"myprofile": "Mon profile",
-		"projet": "Projet"
+		"projet": "Projet",
+		"recherche": "Recherche",
+		"mrecherche": "Entrez un mot pour rechercher" ,
+		"ttstatus": "tout les status",
+		"afaire": "A faire",
+		"encours": "En cours",
+		"termine": "Terminé",
+		"rehercheencours": "Recherche en cours ...",
+		"impossibleserv": "Impossible de contacter le serveur: ",
+		"noreult": "Aucun résultat trouvé",
+		"nameproject": "Le nom du projet est obligatoire"
 	}
 }

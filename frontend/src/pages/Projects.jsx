@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getProjects, createProject } from "../services/projectService";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const USE_MOCK = true;
 
@@ -15,6 +16,7 @@ function Projects()
 	const [error, setError] = useState("");
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
+	const { t } = useTranslation();
 
 	useEffect(() =>
 	{
@@ -48,7 +50,7 @@ function Projects()
 		e.preventDefault();
 
 		if (!name.trim()) {
-			setError("Le nom du projet est obligatoire");
+			setError(t("random.nameproject"));
 			return;
 		}
 		try
@@ -73,7 +75,7 @@ function Projects()
 	}
 
 	if (loading)
-		return <p>Chargement...</p>;
+		return <p>{t("loading.load")}</p>;
 
 	return (
 		<div className="projects-page">
@@ -82,7 +84,7 @@ function Projects()
 			<form onSubmit={handleCreate} className="project-form">
 				<input type="text" placeholder="Nom du projet" value={name} onChange={(e) => setName(e.target.value)} />
 				<input type="text" placeholder="Description (optionnel)" value={description} onChange={(e) => setDescription(e.target.value)} />
-				<button type="submit">Créer</button>
+				<button type="submit">{t("projects.create")}</button>
 			</form>
 			<ul className="project-list">
 				{projects.map((project) => (
