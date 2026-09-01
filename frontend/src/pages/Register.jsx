@@ -1,4 +1,5 @@
 import { useState } from 'react';
+// import './register.css';
 import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
 import { useTranslation } from 'react-i18next';
@@ -18,23 +19,23 @@ function Register()
 		if (!username.trim() || !email.trim() || !password || !confirmPassword)
 		{
 			if (!username.trim())
-				setError("Veuillez entrer un nom d'utilisateur");
+				setError(t("register.username"));
 			else if (!email.trim())
-				setError("Veuillez entrer une adresse mail");
+				setError(t("register.email"));
 			else if (!password)
-				setError("Veuillez entrer un mot de passe");
+				setError(t("register.password"));
 			else
-				setError("Veuillez confirmer votre mot de passe");
+				setError(t("register.cpassword"));
 			return ;
 		}
 		if (!isvalidemail(email))
 		{
-			setError("Adresse email invalide");
+			setError(t("register.invaemail"));
 			return ;
 		}
 		if (password !== confirmPassword)
 		{
-			setError("Les mots de passe ne correspondent pas");
+			setError(t("register.falsepassword"));
 			return ;
 		}
 		setError("");
@@ -46,9 +47,13 @@ function Register()
 				<h1>{t("login.register")}</h1>
 				{error && <p className='error'>{error}</p>}
 				<input type="text" placeholder={t("login.username")} required value={username} onChange={(e) => setUsername(e.target.value)} />
+				<p></p>
 				<input type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+				<p></p>
 				<input type="password" placeholder={t("login.password")} required value={password} onChange={(e) => setPassword(e.target.value)} />
+				<p></p>
 				<input type="password" placeholder={t("register.confirmpassword")} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+				<p></p>
 				<button>{t("register.createcount")}</button>
 				<p><Link to="/login">{t("register.return")}</Link></p>
 			</form>

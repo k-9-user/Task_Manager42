@@ -1,0 +1,21 @@
+body{
+	margin: 0px;
+	font-family:'Times New Roman', Times, serif;
+	color: white;
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+}
+
+.register-box input {
+	padding: 12px;
+	font-size: 16px;
+}
+
+.register-box button {
+	padding: 12px;
+	font-size: 16px;
+}

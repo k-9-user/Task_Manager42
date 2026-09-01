@@ -20,8 +20,11 @@ function Login()
 	return (
 		<div className="login-page">
 			<form className="login-box" onSubmit={handleSubmit}>
-				<h1>Transcendance</h1>
-				<LanguageSwitcher />
+				<div className='header'>
+					<h1>Transcendance</h1>
+					<LanguageSwitcher />
+				</div>
+				<p></p>
 				<input type="text" placeholder={t("login.username")} value={email} onChange={(e) => setEmail(e.target.value)}
 				/>
 				<input type="password" placeholder={t("login.password")} value={password} onChange={(e) => setPassword(e.target.value)}

@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import { useTranslation } from "react-i18next";
 
 export function getProjectTasks(projectID) {
 	return apiFetch(`/api/projects/${projectID}/tasks`);
@@ -38,6 +39,7 @@ export async function uploadAttachement(taskID, file)
 {
 	const token = localStorage.getItem("token");
 	const formData = new FormData();
+	const { t } = useTranslation();
 
 	formData.append("file", file);
 
@@ -53,7 +55,7 @@ export async function uploadAttachement(taskID, file)
 	);
 	const result = await reponse.json();
 	if (!result.success)
-		throw new Error(result.error || "Erreur d'upload");
+		throw new Error(result.error || t("random.upload"));
 	return result.data;
 }
 

@@ -3,6 +3,7 @@ import { getProjects, createProject } from "../services/projectService";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+
 const USE_MOCK = true;
 
 const mockProjects = [
@@ -82,8 +83,8 @@ function Projects()
 			<h1>Projets</h1>
 			{error && <p className="error">{error}</p>}
 			<form onSubmit={handleCreate} className="project-form">
-				<input type="text" placeholder="Nom du projet" value={name} onChange={(e) => setName(e.target.value)} />
-				<input type="text" placeholder="Description (optionnel)" value={description} onChange={(e) => setDescription(e.target.value)} />
+				<input type="text" placeholder={t("projects.namePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
+				<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
 				<button type="submit">{t("projects.create")}</button>
 			</form>
 			<ul className="project-list">

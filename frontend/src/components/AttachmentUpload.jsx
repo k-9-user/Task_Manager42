@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { uploadAttachement } from "../services/taskService";
+import { useTranslation } from "react-i18next";
 
 function AttachmentUpload({ taskId, uploadsuccess})
 {
 	const [file, setfile] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState("");
+	const { t } = useTranslation();
 
 	function handleFileChange(e)
 	{
@@ -17,7 +19,7 @@ function AttachmentUpload({ taskId, uploadsuccess})
 	{
 		if (!file)
 		{
-			setError("Sélectionner un fichier");
+			setError(t("random.sfichier"));
 			return ;
 		}
 
@@ -42,7 +44,7 @@ function AttachmentUpload({ taskId, uploadsuccess})
 		<div className="attachement-upload">
 			<input type="file" onChange={handleFileChange} />
 			<button onClick={handleUpload} disabled={uploading}>
-				{uploading ? "Envoi..." : "Ajouter le fichier"}
+				{uploading ? t("random.envoi") : t("random.fichier")}
 			</button>
 			{error && <p className="error">{error}</p>}
 		</div>

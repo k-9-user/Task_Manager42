@@ -19,7 +19,13 @@
 	{
 		"confirmpassword": "Confirmer le mot de passe",
 		"createcount": "Créer mon compte",
-		"return": "retour"
+		"return": "retour",
+		"falsepassword": "Les mots de passe ne correspondent pas",
+		"username": "Veuillez entrer un nom d'utilisateur",
+		"email": "Veuillez entrer une adresse mail",
+		"password": "Veuillez entrer un mot de passe",
+		"cpassword": "Veuillez confirmer votre mot de passe",
+		"invaemail": "Adresse email invalide"
 	},
 	"loading":
 	{
@@ -43,7 +49,8 @@
 	{
 		"title": "Projets",
 		"namePlaceholder": "Nom du projet",
-		"create": "Créer"
+		"create": "Créer",
+		"description": "Description (optionnel)"
 	},
 	"random":
 	{
@@ -58,6 +65,17 @@
 		"rehercheencours": "Recherche en cours ...",
 		"impossibleserv": "Impossible de contacter le serveur: ",
 		"noreult": "Aucun résultat trouvé",
-		"nameproject": "Le nom du projet est obligatoire"
+		"nameproject": "Le nom du projet est obligatoire",
+		"addfichier": "+ Ajouter un fichier",
+		"sfichier": "Sélectionner un fichier",
+		"envoi": "Envoi ...",
+		"ajfichier": "Ajouter le fichier",
+		"erupload": "Erreur d'upload",
+		"ersurv": "Une erreur est survenue"
+	},
+	"footer":
+	{
+		"pc": "Politique de confidentialité",
+		"cdu": "Conditions d'utilisation"
 	}
 }

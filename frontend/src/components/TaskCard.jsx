@@ -1,10 +1,12 @@
 import { useState } from "react";
 import AttachmentUpload from "./AttachmentUpload";
+import { useTranslation } from "react-i18next";
 
 function TaskCard ({ task, onStatusChange })
 {
 	const [attachements, setAttachements] = useState(task.attachements || []);
 	const [showupload, setshowupload] = useState(false);
+	const { t } = useTranslation();
 
 	function uploadsuccess(newattachement)
 	{
@@ -18,9 +20,9 @@ function TaskCard ({ task, onStatusChange })
 			</h4>
 			{task.description && <p>{task.description}</p>}
 			<select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)}>
-				<option value="todo">A faire</option>
-				<option value="in_progress">En cours</option>
-				<option value="done">Terminé</option>
+				<option value="todo">{t("random.afaire")}</option>
+				<option value="in_progress">{t("random.encours")}</option>
+				<option value="done">{t("random.termine")}</option>
 			</select>
 			{attachements.length > 0 && (
 				<ul className="task-atachments">
@@ -35,7 +37,7 @@ function TaskCard ({ task, onStatusChange })
 			)}
 			{showupload ? (
 				<AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />
-			) : (<button onClick={() => setshowupload(true)}>+ Ajouter un fichier</button>)
+			) : (<button onClick={() => setshowupload(true)}>{t("random.addfichier")}</button>)
 			}
 		</div>
 	);

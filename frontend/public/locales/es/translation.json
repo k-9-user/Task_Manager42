@@ -19,7 +19,13 @@
 	{
 		"confirmpassword": "Confirmar la contraseña",
 		"createcount": "Crear mi cuenta",
-		"return": "volver"
+		"return": "volver",
+		"falsepassword": "Las contraseñas no coinciden",
+		"username": "Introduce un nombre de usuario",
+		"email": "Introduce una dirección de correo electrónico",
+		"password": "Introduce una contraseña",
+		"cpassword": "Confirma tu contraseña",
+		"invaemail": "Dirección de correo electrónico no válida"
 	},
 	"loading":
 	{
@@ -43,12 +49,30 @@
 	{
 		"title": "Proyectos",
 		"namePlaceholder": "Nombre del proyecto",
-		"create": "Crear"
+		"create": "Crear",
+		"description": "Descripción (opcional)"
 	},
 	"random":
 	{
 		"myprofile": "Mi perfil",
 		"projet": "proyecto",
-		"recherche": "Búsqueda"
+		"recherche": "Búsqueda",
+		"mrecherche": "Escribe una palabra para buscar" ,
+		"ttstatus": "todos los estados",
+		"afaire": "Tareas pendientes",
+		"encours": "En curso",
+		"termine": "Terminado",
+		"rehercheencours": "Búsqueda en curso ...",
+		"impossibleserv": "No se puede establecer contacto con el servidor: ",
+		"noreult": "No se han encontrado resultados",
+		"nameproject": "Es obligatorio indicar el nombre del proyecto",
+		"addfichier": "+ Añadir un archivo",
+		"erupload": "Error al subir el archivo",
+		"ersurv": "Se ha producido un error"
+	},
+	"footer":
+	{
+		"pc": "Política de privacidad",
+		"cdu": "Condiciones de uso"
 	}
 }
