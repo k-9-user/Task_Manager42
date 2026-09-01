@@ -19,3 +19,4 @@ If you are developing a production application, we recommend using TypeScript wi
 bouillon:
 - PrivateRoute sert a empecher un utilisateur non connecte a acceder aux pages ou il faut etre 	connecter comme exemple avec "http://localhost:5173/Projects". c'est un ajout par rapport a la fiche personne D.
 
+- probleme regler que vite avait mis une largeur maxi pour la fenetre dans index.css

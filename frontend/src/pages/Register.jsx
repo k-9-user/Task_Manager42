@@ -1,5 +1,5 @@
 import { useState } from 'react';
-// import './register.css';
+import './register.css';
 import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
 import { useTranslation } from 'react-i18next';

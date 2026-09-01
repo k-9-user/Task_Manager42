@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getProjects, createProject } from "../services/projectService";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import './Projects.css';
 
 
 const USE_MOCK = true;

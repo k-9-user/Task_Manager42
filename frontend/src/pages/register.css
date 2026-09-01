@@ -1,7 +1,13 @@
+
 body{
 	margin: 0px;
 	font-family:'Times New Roman', Times, serif;
 	color: white;
+}
+
+.register-page{
+	height:  100vh;
+	justify-content: center;
 	background: linear-gradient(
 		135deg,
 		#0f172a 0%,
@@ -13,9 +19,32 @@ body{
 .register-box input {
 	padding: 12px;
 	font-size: 16px;
+	border-radius: 16px;
+	margin: 2px;
 }
 
 .register-box button {
 	padding: 12px;
 	font-size: 16px;
+	cursor:pointer;
+	border-radius: 16px;
+	margin: 10px;
+}
+
+.register-box p a{
+	color: aliceblue;
+	text-decoration: underline;
+	font-weight: 600;
+	padding: 0.4rem 0.9rem;
+	border-radius: 6px;
+	transition: background-color 0.2s ease, color 0.2 ease;
+}
+
+.register-box p a:hover{
+	color: rgb(211, 11, 11);
+	background-color: #0f172a;
+}
+
+.register-box h1 {
+	margin-top: 2rem;
 }

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import TaskBoard from "../components/TaskBoard";
 import { getProjectTasks, updateTaskStatus } from "../services/taskService.js";
 import { useTranslation } from "react-i18next";
+import './ProjectDetail.css';
 
 const USE_MOCK = true;
 

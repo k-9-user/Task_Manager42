@@ -27,8 +27,10 @@ function Login()
 				<p></p>
 				<input type="text" placeholder={t("login.username")} value={email} onChange={(e) => setEmail(e.target.value)}
 				/>
+				<p></p>
 				<input type="password" placeholder={t("login.password")} value={password} onChange={(e) => setPassword(e.target.value)}
 				/>
+				<p></p>
 				<button>{t("login.submit")}</button>
 				<p><Link to="/register">{t("login.register")}</Link></p>
 			</form>

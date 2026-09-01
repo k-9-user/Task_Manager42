@@ -1,0 +1,20 @@
+
+body{
+	margin: 0px;
+	font-family:'Times New Roman', Times, serif;
+	color: white;
+
+}
+
+.project-detail-page{
+	height:  100vh;
+	/* display: flex; */
+	justify-content: center;
+	/* align-items: center; */
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+}
