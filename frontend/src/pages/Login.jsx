@@ -19,21 +19,29 @@ function Login()
 	}
 	return (
 		<div className="login-page">
-			<form className="login-box" onSubmit={handleSubmit}>
-				<div className='header'>
-					<h1>Transcendance</h1>
-					<LanguageSwitcher />
-				</div>
-				<p></p>
-				<input type="text" placeholder={t("login.username")} value={email} onChange={(e) => setEmail(e.target.value)}
-				/>
-				<p></p>
-				<input type="password" placeholder={t("login.password")} value={password} onChange={(e) => setPassword(e.target.value)}
-				/>
-				<p></p>
-				<button>{t("login.submit")}</button>
-				<p><Link to="/register">{t("login.register")}</Link></p>
-			</form>
+			<div className='page-header'>
+				<h1>Transcendance</h1>
+				<LanguageSwitcher />
+			</div>
+			<div className='login-window'>
+				<div className='login-titlebar'>Connexion</div>
+				<form className="login-box" onSubmit={handleSubmit}>
+					<div className="input-group">
+						<div className='input-field'>
+							<label htmlFor='username'>{t("login.username")} : </label>
+							<input id='username' type="text" value={email} onChange={(e) => setEmail(e.target.value)}
+							/>
+						</div>
+						<div className='input-field'>
+							<label htmlFor='password'>{t("login.password")} : </label>
+							<input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+							/>
+						</div>
+						<button>{t("login.submit")}</button>
+					</div>
+				</form>
+			</div>
+			<p><Link to="/register">{t("login.register")}</Link></p>
 		</div>
 	);
 }
