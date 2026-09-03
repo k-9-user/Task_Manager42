@@ -1,0 +1,31 @@
+.footer {
+	display: flex;
+	flex-direction: column;
+	color: black;
+	gap: 0.5rem;
+	align-items: center;
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	padding: 1rem;;
+}
+
+.footer-links {
+	display: flex;
+	flex-direction: column;
+	gap: 1,5rem;
+}
+
+.footer-links .condition-link{
+	color: black;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	text-decoration: none;
+}
+
+.footer-links .condition-link {
+	text-decoration: underline;
+}

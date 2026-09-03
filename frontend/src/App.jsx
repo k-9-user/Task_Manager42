@@ -20,22 +20,24 @@ function AppContent() {
   const hideNavbar = location.pathname === "/login" || location.pathname === "/register";
 
   return (
-    <>
+    <div className="app-container">
       {!hideNavbar && <Navbar />}
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
-        <Route path="/Profile" element={<Profile />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/Search" element={<Search />} />
-        <Route path="/TermsOfService" element={<TermsOfService />} />
-      </Routes>
+      <main className="app-content">
+       <Routes>
+         <Route path="/" element={<Navigate to="/login" />} />
+         <Route path="/admin/users" element={<AdminUsers />} />
+         <Route path="/login" element={<Login />} />
+         <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
+         <Route path="/Profile" element={<Profile />} />
+         <Route path="/projects/:id" element={<ProjectDetail />} />
+         <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
+         <Route path="/register" element={<Register />} />
+         <Route path="/Search" element={<Search />} />
+         <Route path="/TermsOfService" element={<TermsOfService />} />
+       </Routes>
+      </main>
       <Footer />
-    </>
+    </div>
   );
 }
 

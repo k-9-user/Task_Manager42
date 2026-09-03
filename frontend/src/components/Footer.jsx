@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import './Footer.css'
 
 function Footer() {
 	const { t } = useTranslation();
@@ -7,9 +8,8 @@ function Footer() {
 		<footer className="footer">
 			<p>&copy; 2026 Task Manager</p>
 			<div className="footer-links">
-				<Link to="/PrivacyPolicy">{t("footer.pc")}</Link>
-				<p>				</p>
-				<Link to="/TermsOfService">{t("footer.cdu")}</Link>
+				<Link className="condition-link" to="/PrivacyPolicy">{t("footer.pc")}</Link>
+				<Link className="condition-link" to="/TermsOfService">{t("footer.cdu")}</Link>
 			</div>
 		</footer>
 	);
