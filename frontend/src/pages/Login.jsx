@@ -37,11 +37,15 @@ function Login()
 							<input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
 							/>
 						</div>
-						<button>{t("login.submit")}</button>
+						<div className='login-action'>
+							<button>{t("login.submit")}</button>
+						</div>
+						<div className='register-link'>
+							<Link to="/register" className='btn-link'>{t("login.register")}</Link>
+						</div>
 					</div>
 				</form>
 			</div>
-			<p><Link to="/register">{t("login.register")}</Link></p>
 		</div>
 	);
 }

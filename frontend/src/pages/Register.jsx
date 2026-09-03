@@ -43,20 +43,35 @@ function Register()
 	}
 	return (
 		<div className='register-page'>
-			<form className='register-box' onSubmit={handleSubmit}>
-				<h1>{t("login.register")}</h1>
-				{error && <p className='error'>{error}</p>}
-				<input type="text" placeholder={t("login.username")} required value={username} onChange={(e) => setUsername(e.target.value)} />
-				<p></p>
-				<input type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-				<p></p>
-				<input type="password" placeholder={t("login.password")} required value={password} onChange={(e) => setPassword(e.target.value)} />
-				<p></p>
-				<input type="password" placeholder={t("register.confirmpassword")} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-				<p></p>
-				<button>{t("register.createcount")}</button>
-				<p><Link to="/login">{t("register.return")}</Link></p>
-			</form>
+			<h1>Transcendance</h1>
+			<div className='register-window'>
+				<div className='register-titlebar'>{t("login.register")}</div>
+				<form className='register-box' onSubmit={handleSubmit}>
+					{error && <p className='error'>{error}</p>}
+					<div className='input-group'>
+						<div className='input-field'>
+							<label htmlFor='username'>{t("login.username")} : </label>
+							<input id='username' type="text" required value={username} onChange={(e) => setUsername(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='email'>Email : </label>
+							<input id='email' type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='password'>{t("login.password")} : </label>
+							<input id='password' type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='confirmpassword'>{t("register.confirmpassword")} : </label>
+							<input id='confirmpassword' type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+						</div>
+						<button>{t("register.createcount")}</button>
+						<div className='login-link'>
+							<Link className='btn-link' to="/login">{t("register.return")}</Link>
+						</div>
+					</div>
+				</form>
+			</div>
 		</div>
 	);
 }

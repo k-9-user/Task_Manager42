@@ -6,27 +6,22 @@
 	flex-direction: column;
 	min-height:  100vh;
 	gap: 1.5rem;
-	/* display: flex; */
-	/* justify-content: center; */
 	align-items: center;
-	/* background: linear-gradient(
+	background: linear-gradient(
 		135deg,
 		#0f172a 0%,
 		#1e3a8a 50%,
 		#2563eb 100%
-	); */
-	/* background: linear-gradient(to bottom, #7db9e8 0%, #2a6ebb 100%); */
-	background-color: #235ec9;
+	);
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 
 
 .login-titlebar {
-	/* background: linear-gradient(to bottom, #f0f0f0, #d4d0c8); */
-	/* background: #235ec9; */
+	display: flex;
+	justify-content: flex-start;
 	background: linear-gradient(bottom, #4f8bd6 px, #2f6fc0 2px, #3a6ea5 20%, #245edb 75%,  #0a246a 100%);
-	/* color: #1e1e1e; */
 	color: #ffffff;
 	font-size: 0.9rem;
 	font-weight: bold;
@@ -41,17 +36,10 @@
 	box-shadow: inset 1px 0 #3a6ea5, inset -1px 0 #003399, 0 0 0 1px #245edb, 0 6px 20px rgba(0, 0, 0, 0.4);
 	border-radius: 6px;
 	overflow: hidden;
-	/* box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); */
-	/* background: linear-gradient(to bottom, #f0f0f0, #d4d0c8); */
-	/* color: black; */
 }
 
 
 .input-group{
-	/* background-color: rgb(182, 180, 180); */
-	/* background-color: #eef6fd; */
-	/* background-color: #d4d0c8; */
-	/* background: linear-gradient(to bottom, #f0f0f0, #d4d0c8); */
 	display: grid;
 	grid-template-columns: auto 1fr;
 	align-items: flex-start;
@@ -68,7 +56,6 @@
 }
 
 .input-field label{
-	/* color: #ffffff; */
 	color: black;
 	font-size: 0.85rem;
 	flex-shrink: 0;
@@ -87,10 +74,6 @@
 	font-size: 0.9 rem;
 }
 
-/* .input-field input::focus{
-	border-color: #2a6ebb;
-	box-shadow: 0 0 0 2px rgba(42, 110, 187, 0.3);
-} */
 
 .login-box {
 	display: flex;
@@ -99,15 +82,9 @@
 	width: 100%;
 	box-sizing: border-box;
 	padding: 2rem;
-	/* align-items: flex-end; */
-	/* width: 100%; */
-	/* max-width: 420px; */
-	/* background-color: #d4d0c8; */
-	/* background: linear-gradient(bottom, #3f7fd6 0%, #1d4f9e 100%); */
-	background: linear-gradient(to bottom, #f0f0f0, #d4d0c8);
-	/* background-color: #ECE9D8; */
-
-	padding: 2rem;
+	background: linear-gradient(to bottom, #87898a 0%, #414143 100%);
+	/* background: linear-gradient(to bottom, #f0f0f0, #d4d0c8); */
+	/* background-color: #414143; */
 	/* border-radius: 8px; */
 	/* border: 1px solid #003c74; */
 	/* box-shadow: 0 0 0 3px #4d94db, 0 8px 24px rgba(0, 0, 0, 0.4); */
@@ -115,21 +92,49 @@
 
 .login-box button{
 	background: linear-gradient(to bottom, #f5f5f5 0%, #d8d8d8 100%);
-	/* padding: 0.6px; */
 	border: 1px solid #1c4d80;
-	/* color: #ffffff; */
-	/* font-weight: bold; */
 	color: black;
-	/* cursor: pointer; */
-	/* margin: 16px; */
+	cursor: pointer;
 	border-radius: 4px;
-	/* width: 100px; */
 	text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+	font-size: 0.85rem;
+	padding: 0.1rem 0.8rem;
+}
+
+.register-link{
+	display: flex;
+	justify-content: flex-start;
+}
+
+.btn-link {
+	all:unset;
+	display: inline-flex;
+	box-sizing: border-box;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	line-height: 1.2;
+	vertical-align: middle;
+	background: linear-gradient(to bottom, #f5f5f5 0%, #d8d8d8 100%);
+	border: 1px solid #1c4d80;
+	color: black;
+	text-decoration: none;
+	padding: 0.4rem 1.2rem;
+	font-size: 0.9rem;
+	border-radius: 4px;
+	text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+	/* height: 36px; */
+	align-items: center;
+	justify-content: center;
+	margin: 2px;
+}
+
+.btn-link:hover{
+	background: linear-gradient(to bottom, #6ba8e0 0%, #3878c7 100%);
+	border: 2px solid #1c4d80;
 }
 
 .login-box button:hover{
 	background: linear-gradient(to bottom, #6ba8e0 0%, #3878c7 100%);
-	/* border: 2px solid #1c4d80; */
+	border: 2px solid #1c4d80;
 }
 
 .page-header {
@@ -142,7 +147,17 @@
 	color: #ffffff;
 	font-size: 1.6rem;
 	text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
-	margin: 0;
+	margin: 2rem;
+}
+
+
+.page-header select{
+	margin-top: 1rem;
+	position: absolute;
+	right: 2%;
+	transform: translateY(-50%);
+	flex-shrink: 0;
+	border-radius: 5px;
 }
 
 @media (max-width: 480px)
@@ -151,6 +166,7 @@
 		padding: 1rem;
 		justify-content: flex-start;
 		padding-top: 3rem;
+		align-items: center;
 	}
 
 	.page-header{
@@ -165,6 +181,7 @@
 
 	.login-window{
 		max-width: 100%;
+		/* justify-content: center; */
 	}
 
 	.login-box{
@@ -186,8 +203,18 @@
 		width: 100%;
 	}
 
-	.login-box button{
+	.login-action {
+		flex-direction: column;
+		align-items: stretch;
+		/* justify-content: center; */
+		gap: 0.5rem
+	}
+
+	.login-box button,
+	.btn-link{
 		width: 100%;
 		padding: 0.6rem;
+		text-align: center;
+		margin: 0.25rem;
 	}
 }
