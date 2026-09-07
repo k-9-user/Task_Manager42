@@ -1,16 +1,10 @@
 
-body{
-	margin: 0px;
-	font-family:'Times New Roman', Times, serif;
-	color: white;
-
-}
-
 .project-detail-page{
-	height:  100vh;
-	/* display: flex; */
+	flex: 1;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 	justify-content: center;
-	/* align-items: center; */
+	align-items: center;
+	color: #ffffff;
 	background: linear-gradient(
 		135deg,
 		#0f172a 0%,

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import TaskCard from "./TaskCard";
+import './TaskBoard.css';
 
 function TaskBoard({ tasks, onStatusChange })
 {

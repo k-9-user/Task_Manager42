@@ -67,6 +67,9 @@
 		"noreult": "No results found",
 		"nameproject": "The project name is required",
 		"addfichier": "+ Add a file",
+		"sfichier": "Select a file",
+		"envoi": "Sending ...",
+		"ajfichier": "Add the file",
 		"erupload": "Upload error",
 		"ersurv": "An error has occurred"
 	},

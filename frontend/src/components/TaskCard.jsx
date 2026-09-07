@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AttachmentUpload from "./AttachmentUpload";
 import { useTranslation } from "react-i18next";
+import './TaskCard.css';
 
 function TaskCard ({ task, onStatusChange })
 {

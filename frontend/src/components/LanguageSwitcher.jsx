@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import './LangageSwitcher.css';
+
 
 function LanguageSwitcher()
 {

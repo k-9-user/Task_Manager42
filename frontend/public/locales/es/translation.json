@@ -67,6 +67,9 @@
 		"noreult": "No se han encontrado resultados",
 		"nameproject": "Es obligatorio indicar el nombre del proyecto",
 		"addfichier": "+ Añadir un archivo",
+		"sfichier": "Seleccionar un archivo",
+		"envoi": "Enviando ...",
+		"ajfichier": "Añadir el archivo",
 		"erupload": "Error al subir el archivo",
 		"ersurv": "Se ha producido un error"
 	},

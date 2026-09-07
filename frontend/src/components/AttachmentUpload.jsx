@@ -44,7 +44,7 @@ function AttachmentUpload({ taskId, uploadsuccess})
 		<div className="attachement-upload">
 			<input type="file" onChange={handleFileChange} />
 			<button onClick={handleUpload} disabled={uploading}>
-				{uploading ? t("random.envoi") : t("random.fichier")}
+				{uploading ? t("random.envoi") : t("random.ajfichier")}
 			</button>
 			{error && <p className="error">{error}</p>}
 		</div>
