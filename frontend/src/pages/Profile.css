@@ -1,5 +1,5 @@
 
-.project-detail-page{
+.profile-page {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
@@ -14,12 +14,12 @@
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-@media (max-width: 480px)
-{
-	.project-detail-page{
-		padding: 1rem;
-		justify-content: flex-start;
-		padding-top: 3rem;
-		align-items: center;
-	}
+.profile-page h1 {
+	font-size: 1.6rem;
+	color: #ffffff;
+}
+
+.profile-page p {
+	font-size: 0.85rem;
+	color: black;
 }

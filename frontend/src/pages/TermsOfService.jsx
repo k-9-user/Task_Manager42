@@ -1,3 +1,5 @@
+import './TermsOfService.css';
+
 function TermsOfService ()
 {
 	return (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
 import { useTranslation } from "react-i18next";
+import './Profile.css';
 
 
 const USE_MOCK = true; // a retirer

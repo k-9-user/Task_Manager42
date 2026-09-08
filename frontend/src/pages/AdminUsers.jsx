@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getUser, userrole, deleteuser} from "../services/userservice.js";
 import { useTranslation } from "react-i18next";
+import './AdminUsers.css';
 
 function AdminUsers ()
 {

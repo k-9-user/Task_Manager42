@@ -29,7 +29,7 @@
 .register-window {
 	width: 100%;
 	max-width: 720px;
-	border: 2px solid #0a246a;
+	border: 4px solid #0a246a;
 	box-shadow: inset 1px 0 #3a6ea5, inset -1px 0 #003399, 0 0 0 1px #245edb, 0 6px 20px rgba(0, 0, 0, 0.4);
 	border-radius: 6px;
 	overflow: hidden;

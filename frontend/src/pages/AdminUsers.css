@@ -1,5 +1,5 @@
 
-.project-detail-page{
+.admin-user-page {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
@@ -14,12 +14,8 @@
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-@media (max-width: 480px)
-{
-	.project-detail-page{
-		padding: 1rem;
-		justify-content: flex-start;
-		padding-top: 3rem;
-		align-items: center;
-	}
+.admin-user-page h1 {
+	font-size: 1.6rem;
+	text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+	margin: 2rem;
 }

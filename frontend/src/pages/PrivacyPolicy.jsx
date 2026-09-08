@@ -1,3 +1,5 @@
+import './PrivacyPolicy.css';
+
 function PrivacyPolicy ()
 {
 	return (
