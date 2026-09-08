@@ -12,22 +12,25 @@ RUN groupadd --gid 10001 app \
 FROM base AS dependencies
 
 RUN python -m venv /opt/venv
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir --requirement /tmp/requirements.txt
 
-FROM base AS runtime
+FROM base AS application
 
-COPY --from=dependencies /opt/venv /opt/venv
 COPY --chown=app:app . /app
 RUN mkdir -p /app/uploads && chown app:app /app/uploads
 
 USER app
 EXPOSE 8000
 
-FROM runtime AS development
+FROM application AS development
+
+COPY --from=dependencies /opt/venv /opt/venv
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--no-access-log"]
 
-FROM runtime AS production
+FROM application AS production
+
+COPY --from=dependencies /opt/venv /opt/venv
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

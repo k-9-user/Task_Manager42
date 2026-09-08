@@ -9,6 +9,9 @@ venv/
 # Environment
 .env
 
+# Local TLS
+nginx/certs/*
+
 # Node / frontend
 node_modules/
 dist/

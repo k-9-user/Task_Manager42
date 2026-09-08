@@ -14,7 +14,6 @@ from app.routers.users import router as users_router
 
 
 logging.basicConfig(level=logging.WARNING)
-logging.getLogger().setLevel(logging.WARNING)
 logging.getLogger("app").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()

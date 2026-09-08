@@ -3,10 +3,10 @@ from uuid import uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, inspect
+from sqlalchemy import Engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 
 
 def _user_values(**overrides: object) -> dict[str, object]:
@@ -15,10 +15,12 @@ def _user_values(**overrides: object) -> dict[str, object]:
         "id": uuid4(),
         "email": f"db-{identity}@example.com",
         "username": f"db_{identity}",
+        "display_name": None,
         "password_hash": "$argon2id$test-placeholder",
         "oauth_provider": None,
         "oauth_id": None,
         "role": UserRole.USER,
+        "status": UserStatus.ACTIVE,
         "avatar_url": "/static/default-avatar.png",
     }
     values.update(overrides)
@@ -43,7 +45,9 @@ def test_initial_users_migration_upgrades_and_downgrades(
             "oauth_provider",
             "oauth_id",
             "username",
+            "display_name",
             "role",
+            "status",
             "avatar_url",
             "created_at",
             "updated_at",
@@ -119,3 +123,51 @@ def test_database_enforces_unique_email_username_and_oauth_identity(
             with pytest.raises(IntegrityError):
                 connection.execute(User.__table__.insert().values(duplicate))
             transaction.rollback()
+
+
+def test_status_migration_repairs_a_populated_database_without_an_admin(
+    database_engine: Engine,
+    alembic_config: Config,
+) -> None:
+    first_id = uuid4()
+    second_id = uuid4()
+    try:
+        with database_engine.begin() as connection:
+            connection.execute(text("TRUNCATE TABLE users CASCADE"))
+        command.downgrade(alembic_config, "db_install")
+        with database_engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO users (
+                        id, email, password_hash, username, role,
+                        avatar_url, created_at, updated_at
+                    ) VALUES (
+                        :first_id, 'legacy-first@example.com', :password_hash,
+                        'legacy_first', 'user', '/static/default-avatar.png',
+                        '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
+                    ), (
+                        :second_id, 'legacy-second@example.com', :password_hash,
+                        'legacy_second', 'user', '/static/default-avatar.png',
+                        '2026-01-02T00:00:00Z', '2026-01-02T00:00:00Z'
+                    )
+                    """
+                ),
+                {
+                    "first_id": first_id,
+                    "second_id": second_id,
+                    "password_hash": "$argon2id$legacy-placeholder",
+                },
+            )
+
+        command.upgrade(alembic_config, "head")
+        with database_engine.connect() as connection:
+            roles = connection.execute(
+                text("SELECT id, role::text FROM users ORDER BY created_at, id")
+            ).all()
+
+        assert roles == [(first_id, "admin"), (second_id, "user")]
+    finally:
+        command.upgrade(alembic_config, "head")
+        with database_engine.begin() as connection:
+            connection.execute(text("TRUNCATE TABLE users CASCADE"))

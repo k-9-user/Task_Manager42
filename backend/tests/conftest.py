@@ -105,13 +105,14 @@ def user_factory(
 ) -> Callable[..., object]:
     from app.auth.security import hash_password
     from app.database import SessionLocal
-    from app.models.user import User, UserRole
+    from app.models.user import User, UserRole, UserStatus
 
     def create_user(
         *,
         email: str | None = None,
         username: str | None = None,
         role: UserRole = UserRole.USER,
+        status: UserStatus = UserStatus.ACTIVE,
         oauth_id: str | None = None,
     ) -> User:
         identity = uuid4().hex
@@ -120,6 +121,7 @@ def user_factory(
             email=email or f"user-{identity}@example.com",
             username=username or f"user_{identity}",
             role=role,
+            status=status,
             password_hash=None if is_oauth else hash_password("valid-password-42"),
             oauth_provider="google" if is_oauth else None,
             oauth_id=oauth_id,

@@ -24,7 +24,7 @@ from app.auth.security import (
 )
 from app.config import get_settings
 from app.database import get_db
-from app.models.user import ADMIN_INVARIANT_LOCK_KEY, User, UserRole
+from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
     AuthData,
     AuthResponse,
@@ -33,6 +33,7 @@ from app.schemas.user import (
     UserRegister,
     UserResponse,
 )
+from app.utils.locks import lock_admin_invariants
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -53,10 +54,12 @@ def _auth_response(user: User) -> AuthResponse:
     )
 
 
-def _lock_admin_invariants(db: Session) -> None:
-    """Serialize account bootstrap and admin-count mutations in PostgreSQL."""
-
-    db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
+def _ensure_active_user(user: User) -> None:
+    if user.status == UserStatus.BANNED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is banned",
+        )
 
 
 def _new_user_role_locked(db: Session) -> UserRole:
@@ -98,15 +101,17 @@ def register(
 
     email = str(payload.email)
     password_hash = hash_password(payload.password.get_secret_value())
-    _lock_admin_invariants(db)
-    email_exists = db.scalar(select(User.id).where(func.lower(User.email) == email))
+    lock_admin_invariants(db)
+    email_exists = db.scalar(select(User.id).where(User.email == email))
     if email_exists is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered",
         )
 
-    username_exists = db.scalar(select(User.id).where(User.username == payload.username))
+    username_exists = db.scalar(
+        select(User.id).where(func.lower(User.username) == payload.username.lower())
+    )
     if username_exists is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -153,7 +158,7 @@ def login(
     """Verify local credentials and issue a bearer token."""
 
     email = str(payload.email)
-    user = db.scalar(select(User).where(func.lower(User.email) == email))
+    user = db.scalar(select(User).where(User.email == email))
     password = payload.password.get_secret_value()
     password_is_valid, updated_hash = verify_password_and_update(
         password,
@@ -165,6 +170,7 @@ def login(
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    _ensure_active_user(user)
     if updated_hash is not None:
         user.password_hash = updated_hash
         db.commit()
@@ -267,9 +273,10 @@ async def google_oauth_callback(
         )
     )
     if existing_user is not None:
+        _ensure_active_user(existing_user)
         return _auth_response(existing_user)
 
-    _lock_admin_invariants(db)
+    lock_admin_invariants(db)
     existing_user = db.scalar(
         select(User).where(
             User.oauth_provider == "google",
@@ -277,11 +284,12 @@ async def google_oauth_callback(
         )
     )
     if existing_user is not None:
+        _ensure_active_user(existing_user)
         return _auth_response(existing_user)
 
     email = str(claims.email)
     email_exists = db.scalar(
-        select(User.id).where(func.lower(User.email) == email)
+        select(User.id).where(User.email == email)
     )
     if email_exists is not None:
         logger.warning("google_oauth_failed category=email_collision")
@@ -294,7 +302,10 @@ async def google_oauth_callback(
         (
             candidate
             for candidate in google_username_candidates(email, claims.sub)
-            if db.scalar(select(User.id).where(User.username == candidate)) is None
+            if db.scalar(
+                select(User.id).where(func.lower(User.username) == candidate.lower())
+            )
+            is None
         ),
         None,
     )

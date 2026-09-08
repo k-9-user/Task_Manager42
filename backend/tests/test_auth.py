@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -17,7 +18,7 @@ from app.auth.security import (
 )
 from app.database import SessionLocal
 from app.main import app
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import UserRegister, UserUpdate
 
 
@@ -84,7 +85,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
         response = test_client.options(
             "/api/auth/login",
             headers={
-                "Origin": "http://localhost:5173",
+                "Origin": "https://localhost:8443",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "authorization,content-type",
             },
@@ -99,7 +100,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == (
-        "http://localhost:5173"
+        "https://localhost:8443"
     )
     assert "authorization" in response.headers[
         "access-control-allow-headers"
@@ -248,7 +249,11 @@ def test_me_can_be_read_and_updated_without_role_escalation(
     updated = client.put(
         "/api/users/me",
         headers=headers,
-        json={"username": "renamed_user", "avatar": "/avatars/user.png"},
+        json={
+            "username": "renamed_user",
+            "display_name": "Renamed User",
+            "avatar": "/avatars/user.png",
+        },
     )
     escalation = client.put(
         "/api/users/me",
@@ -259,6 +264,7 @@ def test_me_can_be_read_and_updated_without_role_escalation(
     assert current.status_code == 200
     assert updated.status_code == 200
     assert updated.json()["data"]["user"]["username"] == "renamed_user"
+    assert updated.json()["data"]["user"]["display_name"] == "Renamed User"
     assert updated.json()["data"]["user"]["avatar_url"] == "/avatars/user.png"
     assert escalation.status_code == 422
 
@@ -284,3 +290,26 @@ def test_profile_update_rejects_a_duplicate_username(client: TestClient) -> None
     assert response.status_code == 409
     current_user = client.get("/api/users/me", headers=headers)
     assert current_user.json()["data"]["user"]["username"] == "first_user"
+
+
+def test_banned_user_cannot_login_or_use_existing_token(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    user = user_factory(
+        email="banned@example.com",
+        status=UserStatus.BANNED,
+    )
+    headers = auth_headers(user)
+
+    current = client.get("/api/users/me", headers=headers)
+    login = client.post(
+        "/api/auth/login",
+        json={"email": user.email, "password": "valid-password-42"},
+    )
+
+    assert current.status_code == 403
+    assert current.json()["error"] == "Account is banned"
+    assert login.status_code == 403
+    assert login.json()["error"] == "Account is banned"

@@ -5,12 +5,12 @@ from collections.abc import Mapping
 from functools import lru_cache
 from hashlib import sha256
 from typing import Any, Literal
-from urllib.parse import urlsplit
 
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.config import get_settings
+from app.utils.validators import has_unsafe_url_characters, is_safe_https_url
 
 
 GOOGLE_CLIENT_NAME = "google"
@@ -28,8 +28,7 @@ _USERNAME_MAX_LENGTH = 50
 _PRIMARY_USERNAME_SUFFIX_LENGTH = 16
 _UNSAFE_USERNAME_CHARACTERS = re.compile(r"[^a-z0-9]+")
 
-# Authlib 1.7 logs the PKCE verifier at DEBUG; keep that secret out of logs even
-# when an operator temporarily lowers the application's global log threshold.
+
 logging.getLogger("authlib.integrations.base_client.sync_app").setLevel(
     logging.WARNING
 )
@@ -77,29 +76,8 @@ class GoogleClaims(BaseModel):
         picture = value.strip()
         if (
             not picture
-            or "\\" in picture
-            or any(
-                character.isspace()
-                or ord(character) < 0x20
-                or ord(character) == 0x7F
-                for character in picture
-            )
-        ):
-            raise ValueError("picture must be a valid HTTPS URL")
-
-        try:
-            parsed = urlsplit(picture)
-            parsed_port = parsed.port
-        except ValueError as exc:
-            raise ValueError("picture must be a valid HTTPS URL") from exc
-
-        if (
-            parsed.scheme.lower() != "https"
-            or not parsed.netloc
-            or parsed.hostname is None
-            or parsed.username is not None
-            or parsed.password is not None
-            or parsed_port is not None and not 1 <= parsed_port <= 65535
+            or has_unsafe_url_characters(picture)
+            or not is_safe_https_url(picture)
         ):
             raise ValueError("picture must be a valid HTTPS URL")
         return picture

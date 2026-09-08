@@ -9,24 +9,27 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user, require_admin
 from app.database import get_db
-from app.models.user import ADMIN_INVARIANT_LOCK_KEY, User, UserRole
+from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
+    AdminUserUpdate,
     CurrentUserResponse,
     DeleteData,
     DeleteResponse,
     ErrorResponse,
     UserData,
     UserRoleUpdate,
+    UserStatusUpdate,
     UserResponse,
     UserUpdate,
     UsersData,
     UsersResponse,
 )
+from app.utils.locks import lock_admin_invariants
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 logger = logging.getLogger(__name__)
-POSTGRESQL_MAX_BIGINT = 2**63 - 1
+MAX_PAGE = 1_000_000
 
 
 def _user_response(user: User) -> CurrentUserResponse:
@@ -35,12 +38,12 @@ def _user_response(user: User) -> CurrentUserResponse:
     )
 
 
-def _revalidate_admin_locked(
+def _revalidate_admin(
     db: Session,
     current_admin: User,
     target_id: UUID,
 ) -> User:
-    """Reload the actor after locking so stale admin authority cannot be used."""
+    """Reload the actor so a stale admin role or ban cannot authorize an action."""
 
     actor_id = current_admin.id
     refreshed_admin = db.scalar(
@@ -69,7 +72,47 @@ def _revalidate_admin_locked(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
+    if refreshed_admin.status != UserStatus.ACTIVE:
+        logger.warning(
+            "admin_action_denied actor_id=%s target_id=%s reason=actor_banned",
+            actor_id,
+            target_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is banned",
+        )
     return refreshed_admin
+
+
+def _lock_and_revalidate_admin(
+    db: Session,
+    current_admin: User,
+    target_id: UUID,
+) -> User:
+    """Serialize the admin-count invariant, then re-read the actor under it."""
+
+    lock_admin_invariants(db)
+    return _revalidate_admin(db, current_admin, target_id)
+
+
+def _load_target(db: Session, user_id: UUID) -> User:
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+    return target
+
+
+def _active_admin_count(db: Session) -> int:
+    return db.scalar(
+        select(func.count()).select_from(User).where(
+            User.role == UserRole.ADMIN,
+            User.status == UserStatus.ACTIVE,
+        )
+    ) or 0
 
 
 @router.get(
@@ -103,11 +146,14 @@ def update_me(
 ) -> CurrentUserResponse:
     """Update the current user's public profile fields."""
 
-    if payload.username is not None and payload.username != current_user.username:
+    if payload.username is not None:
         current_user.username = payload.username
 
     if payload.avatar is not None:
         current_user.avatar_url = payload.avatar
+
+    if "display_name" in payload.model_fields_set:
+        current_user.display_name = payload.display_name
 
     try:
         db.commit()
@@ -134,28 +180,69 @@ def update_me(
 def list_users(
     _current_admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
-    page: Annotated[int, Query(ge=1)] = 1,
+    page: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> UsersResponse:
     """Return one bounded page of users to an administrator."""
 
     total = db.scalar(select(func.count()).select_from(User)) or 0
-    offset = (page - 1) * limit
-    if offset > POSTGRESQL_MAX_BIGINT:
-        users = []
-    else:
-        users = db.scalars(
-            select(User)
-            .order_by(User.created_at.desc(), User.id.desc())
-            .offset(offset)
-            .limit(limit)
-        ).all()
+    users = db.scalars(
+        select(User)
+        .order_by(User.created_at.desc(), User.id.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    ).all()
     return UsersResponse(
         data=UsersData(
             users=[UserResponse.model_validate(user) for user in users],
             total=total,
         )
     )
+
+
+@router.put(
+    "/{user_id}",
+    summary="Update a user",
+    response_model=CurrentUserResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"model": ErrorResponse},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
+    },
+)
+def update_user(
+    user_id: UUID,
+    payload: AdminUserUpdate,
+    current_admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+) -> CurrentUserResponse:
+    """Update another account's public identity as a global administrator."""
+
+    current_admin = _revalidate_admin(db, current_admin, user_id)
+    target = _load_target(db, user_id)
+
+    if payload.username is not None:
+        target.username = payload.username
+    if "display_name" in payload.model_fields_set:
+        target.display_name = payload.display_name
+
+    try:
+        db.commit()
+        db.refresh(target)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already taken",
+        ) from exc
+    logger.info(
+        "admin_user_updated actor_id=%s target_id=%s",
+        current_admin.id,
+        target.id,
+    )
+    return _user_response(target)
 
 
 @router.put(
@@ -178,24 +265,20 @@ def update_user_role(
 ) -> CurrentUserResponse:
     """Change an app-wide role while preserving at least one administrator."""
 
-    db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
-    current_admin = _revalidate_admin_locked(db, current_admin, user_id)
-    target = db.get(User, user_id)
-    if target is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    current_admin = _lock_and_revalidate_admin(db, current_admin, user_id)
+    target = _load_target(db, user_id)
     actor_id = current_admin.id
     target_id = target.id
 
     if target.role == payload.role:
         return _user_response(target)
 
-    if target.role == UserRole.ADMIN and payload.role != UserRole.ADMIN:
-        admin_count = db.scalar(
-            select(func.count()).select_from(User).where(User.role == UserRole.ADMIN)
-        ) or 0
+    if (
+        target.role == UserRole.ADMIN
+        and target.status == UserStatus.ACTIVE
+        and payload.role != UserRole.ADMIN
+    ):
+        admin_count = _active_admin_count(db)
         if admin_count <= 1:
             logger.warning(
                 "admin_role_change_denied actor_id=%s target_id=%s reason=last_admin",
@@ -215,6 +298,60 @@ def update_user_role(
         actor_id,
         target_id,
         target.role.value,
+    )
+    return _user_response(target)
+
+
+@router.put(
+    "/{user_id}/status",
+    summary="Change a user status",
+    response_model=CurrentUserResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"model": ErrorResponse},
+        status.HTTP_404_NOT_FOUND: {"model": ErrorResponse},
+        status.HTTP_409_CONFLICT: {"model": ErrorResponse},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": ErrorResponse},
+    },
+)
+def update_user_status(
+    user_id: UUID,
+    payload: UserStatusUpdate,
+    current_admin: Annotated[User, Depends(require_admin)],
+    db: Annotated[Session, Depends(get_db)],
+) -> CurrentUserResponse:
+    """Ban or restore an account while preserving an active administrator."""
+
+    current_admin = _lock_and_revalidate_admin(db, current_admin, user_id)
+    target = _load_target(db, user_id)
+    if target.status == payload.status:
+        return _user_response(target)
+
+    if (
+        target.role == UserRole.ADMIN
+        and target.status == UserStatus.ACTIVE
+        and payload.status == UserStatus.BANNED
+        and _active_admin_count(db) <= 1
+    ):
+        logger.warning(
+            "admin_status_change_denied actor_id=%s target_id=%s reason=last_active_admin",
+            current_admin.id,
+            target.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="At least one active administrator is required",
+        )
+
+    target.status = payload.status
+    db.commit()
+    db.refresh(target)
+    logger.info(
+        "admin_user_status_changed actor_id=%s target_id=%s status=%s reason=%r",
+        current_admin.id,
+        target.id,
+        target.status.value,
+        payload.reason,
     )
     return _user_response(target)
 
@@ -239,21 +376,13 @@ def delete_user(
 ) -> DeleteResponse:
     """Delete an account while preserving at least one administrator."""
 
-    db.execute(select(func.pg_advisory_xact_lock(ADMIN_INVARIANT_LOCK_KEY)))
-    current_admin = _revalidate_admin_locked(db, current_admin, user_id)
-    target = db.get(User, user_id)
-    if target is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
+    current_admin = _lock_and_revalidate_admin(db, current_admin, user_id)
+    target = _load_target(db, user_id)
     actor_id = current_admin.id
     target_id = target.id
 
-    if target.role == UserRole.ADMIN:
-        admin_count = db.scalar(
-            select(func.count()).select_from(User).where(User.role == UserRole.ADMIN)
-        ) or 0
+    if target.role == UserRole.ADMIN and target.status == UserStatus.ACTIVE:
+        admin_count = _active_admin_count(db)
         if admin_count <= 1:
             logger.warning(
                 "admin_delete_denied actor_id=%s target_id=%s reason=last_admin",

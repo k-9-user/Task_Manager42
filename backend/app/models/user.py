@@ -6,9 +6,11 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Index,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -22,6 +24,11 @@ ADMIN_INVARIANT_LOCK_KEY = 0x544D3432
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     USER = "user"
+
+
+class UserStatus(str, enum.Enum):
+    ACTIVE = "active"
+    BANNED = "banned"
 
 
 class User(Base):
@@ -46,6 +53,7 @@ class User(Base):
             "oauth_id",
             name="uq_users_oauth_identity",
         ),
+        Index("uq_users_username_lower", text("lower(username)"), unique=True),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -54,6 +62,7 @@ class User(Base):
     oauth_provider = Column(String, nullable=True)
     oauth_id = Column(String, nullable=True)
     username = Column(String, unique=True, nullable=False)
+    display_name = Column(String, nullable=True)
     role = Column(
         Enum(
             UserRole,
@@ -63,6 +72,16 @@ class User(Base):
         nullable=False,
         default=UserRole.USER,
         server_default=UserRole.USER.value,
+    )
+    status = Column(
+        Enum(
+            UserStatus,
+            name="user_status",
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
+        nullable=False,
+        default=UserStatus.ACTIVE,
+        server_default=UserStatus.ACTIVE.value,
     )
     avatar_url = Column(
         String,

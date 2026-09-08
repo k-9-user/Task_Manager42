@@ -38,7 +38,7 @@ backend/tests/test_auth.py
 - [x] Créer `backend/app/config.py`, `backend/app/database.py`
 - [ ] Créer TOUS les modèles de base même si B/C les utilisent : `user.py` (le tien), et prévoir avec eux `project.py`, `task.py` (peuvent être créés par B directement, à coordonner)
 - [x] Initialiser Alembic + première migration
-- [ ] **Prévenir l'équipe dès que `docker compose up` fonctionne**
+- [x] **Prévenir l'équipe dès que `docker compose up` fonctionne**
 
 ## Semaine 2 — Auth email/password + permissions
 
@@ -47,22 +47,24 @@ backend/tests/test_auth.py
 - [x] `backend/app/routers/auth.py` : `POST /api/auth/register`, `POST /api/auth/login`
 - [x] `backend/app/auth/dependencies.py` : `get_current_user()`, `require_admin()`
 - [x] `GET /api/users/me`, `PUT /api/users/me`
-- [ ] **Prévenir D dès que login/register est testable**
+- [x] **Prévenir D dès que login/register est testable**
 
 ## Semaine 3 — OAuth + rôles admin
 
 - [x] `backend/app/auth/oauth.py` : config Google OAuth
 - [x] `GET /api/auth/oauth/google`
 - [x] `GET /api/users` (admin, liste paginée), `PUT /api/users/{id}/role`, `DELETE /api/users/{id}`
+- [x] `PUT /api/users/{id}`, `PUT /api/users/{id}/status` : renommage admin et bannissement réversible
 - [x] `backend/app/utils/validators.py` : validation stricte des inputs
-- [x] Vérifier que seul un admin peut changer un rôle ou supprimer un user
+- [x] Vérifier que seul un admin peut changer un rôle, bannir ou supprimer un user
 
 ## Semaine 3-4 — HTTPS, Health check, sécurité finale
 
-- [ ] Config Nginx en reverse proxy HTTPS (certificat auto-signé en local)
+- [x] Config Nginx en reverse proxy HTTPS (certificat auto-signé en local)
+- [x] Config statique Nginx HTTPS et exposition directe backend/frontend réservée à l'override de développement
 - [x] `backend/app/routers/health.py` : `GET /health`
 - [x] Revue sécurité : CORS
-- [ ] Rate limiting basique sur `/auth`
+- [x] Rate limiting Nginx par IP sur login/register/démarrage OAuth (`10/min`, burst `5`)
 - [x] `backend/tests/test_auth.py`
 - [ ] Aide à l'intégration finale
 

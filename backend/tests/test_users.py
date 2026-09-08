@@ -1,13 +1,15 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from typing import Any
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth.dependencies import require_admin
 from app.database import SessionLocal
 from app.main import app
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 
 
 def test_users_list_enforces_admin_access_and_bounded_pagination(
@@ -59,9 +61,21 @@ def test_regular_user_cannot_change_roles_or_delete_users(
         f"/api/users/{target.id}",
         headers=headers,
     )
+    rename = client.put(
+        f"/api/users/{target.id}",
+        headers=headers,
+        json={"display_name": "Nope"},
+    )
+    ban = client.put(
+        f"/api/users/{target.id}/status",
+        headers=headers,
+        json={"status": "banned"},
+    )
 
     assert role_change.status_code == 403
     assert deletion.status_code == 403
+    assert rename.status_code == 403
+    assert ban.status_code == 403
     with SessionLocal() as session:
         persisted_target = session.get(User, target.id)
         assert persisted_target is not None
@@ -206,3 +220,109 @@ def test_admin_is_revalidated_after_the_invariant_lock(
     assert response.status_code == 403
     with SessionLocal() as session:
         assert session.get(User, target.id) is not None
+
+
+def test_admin_can_rename_another_user(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    admin = user_factory(role=UserRole.ADMIN)
+    target = user_factory()
+
+    response = client.put(
+        f"/api/users/{target.id}",
+        headers=auth_headers(admin),
+        json={"username": "admin_renamed", "display_name": "Admin Renamed"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["username"] == "admin_renamed"
+    assert response.json()["data"]["user"]["display_name"] == "Admin Renamed"
+
+
+def test_admin_can_ban_and_unban_user_with_immediate_token_effect(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    admin = user_factory(role=UserRole.ADMIN)
+    target = user_factory()
+    target_headers = auth_headers(target)
+
+    banned = client.put(
+        f"/api/users/{target.id}/status",
+        headers=auth_headers(admin),
+        json={"status": "banned", "reason": "abuse report"},
+    )
+    denied = client.get("/api/users/me", headers=target_headers)
+    unbanned = client.put(
+        f"/api/users/{target.id}/status",
+        headers=auth_headers(admin),
+        json={"status": "active"},
+    )
+    restored = client.get("/api/users/me", headers=target_headers)
+
+    assert banned.status_code == 200
+    assert banned.json()["data"]["user"]["status"] == "banned"
+    assert denied.status_code == 403
+    assert unbanned.status_code == 200
+    assert unbanned.json()["data"]["user"]["status"] == "active"
+    assert restored.status_code == 200
+
+
+def test_sole_active_admin_cannot_be_banned(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    active_admin = user_factory(role=UserRole.ADMIN)
+    user_factory(role=UserRole.ADMIN, status=UserStatus.BANNED)
+
+    response = client.put(
+        f"/api/users/{active_admin.id}/status",
+        headers=auth_headers(active_admin),
+        json={"status": "banned"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"] == "At least one active administrator is required"
+
+
+def test_concurrent_admin_bans_preserve_one_active_admin(
+    database: object,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    first = user_factory(role=UserRole.ADMIN)
+    second = user_factory(role=UserRole.ADMIN)
+    barrier = Barrier(2)
+
+    def ban(actor: User, target: User) -> int:
+        barrier.wait()
+        with TestClient(app, base_url="https://testserver") as test_client:
+            response = test_client.put(
+                f"/api/users/{target.id}/status",
+                headers=auth_headers(actor),
+                json={"status": "banned"},
+            )
+        return response.status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        statuses = list(
+            executor.map(
+                lambda pair: ban(*pair),
+                ((first, second), (second, first)),
+            )
+        )
+
+    with SessionLocal() as session:
+        active_admins = session.scalar(
+            select(func.count()).select_from(User).where(
+                User.role == UserRole.ADMIN,
+                User.status == UserStatus.ACTIVE,
+            )
+        )
+
+    assert sorted(statuses) == [200, 403]
+    assert active_admins == 1

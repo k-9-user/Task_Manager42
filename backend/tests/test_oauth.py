@@ -14,7 +14,7 @@ from starlette.requests import Request
 from app.auth.oauth import get_google_oauth_client
 from app.database import SessionLocal
 from app.main import app
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 from app.routers.auth import get_google_client
 
 
@@ -237,6 +237,23 @@ def test_oauth_only_account_rejects_password_login(
 
     assert response.status_code == 401
     assert response.json()["error"] == "Invalid email or password"
+
+
+def test_google_callback_rejects_a_banned_provider_account(
+    client: TestClient,
+    user_factory: Any,
+) -> None:
+    user_factory(
+        email=VALID_CLAIMS["email"],
+        oauth_id=VALID_CLAIMS["sub"],
+        status=UserStatus.BANNED,
+    )
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+
+    response = client.get("/api/auth/oauth/google/callback")
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Account is banned"
 
 
 def test_oauth_failures_do_not_log_secrets(
