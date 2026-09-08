@@ -1,0 +1,31 @@
+
+
+.projects-page {
+	display: flex;
+	flex-direction: column;
+	min-height:  100vh;
+	gap: 1.5rem;
+	align-items: center;
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.project-form input{
+	/* padding: 12px; */
+	color: chartreuse;
+}
+
+@media (max-width: 480px)
+{
+	.projects-page{
+		padding: 1rem;
+		justify-content: flex-start;
+		padding-top: 3rem;
+		align-items: center;
+	}
+}

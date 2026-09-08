@@ -1,0 +1,81 @@
+{
+	"navbar":
+	{
+		"projects": "Projects",
+		"login": "Log in",
+		"logout": "Log out",
+		"search": "To Search"
+	},
+	"login":
+	{
+		"title": "Transcendance",
+		"username": "Username",
+		"password": "Password",
+		"submit": "Log in",
+		"noAccount": "No account?",
+		"register": "Sign up"
+	},
+	"register":
+	{
+		"confirmpassword": "Confirm pasword",
+		"createcount": "Creat my account",
+		"return": "return",
+		"falsepassword": "The passwords do not match",
+		"username": "Please enter a username",
+		"email": "Please enter an email address",
+		"password": "Please enter a password",
+		"cpassword": "Please confirm your password",
+		"invaemail": "Invalid email address"
+	},
+	"loading":
+	{
+		"load": "loading ..."
+	},
+	"error":
+	{
+		"err": "Error"
+	},
+	"admin":
+	{
+		"usermanag": "User management",
+		"role": "role",
+		"action": "action",
+		"user": "User",
+		"admin": "Administrator",
+		"rmuser": "Delete this user ?",
+		"delete": "Delete"
+	},
+	"projects":
+	{
+		"title": "Projects",
+		"namePlaceholder": "Project name",
+		"create": "Create",
+		"description": "Description (optional)"
+	},
+	"random":
+	{
+		"myprofile": "My profile",
+		"projet": "Project",
+		"recherche" : "Search",
+		"mrecherche": "Enter a word to search for",
+		"ttstatus": "all statuses",
+		"afaire": "Things to Do",
+		"encours": "In Progress",
+		"termine": "Done",
+		"rehercheencours": "Searching ...",
+		"impossibleserv": "Unable to contact the server: ",
+		"noreult": "No results found",
+		"nameproject": "The project name is required",
+		"addfichier": "+ Add a file",
+		"sfichier": "Select a file",
+		"envoi": "Sending ...",
+		"ajfichier": "Add the file",
+		"erupload": "Upload error",
+		"ersurv": "An error has occurred"
+	},
+	"footer":
+	{
+		"pc": "Privacy Policy",
+		"cdu": "Terms of Use"
+	}
+}
