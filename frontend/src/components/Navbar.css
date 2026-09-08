@@ -1,5 +1,5 @@
 .navbar {
-	font-family: 'Times New Roman', Times, serif;
+	font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -28,7 +28,7 @@
 .navbar-links a {
   color: #cfcfe0;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   padding: 0.4rem 0.8rem;
   border-radius: 6px;

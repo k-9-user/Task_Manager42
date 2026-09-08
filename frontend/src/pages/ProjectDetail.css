@@ -1,0 +1,14 @@
+
+.project-detail-page{
+	flex: 1;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	justify-content: center;
+	align-items: center;
+	color: #ffffff;
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+}

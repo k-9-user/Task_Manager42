@@ -1,8 +1,11 @@
+import { useTranslation } from "react-i18next";
 import TaskCard from "./TaskCard";
+import './TaskBoard.css';
 
 function TaskBoard({ tasks, onStatusChange })
 {
-	const colonne = [{ key: "todo", label: "A faire"}, { key: "in_progress", label: "En cours"}, { key: "done", label: "Termine" }];
+	const { t } = useTranslation()
+	const colonne = [{ key: "todo", label: t("random.afaire")}, { key: "in_progress", label: t("random.encours")}, { key: "done", label: t("random.termine") }];
 
 	return ( <div className="task-board">
 		{colonne.map((col) => (<div key={col.key} className="task-colonne">

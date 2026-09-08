@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate, Link } from "react-router-dom";
+import './register.css';
+import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
-import { register as registerApi } from "../services/authService";
-import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Register()
 {
@@ -11,54 +12,66 @@ function Register()
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState("");
-	const { login } = useAuth();
-	const navigate = useNavigate();
+	const { t } = useTranslation();
 
-	async function handleSubmit (e) {
+	function handleSubmit (e) {
 		e.preventDefault();
 		if (!username.trim() || !email.trim() || !password || !confirmPassword)
 		{
 			if (!username.trim())
-				setError("Veuillez entrer un nom d'utilisateur");
+				setError(t("register.username"));
 			else if (!email.trim())
-				setError("Veuillez entrer une adresse mail");
+				setError(t("register.email"));
 			else if (!password)
-				setError("Veuillez entrer un mot de passe");
+				setError(t("register.password"));
 			else
-				setError("Veuillez confirmer votre mot de passe");
+				setError(t("register.cpassword"));
 			return ;
 		}
 		if (!isvalidemail(email))
 		{
-			setError("Adresse email invalide");
+			setError(t("register.invaemail"));
 			return ;
 		}
 		if (password !== confirmPassword)
 		{
-			setError("Les mots de passe ne correspondent pas");
+			setError(t("register.falsepassword"));
 			return ;
 		}
 		setError("");
-		try {
-			const data = await registerApi(username, email, password);
-			login(data.token);
-			navigate("/projects");
-		} catch (err) {
-			setError(err.message);
-		}
+		console.log(`Nouveau compte : ${username}, ${email}`);
 	}
 	return (
 		<div className='register-page'>
-			<form className='register-box' onSubmit={handleSubmit}>
-				<h1>Creer un compte</h1>
-				{error && <p className='error'>{error}</p>}
-				<input type="text" placeholder="Nom d'utilisateur" required value={username} onChange={(e) => setUsername(e.target.value)} />
-				<input type="email" placeholder="Email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-				<input type="password" placeholder='Mot de passe' required value={password} onChange={(e) => setPassword(e.target.value)} />
-				<input type="password" placeholder='Confirmer le mot de passe' required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-				<button>Creer mon compte</button>
-				<p><Link to="/login"> Retour</Link></p>
-			</form>
+			<h1>Transcendance</h1>
+			<div className='register-window'>
+				<div className='register-titlebar'>{t("login.register")}</div>
+				<form className='register-box' onSubmit={handleSubmit}>
+					{error && <p className='error'>{error}</p>}
+					<div className='input-group'>
+						<div className='input-field'>
+							<label htmlFor='username'>{t("login.username")} : </label>
+							<input id='username' type="text" required value={username} onChange={(e) => setUsername(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='email'>Email : </label>
+							<input id='email' type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='password'>{t("login.password")} : </label>
+							<input id='password' type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+						</div>
+						<div className='input-field'>
+							<label htmlFor='confirmpassword'>{t("register.confirmpassword")} : </label>
+							<input id='confirmpassword' type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+						</div>
+						<button>{t("register.createcount")}</button>
+						<div className='login-link'>
+							<Link className='btn-link' to="/login">{t("register.return")}</Link>
+						</div>
+					</div>
+				</form>
+			</div>
 		</div>
 	);
 }
