@@ -6,7 +6,10 @@ from sqlalchemy import engine_from_config, pool
 from app.config import get_settings
 from app.database import Base
 from app.models.user import User
-
+from app.models.project import Project
+from app.models.project_member import ProjectMember
+from app.models.task import Task
+from app.models.notification import Notification
 
 config = context.config
 

@@ -1,146 +1,147 @@
+"""
+Fixtures partagées pour les tests B (projects/tasks/gdpr).
+
+⚠️ Ces tests ont besoin de `app.database` (Base, get_db), `app.models.user`
+et `app.auth.dependencies.get_current_user`, livrés par Personne A — pas
+encore présents dans ce dossier `backend/` sur cette branche (seulement dans
+`Partie-A/` pour l'instant). Ils sont écrits pour tourner dès que ses
+fichiers seront fusionnés ici, exactement comme les routers eux-mêmes.
+
+Nécessite une vraie base Postgres : les modèles utilisent le type UUID
+spécifique à Postgres (`sqlalchemy.dialects.postgresql.UUID`), incompatible
+avec SQLite. Pointer `TEST_DATABASE_URL` vers une DB de test dédiée, jamais
+la DB de dev — ce fichier crée/détruit tout le schéma dessus.
+
+Pas de dépendance à `app/main.py` (pas encore livré / pas assigné) : on
+construit ici une appli FastAPI de test minimale, avec seulement les routers
+B (projects, tasks, gdpr) et le même exception handler `{success, error}`
+que celui documenté pour le vrai `main.py`.
+"""
+
 import os
-from collections.abc import Callable, Generator
-from pathlib import Path
-from uuid import uuid4
+import uuid
 
 import pytest
-from alembic import command
-from alembic.config import Config
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
 
+from app.auth.dependencies import get_current_user
+from app.database import Base, get_db
+from app.models.user import User
+from app.routers import gdpr, notifications, projects, tasks
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
-
-os.environ["DATABASE_URL"] = (
-    TEST_DATABASE_URL
-    or "postgresql://taskmanager:taskmanager@127.0.0.1/taskmanager_missing_test"
-)
-os.environ["JWT_SECRET"] = "test-jwt-signing-secret-at-least-32-characters"
-os.environ["JWT_EXPIRATION"] = "3600"
-os.environ["OAUTH_GOOGLE_CLIENT_ID"] = "test-google-client"
-os.environ["OAUTH_GOOGLE_CLIENT_SECRET"] = "test-google-secret"
-os.environ["OAUTH_GOOGLE_REDIRECT_URI"] = (
-    "https://testserver/api/auth/oauth/google/callback"
-)
-os.environ["OAUTH_SESSION_SECRET"] = (
-    "test-oauth-session-secret-at-least-32-characters"
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL", "postgresql://user:password@localhost:5432/taskmanager_test"
 )
 
+engine = create_engine(TEST_DATABASE_URL)
+TestingSessionLocal = sessionmaker(bind=engine, autoflush=False)
 
-def _checked_test_database_url() -> str:
-    if not TEST_DATABASE_URL:
-        pytest.fail(
-            "Database/API tests require TEST_DATABASE_URL for a disposable "
-            "PostgreSQL database whose name ends in '_test'.",
-            pytrace=False,
+
+def _build_test_app() -> FastAPI:
+    test_app = FastAPI()
+    test_app.include_router(projects.router)
+    test_app.include_router(tasks.router)
+    test_app.include_router(gdpr.router)
+    test_app.include_router(notifications.router)
+
+    @test_app.exception_handler(HTTPException)
+    async def _http_exception_handler(request, exc: HTTPException) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code, content={"success": False, "error": exc.detail}
         )
 
-    url = make_url(TEST_DATABASE_URL)
-    if url.get_backend_name() != "postgresql" or not (
-        url.database and url.database.endswith("_test")
-    ):
-        pytest.fail(
-            "Refusing database tests: TEST_DATABASE_URL must be PostgreSQL "
-            "and its database name must end in '_test'.",
-            pytrace=False,
-        )
-    return TEST_DATABASE_URL
+    return test_app
 
 
-@pytest.fixture(scope="session")
-def alembic_config() -> Config:
-    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
-    config.set_main_option(
-        "sqlalchemy.url",
-        _checked_test_database_url().replace("%", "%%"),
-    )
-    return config
+app = _build_test_app()
 
 
-@pytest.fixture(scope="session")
-def database_engine(alembic_config: Config) -> Generator[Engine, None, None]:
-    database_url = _checked_test_database_url()
-    engine = create_engine(database_url, pool_pre_ping=True)
+@pytest.fixture(scope="session", autouse=True)
+def _create_schema():
+    Base.metadata.create_all(engine)
+    yield
+    Base.metadata.drop_all(engine)
+
+
+@pytest.fixture
+def db_session():
+    """Une session par test, dans une transaction annulée à la fin — aucun
+    test ne pollue les suivants, pas besoin de nettoyer la DB à la main.
+
+    Le code testé (routers) appelle lui-même `db.commit()`/`db.rollback()`
+    (ex: `add_member` sur IntegrityError) — un simple `connection.begin()`
+    se retrouverait "déassocié" dès le premier commit interne. On utilise
+    donc un SAVEPOINT (`begin_nested`) redémarré automatiquement à chaque
+    fin de transaction interne, pattern standard SQLAlchemy pour ce cas."""
+
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = TestingSessionLocal(bind=connection)
+
+    nested = connection.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def _restart_savepoint(sess, trans):
+        nonlocal nested
+        if not nested.is_active:
+            nested = connection.begin_nested()
+
     try:
-        command.upgrade(alembic_config, "head")
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-    except OperationalError:
-        engine.dispose()
-        pytest.fail(
-            "Disposable PostgreSQL test database is not reachable; create it "
-            "and rerun with TEST_DATABASE_URL.",
-            pytrace=False,
-        )
-
-    yield engine
-    engine.dispose()
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture
-def database(database_engine: Engine) -> Generator[Engine, None, None]:
-    with database_engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE users CASCADE"))
-    yield database_engine
-    with database_engine.begin() as connection:
-        connection.execute(text("TRUNCATE TABLE users CASCADE"))
+def make_user(db_session):
+    """Factory : crée un vrai user en base (nécessaire pour les FK) et le renvoie."""
 
-
-@pytest.fixture
-def client(database: Engine) -> Generator[TestClient, None, None]:
-    from app.main import app
-
-    app.dependency_overrides.clear()
-    with TestClient(app, base_url="https://testserver") as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def user_factory(
-    database: Engine,
-) -> Callable[..., object]:
-    from app.auth.security import hash_password
-    from app.database import SessionLocal
-    from app.models.user import User, UserRole, UserStatus
-
-    def create_user(
-        *,
-        email: str | None = None,
-        username: str | None = None,
-        role: UserRole = UserRole.USER,
-        status: UserStatus = UserStatus.ACTIVE,
-        oauth_id: str | None = None,
-    ) -> User:
-        identity = uuid4().hex
-        is_oauth = oauth_id is not None
+    def _make(email: str | None = None, username: str | None = None) -> User:
+        suffix = uuid.uuid4().hex[:8]
         user = User(
-            email=email or f"user-{identity}@example.com",
-            username=username or f"user_{identity}",
-            role=role,
-            status=status,
-            password_hash=None if is_oauth else hash_password("valid-password-42"),
-            oauth_provider="google" if is_oauth else None,
-            oauth_id=oauth_id,
+            email=email or f"user-{suffix}@test.dev",
+            username=username or f"user_{suffix}",
         )
-        with SessionLocal() as session:
-            session.add(user)
-            session.commit()
-            session.refresh(user)
-            session.expunge(user)
+        db_session.add(user)
+        db_session.flush()
         return user
 
-    return create_user
+    return _make
 
 
 @pytest.fixture
-def auth_headers() -> Callable[[object], dict[str, str]]:
-    from app.auth.security import create_access_token
+def client(db_session, make_user):
+    """TestClient avec `get_db`/`get_current_user` substitués. Utilisateur
+    connecté par défaut : un nouvel utilisateur de test, accessible via
+    `client.current_user`. Change d'utilisateur avec la fixture `login_as`."""
 
-    def headers(user: object) -> dict[str, str]:
-        return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+    current_user = make_user()
 
-    return headers
+    def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = lambda: current_user
+
+    test_client = TestClient(app)
+    test_client.current_user = current_user
+    yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def login_as(client):
+    """Change l'utilisateur connecté en cours de test (ex: pour vérifier
+    qu'un viewer se fait bien refuser une action)."""
+
+    def _login_as(user: User) -> None:
+        app.dependency_overrides[get_current_user] = lambda: user
+
+    return _login_as
