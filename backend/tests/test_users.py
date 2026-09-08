@@ -326,3 +326,80 @@ def test_concurrent_admin_bans_preserve_one_active_admin(
 
     assert sorted(statuses) == [200, 403]
     assert active_admins == 1
+
+
+def test_admin_rename_conflicts_are_reported_and_case_insensitive(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    admin = user_factory(role=UserRole.ADMIN, username="admin_actor")
+    target = user_factory(username="target_user")
+    user_factory(username="taken_name")
+    headers = auth_headers(admin)
+
+    conflict = client.put(
+        f"/api/users/{target.id}",
+        headers=headers,
+        json={"username": "taken_name"},
+    )
+    shadowing = client.put(
+        f"/api/users/{target.id}",
+        headers=headers,
+        json={"username": "Taken_Name"},
+    )
+    accepted = client.put(
+        f"/api/users/{target.id}",
+        headers=headers,
+        json={"username": "Renamed_Target"},
+    )
+
+    assert conflict.status_code == 409
+    assert conflict.json()["error"] == "Username already taken"
+    assert shadowing.status_code == 409
+    assert accepted.status_code == 200
+    assert accepted.json()["data"]["user"]["username"] == "Renamed_Target"
+
+
+def test_user_list_pages_newest_first_without_gaps_or_repeats(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    admin = user_factory(role=UserRole.ADMIN)
+    for index in range(6):
+        user_factory(username=f"paged_user_{index}")
+    headers = auth_headers(admin)
+
+    first_page = client.get("/api/users?page=1&limit=3", headers=headers)
+    second_page = client.get("/api/users?page=2&limit=3", headers=headers)
+    third_page = client.get("/api/users?page=3&limit=3", headers=headers)
+    past_the_end = client.get("/api/users?page=4&limit=3", headers=headers)
+    rejected = client.get("/api/users?page=0", headers=headers)
+    overflowing = client.get("/api/users?page=99999999999999", headers=headers)
+
+    # 1 admin + 6 members = 7 rows, so limit=3 gives pages of 3, 3, 1 and then 0.
+    assert first_page.status_code == 200
+    for page in (first_page, second_page, third_page, past_the_end):
+        assert page.json()["data"]["total"] == 7
+    assert len(first_page.json()["data"]["users"]) == 3
+    assert len(second_page.json()["data"]["users"]) == 3
+    assert len(third_page.json()["data"]["users"]) == 1
+    assert past_the_end.json()["data"]["users"] == []
+
+    collected = [
+        user["id"]
+        for page in (first_page, second_page, third_page, past_the_end)
+        for user in page.json()["data"]["users"]
+    ]
+    assert len(collected) == len(set(collected)) == 7
+
+    created = [
+        user["created_at"]
+        for page in (first_page, second_page, third_page, past_the_end)
+        for user in page.json()["data"]["users"]
+    ]
+    assert created == sorted(created, reverse=True)
+
+    assert rejected.status_code == 422
+    assert overflowing.status_code == 422

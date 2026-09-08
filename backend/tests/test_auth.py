@@ -19,7 +19,11 @@ from app.auth.security import (
 from app.database import SessionLocal
 from app.main import app
 from app.models.user import User, UserRole, UserStatus
-from app.schemas.user import UserRegister, UserUpdate
+from app.schemas.user import (
+    UserRegister,
+    UserStatusUpdate,
+    UserUpdate,
+)
 
 
 VALID_REGISTRATION = {
@@ -74,10 +78,66 @@ def test_registration_schema_is_strict() -> None:
             UserRegister.model_validate(payload)
 
 
-def test_profile_schema_rejects_unsafe_local_avatar_paths() -> None:
-    for avatar in ("/../admin", "/avatars/../../private.png"):
+def test_profile_schema_rejects_unsafe_avatars() -> None:
+    unsafe_avatars = (
+        "/../admin",
+        "/avatars/../../private.png",
+        "/avatars/%2e%2e/private.png",
+        "http://images.example.com/a.png",
+        "//images.example.com/a.png",
+        "https://user:password@images.example.com/a.png",
+        "https://images.example.com:0/a.png",
+        "javascript:alert(1)",
+        "avatars/relative.png",
+        "https://images.example.com/a b.png",
+        "https://images.example.com/a\\b.png",
+        "https://images.example.com/a\tb.png",
+        "  ",
+        "/" + "a" * 3000,
+    )
+    for avatar in unsafe_avatars:
         with pytest.raises(ValidationError):
             UserUpdate.model_validate({"avatar": avatar})
+
+
+def test_profile_schema_accepts_safe_avatars() -> None:
+    safe_avatars = (
+        "/static/default-avatar.png",
+        "/avatars/nested/user.png",
+        "https://images.example.com/a.png",
+        "https://images.example.com:8443/a.png",
+    )
+    for avatar in safe_avatars:
+        assert UserUpdate.model_validate({"avatar": avatar}).avatar == avatar
+
+
+def test_display_name_and_reason_trim_and_reject_control_characters() -> None:
+    assert UserUpdate.model_validate(
+        {"display_name": "  Jean Dupont  "}
+    ).display_name == "Jean Dupont"
+    assert UserStatusUpdate.model_validate(
+        {"status": "banned", "reason": "  abuse report  "}
+    ).reason == "abuse report"
+
+    for blank in ("", "   "):
+        with pytest.raises(ValidationError):
+            UserUpdate.model_validate({"display_name": blank})
+        with pytest.raises(ValidationError):
+            UserStatusUpdate.model_validate({"status": "banned", "reason": blank})
+
+    for control in ("a\tb", "a\nb", "a\x7fb"):
+        with pytest.raises(ValidationError):
+            UserUpdate.model_validate({"display_name": control})
+        with pytest.raises(ValidationError):
+            UserStatusUpdate.model_validate({"status": "banned", "reason": control})
+
+
+def test_email_is_normalized_before_validation() -> None:
+    registration = UserRegister.model_validate(
+        {**VALID_REGISTRATION, "email": "  First.User@Example.COM  "}
+    )
+
+    assert str(registration.email) == "first.user@example.com"
 
 
 def test_cors_allows_configured_frontend_preflight() -> None:
@@ -313,3 +373,79 @@ def test_banned_user_cannot_login_or_use_existing_token(
     assert current.json()["error"] == "Account is banned"
     assert login.status_code == 403
     assert login.json()["error"] == "Account is banned"
+
+
+def test_registration_matches_a_stored_email_regardless_of_input_case(
+    client: TestClient,
+) -> None:
+    assert client.post("/api/auth/register", json=VALID_REGISTRATION).status_code == 201
+
+    duplicate = client.post(
+        "/api/auth/register",
+        json={
+            **VALID_REGISTRATION,
+            "email": "  FIRST@Example.COM ",
+            "username": "other_name",
+        },
+    )
+    login = client.post(
+        "/api/auth/login",
+        json={
+            "email": "FIRST@EXAMPLE.COM",
+            "password": VALID_REGISTRATION["password"],
+        },
+    )
+
+    assert duplicate.status_code == 409
+    assert duplicate.json()["error"] == "Email already registered"
+    assert login.status_code == 200
+    assert login.json()["data"]["user"]["email"] == "first@example.com"
+
+
+def test_usernames_are_unique_case_insensitively(client: TestClient) -> None:
+    first = client.post("/api/auth/register", json=VALID_REGISTRATION)
+
+    shadowed = client.post(
+        "/api/auth/register",
+        json={
+            **VALID_REGISTRATION,
+            "email": "second@example.com",
+            "username": "First_User",
+        },
+    )
+
+    assert first.status_code == 201
+    assert first.json()["data"]["user"]["username"] == "first_user"
+    assert shadowed.status_code == 409
+    assert shadowed.json()["error"] == "Username already taken"
+
+
+def test_profile_rename_preserves_casing_but_cannot_shadow_another_user(
+    client: TestClient,
+) -> None:
+    first = client.post("/api/auth/register", json=VALID_REGISTRATION)
+    second = client.post(
+        "/api/auth/register",
+        json={
+            "email": "second@example.com",
+            "username": "second_user",
+            "password": "valid-password",
+        },
+    )
+    second_headers = {"Authorization": f"Bearer {second.json()['data']['token']}"}
+
+    shadowing = client.put(
+        "/api/users/me",
+        headers=second_headers,
+        json={"username": "First_User"},
+    )
+    cased = client.put(
+        "/api/users/me",
+        headers=second_headers,
+        json={"username": "Second_User"},
+    )
+
+    assert first.status_code == 201
+    assert shadowing.status_code == 409
+    assert cased.status_code == 200
+    assert cased.json()["data"]["user"]["username"] == "Second_User"

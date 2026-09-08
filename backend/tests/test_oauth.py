@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
@@ -45,9 +46,18 @@ def _override_google_client(fake_client: object) -> None:
     app.dependency_overrides[get_google_client] = lambda: fake_client
 
 
-def test_google_client_is_cached_and_uses_pkce() -> None:
+@pytest.fixture
+def isolated_google_client_cache() -> Generator[None, None, None]:
+    """Drop the process-wide client so a mutated one cannot leak between tests."""
+
+    get_google_oauth_client.cache_clear()
+    yield
     get_google_oauth_client.cache_clear()
 
+
+def test_google_client_is_cached_and_uses_pkce(
+    isolated_google_client_cache: None,
+) -> None:
     first = get_google_oauth_client()
     second = get_google_oauth_client()
     first.server_metadata.update(
