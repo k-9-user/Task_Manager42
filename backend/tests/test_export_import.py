@@ -13,7 +13,6 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.auth.dependencies import get_current_user
 from app.database import Base, get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -52,7 +51,9 @@ def app(db: Session, current_user: User) -> FastAPI:
         yield db
 
     test_app.dependency_overrides[get_db] = override_get_db
-    test_app.dependency_overrides[get_current_user] = lambda: current_user
+    test_app.dependency_overrides[
+        export_import.get_export_import_current_user
+    ] = lambda: current_user
     return test_app
 
 

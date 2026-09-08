@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.attachment import Attachment
@@ -46,8 +45,16 @@ UPLOAD_URL_PREFIX = "/uploads"
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
+def get_attachments_current_user() -> User:
+    """Fail closed until the shared JWT current-user dependency is available."""
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Shared current-user authentication is not available",
+    )
+
+
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_attachments_current_user)]
 ApplicationSettings = Annotated[Settings, Depends(get_settings)]
 
 

@@ -20,7 +20,6 @@ from fastapi import (
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -57,8 +56,16 @@ MAX_IMPORT_SIZE_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_RECORDS = 1000
 
 
+def get_export_import_current_user() -> User:
+    """Fail closed until the shared JWT current-user dependency is available."""
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Shared current-user authentication is not available",
+    )
+
+
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_export_import_current_user)]
 
 
 @router.get(

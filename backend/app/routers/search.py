@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -20,8 +19,16 @@ router = APIRouter(
 )
 
 
+def get_search_current_user() -> User:
+    """Fail closed until the shared JWT current-user dependency is available."""
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Shared current-user authentication is not available",
+    )
+
+
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_search_current_user)]
 
 
 @router.get(
