@@ -6,21 +6,12 @@ from sqlalchemy import engine_from_config, pool
 from app.config import get_settings
 from app.database import Base
 from app.models.user import User
-# Modèles B (projects/tasks/notifications) et C (api keys/attachments) —
-# importés pour que leurs tables soient détectées par `Base.metadata` lors
-# des `alembic revision --autogenerate`.
-from app.models.project import Project
-from app.models.project_member import ProjectMember
-from app.models.task import Task
-from app.models.notification import Notification
-from app.models.api_key import ApiKey
-from app.models.attachment import Attachment
 
 
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 database_url = get_settings().database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)

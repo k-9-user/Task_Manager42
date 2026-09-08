@@ -1,5 +1,4 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -8,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.security import decode_access_token
 from app.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserStatus
 
 
 bearer_scheme = HTTPBearer(
@@ -41,9 +40,14 @@ def get_current_user(
     except InvalidTokenError as exc:
         raise _credentials_exception() from exc
 
-    user = db.get(User, UUID(subject))
+    user = db.get(User, subject)
     if user is None:
         raise _credentials_exception()
+    if user.status == UserStatus.BANNED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is banned",
+        )
     return user
 
 
