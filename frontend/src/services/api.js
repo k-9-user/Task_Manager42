@@ -1,9 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL;
-import { useTranslation } from "react-i18next";
 
 export async function apiFetch(endpoint, options = {}) {
 	const token = localStorage.getItem("token");
-	const { t } = useTranslation();
 	const response = await fetch(`${API_URL}${endpoint}`,
 		{ ...options, headers: 
 			{
@@ -17,6 +15,6 @@ export async function apiFetch(endpoint, options = {}) {
 	const result = await response.json();
 
 	if (!result.success)
-		throw new Error(result.error || t("random.ersurv"));
+		throw new Error(result.error || "Une erreur est survenue");
 	return result.data;
 }

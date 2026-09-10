@@ -5,7 +5,7 @@ import { getProjectTasks, updateTaskStatus } from "../services/taskService.js";
 import { useTranslation } from "react-i18next";
 import './ProjectDetail.css';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 
 const mockTasks = [{ id: "1", title: "Créer la maquette", status: "todo" }, { id: "2", title: "Setup Vite", status: "done" }, { id: "3", title: "Page login", status: "in_progress" },];

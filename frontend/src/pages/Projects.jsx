@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import './Projects.css';
 
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const mockProjects = [
 	{ id: "1", name: "site vitrine", description: "Refonte du site client"},

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import './Profile.css';
 
 
-const USE_MOCK = true; // a retirer
+const USE_MOCK = false; // a retirer
 
 const mockUser = {
   username: "Pingouin",

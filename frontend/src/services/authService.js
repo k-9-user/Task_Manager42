@@ -1,21 +1,25 @@
 import { apiFetch } from "./api";
 
-export function login(email, password) {
-	return apiFetch("/api/auth/login", 
+export async function login(email, password) {
+	const data = await apiFetch("/api/auth/login", 
 		{
 			method: "POST",
 			body: JSON.stringify({ email, password}),
 		}
 	);
+	localStorage.setItem("token", data.token);
+	return data;
 }
 
-export function register(username, email, password) {
-	return apiFetch("/api/auth/register", 
+export async function register(username, email, password) {
+	const data = await apiFetch("/api/auth/register", 
 		{
 			method: "POST",
 			body: JSON.stringify({username, email, password}), 
 		}
 	);
+	localStorage.setItem("token", data.token);
+	return data;
 }
 
 export function logout() {

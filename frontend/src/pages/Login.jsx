@@ -1,21 +1,31 @@
 import { useState } from 'react'
-import "@fontsource/nabla";
 import './login.css';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { login } from '../services/authService';
 
 function Login()
 {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const { t } = useTranslation();
+	const navigate = useNavigate();
+	const [error, setError] = useState("");
 
-	function handleSubmit(e) {
+	async function handleSubmit(e) {
 		e.preventDefault();
-		console.log(`Utilisateur : ${email}`);
-		console.log(`Mot de passe : ${password}`);
-		// TODO: appel à authService.login(email, password)
+		setError("");
+
+		try
+		{
+			await login(email, password);
+			navigate("/projects");
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
 	}
 	return (
 		<div className="login-page">
@@ -26,6 +36,7 @@ function Login()
 			<div className='login-window'>
 				<div className='login-titlebar'>Connexion</div>
 				<form className="login-box" onSubmit={handleSubmit}>
+					{error && <p className='error'>{error}</p>}
 					<div className="input-group">
 						<div className='input-field'>
 							<label htmlFor='username'>{t("login.username")} : </label>
@@ -34,7 +45,7 @@ function Login()
 						</div>
 						<div className='input-field'>
 							<label htmlFor='password'>{t("login.password")} : </label>
-							<input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+							<input id='password' type="password" value={password} onChange={(e) => setPassword(e.target.value)}
 							/>
 						</div>
 						<div className='login-action'>

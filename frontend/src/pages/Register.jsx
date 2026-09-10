@@ -3,6 +3,8 @@ import './register.css';
 import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { register } from "../services/authService";
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Register()
@@ -13,8 +15,9 @@ function Register()
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState("");
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 
-	function handleSubmit (e) {
+	async function handleSubmit (e) {
 		e.preventDefault();
 		if (!username.trim() || !email.trim() || !password || !confirmPassword)
 		{
@@ -39,7 +42,16 @@ function Register()
 			return ;
 		}
 		setError("");
-		console.log(`Nouveau compte : ${username}, ${email}`);
+		// console.log(`Nouveau compte : ${username}, ${email}`);
+		try
+		{
+			await register(username, email, password);
+			navigate("/login");
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
 	}
 	return (
 		<div className='register-page'>

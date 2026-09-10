@@ -9,9 +9,9 @@ function PrivateRoute ({ children })
 
 	if (loading)
 		return (<p>{t("lodading.load")}</p>);
-	if (!!isAuthen)
+	if (!isAuthen)
 		return (<Navigate to="/login"/>);
-	return ({children});
+	return (children);
 }
 
 export default PrivateRoute;
