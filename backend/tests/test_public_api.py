@@ -513,7 +513,7 @@ def test_owner_or_editor_can_delete_task(
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"success": True, "data": {"success": True}}
+    assert response.json() == {"success": True, "data": {}}
     assert db.get(Task, task_id) is None
 
 
@@ -561,6 +561,8 @@ def _create_user(db: Session, label: str) -> User:
     user = User(
         email=f"{unique_label}@example.com",
         username=unique_label,
+        oauth_provider="google",
+        oauth_id=unique_label,
     )
     db.add(user)
     db.commit()
@@ -573,6 +575,7 @@ def _create_project(db: Session, owner: User, name: str) -> Project:
     db.add(project)
     db.commit()
     db.refresh(project)
+    _add_member(db, project, owner, ProjectRole.OWNER)
     return project
 
 

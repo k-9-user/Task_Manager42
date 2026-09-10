@@ -4,10 +4,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.api_key_auth import get_current_api_user
+from app.auth.project_permissions import lock_project_for_write
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -34,11 +35,12 @@ RawApiKey = Annotated[
 
 AUTH_RESPONSES = {
     status.HTTP_401_UNAUTHORIZED: {"description": "Missing or invalid API key."},
+    status.HTTP_403_FORBIDDEN: {"description": "Account is banned."},
     status.HTTP_429_TOO_MANY_REQUESTS: {"description": "API rate limit exceeded."},
 }
 WRITE_RESPONSES = {
     **AUTH_RESPONSES,
-    status.HTTP_403_FORBIDDEN: {"description": "Read-only project access."},
+    status.HTTP_403_FORBIDDEN: {"description": "Account is banned or project access is read-only."},
     status.HTTP_404_NOT_FOUND: {"description": "Resource not found or not visible."},
 }
 
@@ -71,8 +73,8 @@ class PublicTaskUpdate(BaseModel):
     "/tasks",
     summary="List accessible tasks",
     description=(
-        "Return tasks from projects owned by the API-key user or joined by that "
-        "user. Project viewers are allowed to read tasks."
+        "Return tasks from projects where the API-key user is a member. "
+        "Project viewers are allowed to read tasks."
     ),
     responses=AUTH_RESPONSES,
 )
@@ -107,8 +109,9 @@ def create_public_task(
     x_api_key: RawApiKey,
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
-    project = _get_accessible_project(db, payload.project_id, current_user.id)
-    _require_project_editor(db, project, current_user.id)
+    project = lock_project_for_write(
+        db, payload.project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+    )
 
     task = Task(project_id=project.id, title=payload.title)
     db.add(task)
@@ -135,9 +138,18 @@ def update_public_task(
     x_api_key: RawApiKey,
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
-    task = _get_accessible_task(db, task_id, current_user.id)
-    project = _get_accessible_project(db, task.project_id, current_user.id)
-    _require_project_editor(db, project, current_user.id)
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Task not found",
+    )
+    task = db.scalar(
+        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     if payload.status is not None:
         task.status = payload.status
@@ -164,22 +176,30 @@ def delete_public_task(
     x_api_key: RawApiKey,
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
-    task = _get_accessible_task(db, task_id, current_user.id)
-    project = _get_accessible_project(db, task.project_id, current_user.id)
-    _require_project_editor(db, project, current_user.id)
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Task not found",
+    )
+    task = db.scalar(
+        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     db.delete(task)
     db.commit()
 
-    return _success_response(success=True)
+    return _success_response()
 
 
 @router.get(
     "/projects",
     summary="List accessible projects",
     description=(
-        "Return projects owned by the API-key user or projects where that user is "
-        "a member."
+        "Return projects where the API-key user is a member."
     ),
     responses=AUTH_RESPONSES,
 )
@@ -202,59 +222,7 @@ def _project_access_filter(user_id: UUID):
     member_project_ids = select(ProjectMember.project_id).where(
         ProjectMember.user_id == user_id
     )
-    return or_(
-        Project.owner_id == user_id,
-        Project.id.in_(member_project_ids),
-    )
-
-
-def _get_accessible_project(db: Session, project_id: UUID, user_id: UUID) -> Project:
-    project = db.scalar(
-        select(Project).where(
-            Project.id == project_id,
-            _project_access_filter(user_id),
-        )
-    )
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-    return project
-
-
-def _get_accessible_task(db: Session, task_id: UUID, user_id: UUID) -> Task:
-    task = db.scalar(
-        select(Task)
-        .join(Project, Task.project_id == Project.id)
-        .where(
-            Task.id == task_id,
-            _project_access_filter(user_id),
-        )
-    )
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found",
-        )
-    return task
-
-
-def _require_project_editor(db: Session, project: Project, user_id: UUID) -> None:
-    if project.owner_id == user_id:
-        return
-
-    member_role = db.scalar(
-        select(ProjectMember.role).where(
-            ProjectMember.project_id == project.id,
-            ProjectMember.user_id == user_id,
-        )
-    )
-    if member_role not in {ProjectRole.OWNER, ProjectRole.EDITOR}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Project membership is read-only",
-        )
+    return Project.id.in_(member_project_ids)
 
 
 def _serialize_task(task: Task) -> dict[str, Any]:

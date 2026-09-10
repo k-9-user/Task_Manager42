@@ -11,11 +11,13 @@ from datetime import datetime, timedelta, timezone
 
 from app.models.notification import Notification, NotificationType
 
+from tests.conftest import member_client as client
+
 
 def _create_project_via_api(client, name="Projet test"):
     response = client.post("/api/projects", json={"name": name, "description": None})
     assert response.status_code == 201, response.text
-    return response.json()["data"]
+    return response.json()["data"]["project"]
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +54,7 @@ def test_update_task_status_notifies_assignee(client, make_user, login_as):
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks",
         json={"title": "Tache", "assignee_id": str(member.id)},
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     client.put(f"/api/tasks/{task_id}", json={"status": "in_progress"})
 
@@ -74,7 +76,7 @@ def test_reassign_task_notifies_new_assignee(client, make_user, login_as):
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks",
         json={"title": "Tache", "assignee_id": str(first.id)},
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     client.put(f"/api/tasks/{task_id}", json={"assignee_id": str(second.id)})
 
@@ -163,7 +165,7 @@ def test_mark_notification_read(client, db_session):
     response = client.put(f"/api/notifications/{notification.id}/read")
 
     assert response.status_code == 200
-    assert response.json()["data"]["read"] is True
+    assert response.json()["data"]["notification"]["read"] is True
 
 
 def test_mark_notification_read_not_mine(client, make_user, db_session):
@@ -210,7 +212,7 @@ def test_mark_all_read(client, db_session):
 
     response = client.put("/api/notifications/read-all")
     assert response.status_code == 200
-    assert response.json() == {"success": True}
+    assert response.json() == {"success": True, "data": {}}
 
     remaining_unread = client.get(
         "/api/notifications", params={"unread_only": True}

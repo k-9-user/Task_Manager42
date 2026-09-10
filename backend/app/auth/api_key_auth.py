@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.api_key import ApiKey
-from app.models.user import User
+from app.models.user import User, UserStatus
 
 
 def generate_api_key() -> str:
@@ -24,6 +24,11 @@ def authenticate_api_key(raw_api_key: str | None, db: Session) -> User:
     user = db.scalar(select(User).where(User.id == api_key.user_id))
     if user is None:
         raise _api_key_authentication_error()
+    if user.status == UserStatus.BANNED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is banned",
+        )
 
     return user
 

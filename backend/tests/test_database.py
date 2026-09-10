@@ -7,6 +7,10 @@ from sqlalchemy import Engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User, UserRole, UserStatus
+from app.database import Base
+
+
+pytestmark = pytest.mark.usefixtures("database")
 
 
 def _user_values(**overrides: object) -> dict[str, object]:
@@ -27,17 +31,24 @@ def _user_values(**overrides: object) -> dict[str, object]:
     return values
 
 
-def test_initial_users_migration_upgrades_and_downgrades(
+def test_complete_initial_migration_upgrades_and_downgrades(
     database_engine: Engine,
     alembic_config: Config,
 ) -> None:
     try:
         command.downgrade(alembic_config, "base")
-        assert "users" not in inspect(database_engine).get_table_names()
+        assert set(inspect(database_engine).get_table_names()) <= {"alembic_version"}
 
         command.upgrade(alembic_config, "head")
         inspector = inspect(database_engine)
-        assert "users" in inspector.get_table_names()
+        assert set(inspector.get_table_names()) == {
+            "alembic_version", "users", "projects", "project_members", "tasks",
+            "notifications", "attachments", "api_keys",
+        }
+        for table in Base.metadata.sorted_tables:
+            assert {column["name"] for column in inspector.get_columns(table.name)} == {
+                column.name for column in table.columns
+            }
         assert {
             "id",
             "email",
@@ -125,49 +136,33 @@ def test_database_enforces_unique_email_username_and_oauth_identity(
             transaction.rollback()
 
 
-def test_status_migration_repairs_a_populated_database_without_an_admin(
+def test_upgrade_head_preserves_populated_complete_schema(
     database_engine: Engine,
     alembic_config: Config,
 ) -> None:
-    first_id = uuid4()
-    second_id = uuid4()
-    try:
-        with database_engine.begin() as connection:
-            connection.execute(text("TRUNCATE TABLE users CASCADE"))
-        command.downgrade(alembic_config, "db_install")
-        with database_engine.begin() as connection:
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO users (
-                        id, email, password_hash, username, role,
-                        avatar_url, created_at, updated_at
-                    ) VALUES (
-                        :first_id, 'legacy-first@example.com', :password_hash,
-                        'legacy_first', 'user', '/static/default-avatar.png',
-                        '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'
-                    ), (
-                        :second_id, 'legacy-second@example.com', :password_hash,
-                        'legacy_second', 'user', '/static/default-avatar.png',
-                        '2026-01-02T00:00:00Z', '2026-01-02T00:00:00Z'
-                    )
-                    """
-                ),
-                {
-                    "first_id": first_id,
-                    "second_id": second_id,
-                    "password_hash": "$argon2id$legacy-placeholder",
-                },
-            )
+    # The approved disposable reset replaces the old incremental status migration.
+    values = _user_values(role=UserRole.ADMIN, display_name="Preserved admin")
+    with database_engine.begin() as connection:
+        connection.execute(User.__table__.insert().values(values))
 
-        command.upgrade(alembic_config, "head")
-        with database_engine.connect() as connection:
-            roles = connection.execute(
-                text("SELECT id, role::text FROM users ORDER BY created_at, id")
-            ).all()
+    command.upgrade(alembic_config, "head")
+    with database_engine.connect() as connection:
+        rows = connection.execute(
+            text("SELECT id, role::text, status::text, display_name FROM users")
+        ).all()
+    assert rows == [(values["id"], "admin", "active", "Preserved admin")]
 
-        assert roles == [(first_id, "admin"), (second_id, "user")]
-    finally:
-        command.upgrade(alembic_config, "head")
-        with database_engine.begin() as connection:
-            connection.execute(text("TRUNCATE TABLE users CASCADE"))
+
+def test_migrated_schema_matches_complete_model_metadata(alembic_config: Config) -> None:
+    command.check(alembic_config)
+
+
+def test_database_enforces_case_insensitive_username_uniqueness(database: Engine) -> None:
+    first = _user_values(username="CaseSensitiveSpelling")
+    second = _user_values(username="casesensitivespelling")
+    with database.begin() as connection:
+        connection.execute(User.__table__.insert().values(first))
+    with database.begin() as connection:
+        with pytest.raises(IntegrityError):
+            with connection.begin_nested():
+                connection.execute(User.__table__.insert().values(second))

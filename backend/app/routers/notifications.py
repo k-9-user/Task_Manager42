@@ -15,7 +15,7 @@ from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models.notification import Notification
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
-from app.schemas.notification import NotificationListResponse, NotificationResponse
+from app.schemas.notification import NotificationData, NotificationListResponse, NotificationResponse
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -40,7 +40,7 @@ def list_notifications(
     )
 
 
-@router.put("/{notification_id}/read", response_model=SuccessEnvelope[NotificationResponse])
+@router.put("/{notification_id}/read", response_model=SuccessEnvelope[NotificationData])
 def mark_notification_read(
     notification_id: uuid.UUID,
     db: Session = Depends(get_db),
@@ -60,7 +60,7 @@ def mark_notification_read(
     db.commit()
     db.refresh(notification)
 
-    return SuccessEnvelope(data=NotificationResponse.model_validate(notification))
+    return SuccessEnvelope(data=NotificationData(notification=NotificationResponse.model_validate(notification)))
 
 
 @router.put("/read-all", response_model=SimpleSuccessResponse)

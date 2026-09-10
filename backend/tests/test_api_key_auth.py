@@ -11,6 +11,7 @@ from app.auth.api_key_auth import (
     generate_api_key,
     get_current_api_user,
 )
+from app.models.user import UserStatus
 
 
 def test_generate_api_key_returns_nonempty_string():
@@ -27,7 +28,7 @@ def test_generate_api_key_returns_distinct_values():
 
 def test_authenticate_api_key_returns_matching_user():
     api_key = SimpleNamespace(user_id="user-id")
-    expected_user = object()
+    expected_user = SimpleNamespace(status=UserStatus.ACTIVE)
     db = MagicMock(spec=Session)
     db.scalar.side_effect = [api_key, expected_user]
 
@@ -48,6 +49,18 @@ def test_authenticate_api_key_rejects_unknown_key():
     assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
     assert raw_api_key not in str(exc_info.value.detail)
     db.scalar.assert_called_once()
+
+
+def test_authenticate_api_key_rejects_banned_user():
+    db = MagicMock(spec=Session)
+    db.scalar.side_effect = [
+        SimpleNamespace(user_id="banned-user"),
+        SimpleNamespace(status=UserStatus.BANNED),
+    ]
+    with pytest.raises(HTTPException) as error:
+        authenticate_api_key("banned-user-api-key", db)
+    assert error.value.status_code == 403
+    assert error.value.detail == "Account is banned"
 
 
 def test_authenticate_api_key_rejects_orphaned_key():

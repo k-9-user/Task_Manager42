@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
+from app.auth.dependencies import get_current_user
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
@@ -52,7 +53,7 @@ def app(db: Session, current_user: User) -> FastAPI:
 
     test_app.dependency_overrides[get_db] = override_get_db
     test_app.dependency_overrides[
-        export_import.get_export_import_current_user
+        get_current_user
     ] = lambda: current_user
     return test_app
 
@@ -93,7 +94,7 @@ def test_openapi_documents_formats_without_api_key(app: FastAPI):
     )
 
 
-def test_missing_shared_current_user_dependency_fails_closed(db: Session):
+def test_anonymous_export_requires_shared_jwt_authentication(db: Session):
     test_app = FastAPI()
     test_app.include_router(export_import.router)
 
@@ -105,7 +106,7 @@ def test_missing_shared_current_user_dependency_fails_closed(db: Session):
     with TestClient(test_app) as test_client:
         response = test_client.get("/api/export", params={"format": "json"})
 
-    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_json_export_is_downloadable(
@@ -644,6 +645,8 @@ def _create_user(db: Session, label: str) -> User:
     user = User(
         email=f"{unique_label}@example.com",
         username=unique_label,
+        oauth_provider="google",
+        oauth_id=unique_label,
     )
     db.add(user)
     db.commit()
@@ -656,6 +659,7 @@ def _create_project(db: Session, owner: User, name: str) -> Project:
     db.add(project)
     db.commit()
     db.refresh(project)
+    _add_member(db, project, owner, ProjectRole.OWNER)
     return project
 
 

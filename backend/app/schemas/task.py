@@ -84,6 +84,10 @@ class TaskListResponse(BaseModel):
     total: int
 
 
+class TaskData(BaseModel):
+    task: TaskResponse
+
+
 # ---------------------------------------------------------------------------
 # GET /api/projects/{id} -> {project, members, tasks}
 # ---------------------------------------------------------------------------

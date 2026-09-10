@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.config import get_settings
 from app.database import Base, get_db
+from app.auth.dependencies import get_current_user
 from app.models.attachment import Attachment
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -65,7 +66,7 @@ def app(
     test_app.dependency_overrides[get_db] = override_get_db
     test_app.dependency_overrides[get_settings] = lambda: test_settings
     test_app.dependency_overrides[
-        attachments.get_attachments_current_user
+        get_current_user
     ] = lambda: current_user
     return test_app
 
@@ -105,7 +106,7 @@ def test_openapi_documents_multipart_upload_without_api_key(app: FastAPI):
     )
 
 
-def test_missing_shared_current_user_dependency_fails_closed(
+def test_anonymous_attachment_delete_requires_shared_jwt_authentication(
     db: Session,
     test_settings: SimpleNamespace,
 ):
@@ -121,7 +122,7 @@ def test_missing_shared_current_user_dependency_fails_closed(
     with TestClient(test_app) as test_client:
         response = test_client.delete(f"/api/attachments/{uuid4()}")
 
-    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_owner_can_upload_supported_pdf(
@@ -473,7 +474,7 @@ def test_owner_can_delete_attachment_and_file(
     response = client.delete(f"/api/attachments/{attachment_id}")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"success": True, "data": {"success": True}}
+    assert response.json() == {"success": True, "data": {}}
     assert db.get(Attachment, attachment_id) is None
     assert not stored_path.exists()
 
@@ -622,6 +623,108 @@ def test_database_failure_after_write_removes_new_file(
     assert list(Path(test_settings.upload_dir).iterdir()) == []
 
 
+def test_upload_only_takes_project_lock_after_writing_file(
+    client, db, current_user, test_settings, monkeypatch,
+):
+    project = _create_project(db, current_user, "Short upload lock project")
+    task = _create_task(db, project, "Short upload lock task")
+    original_write = attachments._write_uploaded_file
+    original_lock = attachments.lock_project_for_write
+    lock_calls = 0
+
+    async def observed_write(*args, **kwargs):
+        assert lock_calls == 0
+        await original_write(*args, **kwargs)
+
+    def observed_lock(*args, **kwargs):
+        nonlocal lock_calls
+        lock_calls += 1
+        return original_lock(*args, **kwargs)
+
+    monkeypatch.setattr(attachments, "_write_uploaded_file", observed_write)
+    monkeypatch.setattr(attachments, "lock_project_for_write", observed_lock)
+
+    response = _upload(client, task, filename="staged.pdf")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert lock_calls == 1
+
+
+def test_upload_revalidates_permission_and_cleans_staged_file(
+    client, db, current_user, test_settings, monkeypatch,
+):
+    owner = _create_user(db, "revoked-upload-owner")
+    project = _create_project(db, owner, "Revoked upload project")
+    membership = _add_member(db, project, current_user, ProjectRole.EDITOR)
+    task = _create_task(db, project, "Revoked upload task")
+    original_write = attachments._write_uploaded_file
+
+    async def revoke_after_write(*args, **kwargs):
+        await original_write(*args, **kwargs)
+        db.delete(membership)
+        db.flush()
+
+    monkeypatch.setattr(attachments, "_write_uploaded_file", revoke_after_write)
+
+    response = _upload(client, task, filename="revoked.pdf")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert db.scalars(select(Attachment)).all() == []
+    assert list(Path(test_settings.upload_dir).iterdir()) == []
+
+
+def test_delete_commit_failure_preserves_metadata_and_bytes(
+    client, db, current_user, test_settings, monkeypatch,
+):
+    project = _create_project(db, current_user, "Failed delete project")
+    task = _create_task(db, project, "Failed delete task")
+    attachment, stored_path = _create_attachment(db, task, current_user, test_settings)
+    attachment_id = attachment.id
+    original_bytes = stored_path.read_bytes()
+    rollback = MagicMock(wraps=db.rollback)
+    monkeypatch.setattr(db, "rollback", rollback)
+    monkeypatch.setattr(db, "commit", MagicMock(side_effect=RuntimeError("delete commit failed")))
+
+    with pytest.raises(RuntimeError, match="delete commit failed"):
+        client.delete(f"/api/attachments/{attachment_id}")
+
+    rollback.assert_called_once()
+    db.expire_all()
+    assert db.get(Attachment, attachment_id) is not None
+    assert stored_path.read_bytes() == original_bytes
+
+
+def test_delete_unlink_failure_logs_orphan_after_metadata_commit(
+    client, db, current_user, test_settings, monkeypatch, caplog,
+):
+    project = _create_project(db, current_user, "Orphan cleanup project")
+    task = _create_task(db, project, "Orphan cleanup task")
+    attachment, stored_path = _create_attachment(db, task, current_user, test_settings)
+    attachment_id = attachment.id
+    original_bytes = stored_path.read_bytes()
+    original_unlink = Path.unlink
+
+    def fail_stored_file_unlink(path, *args, **kwargs):
+        if path == stored_path:
+            # File cleanup must never run before the metadata deletion is committed.
+            with Session(db.get_bind()) as verification:
+                assert verification.get(Attachment, attachment_id) is None
+            raise PermissionError("unlink denied")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_stored_file_unlink)
+    with caplog.at_level("ERROR", logger="app.routers.attachments"):
+        response = client.delete(f"/api/attachments/{attachment_id}")
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "data": {}}
+    assert db.get(Attachment, attachment_id) is None
+    assert stored_path.read_bytes() == original_bytes
+    assert "attachment_cleanup_failed" in caplog.text
+    assert str(attachment_id) in caplog.text
+    assert stored_path.name in caplog.text
+
+
 def _upload(
     client: TestClient,
     task: Task,
@@ -645,6 +748,8 @@ def _create_user(db: Session, label: str) -> User:
     user = User(
         email=f"{unique_label}@example.com",
         username=unique_label,
+        oauth_provider="google",
+        oauth_id=unique_label,
     )
     db.add(user)
     db.commit()
@@ -657,6 +762,7 @@ def _create_project(db: Session, owner: User, name: str) -> Project:
     db.add(project)
     db.commit()
     db.refresh(project)
+    _add_member(db, project, owner, ProjectRole.OWNER)
     return project
 
 

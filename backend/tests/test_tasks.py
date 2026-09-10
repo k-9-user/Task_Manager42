@@ -7,6 +7,8 @@ une vraie base Postgres de test.
 
 import uuid
 
+from tests.conftest import member_client as client
+
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 
@@ -21,7 +23,7 @@ def _add_member(db_session, project_id, user_id, role: ProjectRole) -> ProjectMe
 def _create_project_via_api(client, name="Projet test"):
     response = client.post("/api/projects", json={"name": name, "description": None})
     assert response.status_code == 201, response.text
-    return response.json()["data"]
+    return response.json()["data"]["project"]
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +39,7 @@ def test_create_task_as_owner(client):
     )
 
     assert response.status_code == 201
-    data = response.json()["data"]
+    data = response.json()["data"]["task"]
     assert data["title"] == "Premiere tache"
     assert data["status"] == "todo"
     assert data["project_id"] == project["id"]
@@ -106,7 +108,7 @@ def test_create_task_assignee_member_ok(client, make_user):
     )
 
     assert response.status_code == 201
-    assert response.json()["data"]["assignee_id"] == str(member.id)
+    assert response.json()["data"]["task"]["assignee_id"] == str(member.id)
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +124,7 @@ def test_list_tasks_filter_by_status(client, db_session):
     done_task_id = uuid.UUID(
         client.post(f"/api/projects/{project['id']}/tasks", json={"title": "Done"}).json()[
             "data"
-        ]["id"]
+        ]["task"]["id"]
     )
     db_session.query(Task).filter(Task.id == done_task_id).update(
         {"status": TaskStatus.DONE}
@@ -159,19 +161,19 @@ def test_update_task_status_as_owner(client):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "Tache"}
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     response = client.put(f"/api/tasks/{task_id}", json={"status": "in_progress"})
 
     assert response.status_code == 200
-    assert response.json()["data"]["status"] == "in_progress"
+    assert response.json()["data"]["task"]["status"] == "in_progress"
 
 
 def test_update_task_as_viewer_forbidden(client, make_user, db_session, login_as):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "Tache"}
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     viewer = make_user()
     _add_member(db_session, uuid.UUID(project["id"]), viewer.id, ProjectRole.VIEWER)
@@ -186,7 +188,7 @@ def test_update_task_assignee_not_a_member_rejected(client, make_user):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "Tache"}
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
     outsider = make_user()
 
     response = client.put(
@@ -210,7 +212,7 @@ def test_delete_task_as_editor(client, make_user, db_session, login_as):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "A supprimer"}
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     editor = make_user()
     _add_member(db_session, uuid.UUID(project["id"]), editor.id, ProjectRole.EDITOR)
@@ -219,14 +221,14 @@ def test_delete_task_as_editor(client, make_user, db_session, login_as):
     response = client.delete(f"/api/tasks/{task_id}")
 
     assert response.status_code == 200
-    assert response.json() == {"success": True}
+    assert response.json() == {"success": True, "data": {}}
 
 
 def test_delete_task_as_viewer_forbidden(client, make_user, db_session, login_as):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "Protegee"}
-    ).json()["data"]["id"]
+    ).json()["data"]["task"]["id"]
 
     viewer = make_user()
     _add_member(db_session, uuid.UUID(project["id"]), viewer.id, ProjectRole.VIEWER)

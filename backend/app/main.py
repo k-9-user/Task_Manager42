@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -11,6 +12,14 @@ from app.config import get_settings
 from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
 from app.routers.users import router as users_router
+from app.routers.projects import router as projects_router
+from app.routers.tasks import router as tasks_router
+from app.routers.gdpr import router as gdpr_router
+from app.routers.notifications import router as notifications_router
+from app.routers.public_api import router as public_api_router
+from app.routers.search import router as search_router
+from app.routers.attachments import router as attachments_router
+from app.routers.export_import import router as export_import_router
 
 
 logging.basicConfig(level=logging.WARNING)
@@ -37,6 +46,30 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(health_router)
+app.include_router(projects_router)
+app.include_router(tasks_router)
+app.include_router(gdpr_router)
+app.include_router(notifications_router)
+app.include_router(public_api_router)
+app.include_router(search_router)
+app.include_router(attachments_router)
+app.include_router(export_import_router)
+
+
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(
+    request: Request, exc: IntegrityError,
+) -> JSONResponse:
+    sqlstate = getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
+    if sqlstate == "23503":
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": "Resource has related data or a referenced resource no longer exists",
+            },
+        )
+    return await unexpected_exception_handler(request, exc)
 
 
 @app.exception_handler(StarletteHTTPException)

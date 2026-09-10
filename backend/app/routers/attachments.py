@@ -1,22 +1,25 @@
+import logging
 import uuid
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
 from app.database import get_db
+from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import lock_project_for_write
 from app.models.attachment import Attachment
-from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User
 
 
 router = APIRouter(tags=["Attachments"])
+logger = logging.getLogger(__name__)
 
 ALLOWED_ATTACHMENT_MIME_TYPES = frozenset(
     {
@@ -45,16 +48,8 @@ UPLOAD_URL_PREFIX = "/uploads"
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
-def get_attachments_current_user() -> User:
-    """Fail closed until the shared JWT current-user dependency is available."""
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Shared current-user authentication is not available",
-    )
-
-
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_attachments_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 ApplicationSettings = Annotated[Settings, Depends(get_settings)]
 
 
@@ -74,9 +69,6 @@ ApplicationSettings = Annotated[Settings, Depends(get_settings)]
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {
             "description": "Uploaded file type is not supported."
         },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Shared current-user authentication is not integrated."
-        },
     },
 )
 async def upload_attachment(
@@ -86,10 +78,23 @@ async def upload_attachment(
     current_user: AuthenticatedUser,
     settings: ApplicationSettings,
 ) -> dict[str, Any]:
-    task = _get_accessible_task(db, task_id, current_user.id)
-    project = _get_accessible_project(db, task.project_id, current_user.id)
-    _require_project_editor(db, project, current_user.id)
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     _validate_content_type(file.content_type)
+    membership_role = db.scalar(
+        select(ProjectMember.role).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id,
+        )
+    )
+    if membership_role is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if membership_role not in (ProjectRole.OWNER, ProjectRole.EDITOR):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Project membership is read-only",
+        )
 
     original_filename = file.filename or "unnamed"
     stored_filename = _generate_stored_filename(
@@ -106,16 +111,35 @@ async def upload_attachment(
         settings.max_upload_size_mb * 1024 * 1024,
     )
 
-    attachment = Attachment(
-        task_id=task.id,
-        file_url=f"{UPLOAD_URL_PREFIX}/{stored_filename}",
-        file_name=original_filename,
-        uploaded_by=current_user.id,
-    )
     try:
+        lock_project_for_write(
+            db,
+            project_id,
+            current_user.id,
+            ProjectRole.OWNER,
+            ProjectRole.EDITOR,
+            not_found_detail="Task not found",
+        )
+        task = db.scalar(
+            select(Task)
+            .where(Task.id == task_id)
+            .execution_options(populate_existing=True)
+        )
+        if task is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found",
+            )
+
+        attachment = Attachment(
+            task_id=task.id,
+            file_url=f"{UPLOAD_URL_PREFIX}/{stored_filename}",
+            file_name=original_filename,
+            uploaded_by=current_user.id,
+        )
         db.add(attachment)
         db.commit()
-    except Exception:
+    except BaseException:
         db.rollback()
         stored_path.unlink(missing_ok=True)
         raise
@@ -136,9 +160,6 @@ async def upload_attachment(
         status.HTTP_404_NOT_FOUND: {
             "description": "Attachment not found or not visible."
         },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Shared current-user authentication is not integrated."
-        },
     },
 )
 def delete_attachment(
@@ -147,15 +168,30 @@ def delete_attachment(
     current_user: AuthenticatedUser,
     settings: ApplicationSettings,
 ) -> dict[str, Any]:
-    attachment = _get_accessible_attachment(db, attachment_id, current_user.id)
-    task = _get_accessible_task(db, attachment.task_id, current_user.id)
-    project = _get_accessible_project(db, task.project_id, current_user.id)
-    _require_project_editor(db, project, current_user.id)
+    project_id = db.scalar(
+        select(Task.project_id)
+        .join(Attachment, Attachment.task_id == Task.id)
+        .where(Attachment.id == attachment_id)
+    )
+    if project_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
+        )
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Attachment not found",
+    )
+    attachment = db.scalar(
+        select(Attachment)
+        .where(Attachment.id == attachment_id)
+        .execution_options(populate_existing=True)
+    )
+    if attachment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
+        )
 
     stored_path = _safe_stored_path(attachment.file_url, _upload_directory(settings))
-    if stored_path is not None:
-        stored_path.unlink(missing_ok=True)
-
     try:
         db.delete(attachment)
         db.commit()
@@ -163,88 +199,17 @@ def delete_attachment(
         db.rollback()
         raise
 
-    return _success_response(success=True)
+    if stored_path is not None:
+        try:
+            stored_path.unlink(missing_ok=True)
+        except OSError:
+            logger.error(
+                "attachment_cleanup_failed attachment_id=%s file=%s",
+                attachment_id,
+                stored_path.name,
+            )
 
-
-def _project_access_filter(user_id: UUID):
-    member_project_ids = select(ProjectMember.project_id).where(
-        ProjectMember.user_id == user_id
-    )
-    return or_(
-        Project.owner_id == user_id,
-        Project.id.in_(member_project_ids),
-    )
-
-
-def _get_accessible_task(db: Session, task_id: UUID, user_id: UUID) -> Task:
-    task = db.scalar(
-        select(Task)
-        .join(Project, Task.project_id == Project.id)
-        .where(
-            Task.id == task_id,
-            _project_access_filter(user_id),
-        )
-    )
-    if task is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Task not found",
-        )
-    return task
-
-
-def _get_accessible_attachment(
-    db: Session,
-    attachment_id: UUID,
-    user_id: UUID,
-) -> Attachment:
-    attachment = db.scalar(
-        select(Attachment)
-        .join(Task, Attachment.task_id == Task.id)
-        .join(Project, Task.project_id == Project.id)
-        .where(
-            Attachment.id == attachment_id,
-            _project_access_filter(user_id),
-        )
-    )
-    if attachment is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Attachment not found",
-        )
-    return attachment
-
-
-def _get_accessible_project(db: Session, project_id: UUID, user_id: UUID) -> Project:
-    project = db.scalar(
-        select(Project).where(
-            Project.id == project_id,
-            _project_access_filter(user_id),
-        )
-    )
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-    return project
-
-
-def _require_project_editor(db: Session, project: Project, user_id: UUID) -> None:
-    if project.owner_id == user_id:
-        return
-
-    member_role = db.scalar(
-        select(ProjectMember.role).where(
-            ProjectMember.project_id == project.id,
-            ProjectMember.user_id == user_id,
-        )
-    )
-    if member_role not in {ProjectRole.OWNER, ProjectRole.EDITOR}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Project membership is read-only",
-        )
+    return _success_response()
 
 
 def _validate_content_type(content_type: str | None) -> None:

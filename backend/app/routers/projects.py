@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import lock_project_for_write
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project import Project
@@ -26,8 +27,10 @@ from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project import (
     ProjectCreate,
+    ProjectData,
     ProjectListResponse,
     ProjectMemberCreate,
+    ProjectMemberData,
     ProjectMemberResponse,
     ProjectResponse,
     ProjectUpdate,
@@ -138,7 +141,7 @@ def list_projects(
 
 
 @router.post(
-    "", response_model=SuccessEnvelope[ProjectResponse], status_code=status.HTTP_201_CREATED
+    "", response_model=SuccessEnvelope[ProjectData], status_code=status.HTTP_201_CREATED
 )
 def create_project(
     payload: ProjectCreate,
@@ -165,7 +168,7 @@ def create_project(
     db.commit()
     db.refresh(project)
 
-    return SuccessEnvelope(data=ProjectResponse.model_validate(project))
+    return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
 # ---------------------------------------------------------------------------
@@ -204,19 +207,17 @@ def get_project(
 # ---------------------------------------------------------------------------
 
 
-@router.put("/{project_id}", response_model=SuccessEnvelope[ProjectResponse])
+@router.put("/{project_id}", response_model=SuccessEnvelope[ProjectData])
 def update_project(
     project_id: uuid.UUID,
     payload: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = _get_membership_or_404(db, project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER)
-
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable")
+    project = lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER,
+        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
+    )
 
     # `exclude_unset=True` : on ne touche qu'aux champs réellement envoyés
     # par le client, pas ceux laissés à leur valeur par défaut (None).
@@ -227,7 +228,7 @@ def update_project(
     db.commit()
     db.refresh(project)
 
-    return SuccessEnvelope(data=ProjectResponse.model_validate(project))
+    return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
 # ---------------------------------------------------------------------------
@@ -241,12 +242,10 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = _get_membership_or_404(db, project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER)
-
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable")
+    project = lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER,
+        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
+    )
 
     # cascade="all, delete-orphan" sur Project.members et Project.tasks
     # (cf models/project.py) : SQLAlchemy supprime aussi les membres et
@@ -264,7 +263,7 @@ def delete_project(
 
 @router.post(
     "/{project_id}/members",
-    response_model=SuccessEnvelope[ProjectMemberResponse],
+    response_model=SuccessEnvelope[ProjectMemberData],
     status_code=status.HTTP_201_CREATED,
 )
 def add_member(
@@ -273,8 +272,10 @@ def add_member(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = _get_membership_or_404(db, project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER)
+    project = lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER,
+        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
+    )
 
     new_member = ProjectMember(
         project_id=project_id, user_id=payload.user_id, role=payload.role
@@ -294,7 +295,6 @@ def add_member(
     # Module bonus notifications (cf 02-fiche-personne-B.md) : juste un
     # insert en DB, pas de nouvelle logique complexe. Sauf si le destinataire
     # est inactif depuis 6 mois (cf _user_is_notifiable).
-    project = db.query(Project).filter(Project.id == project_id).first()
     if _user_is_notifiable(db, payload.user_id):
         db.add(
             Notification(
@@ -308,7 +308,7 @@ def add_member(
     db.commit()
     db.refresh(new_member)
 
-    return SuccessEnvelope(data=ProjectMemberResponse.model_validate(new_member))
+    return SuccessEnvelope(data=ProjectMemberData(member=ProjectMemberResponse.model_validate(new_member)))
 
 
 # ---------------------------------------------------------------------------
@@ -323,8 +323,10 @@ def remove_member(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    membership = _get_membership_or_404(db, project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER)
+    project = lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER,
+        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
+    )
 
     target = (
         db.query(ProjectMember)
@@ -335,20 +337,23 @@ def remove_member(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membre introuvable")
 
     if target.role == ProjectRole.OWNER:
-        remaining_owners = (
+        successor = (
             db.query(ProjectMember)
             .filter(
                 ProjectMember.project_id == project_id,
                 ProjectMember.role == ProjectRole.OWNER,
                 ProjectMember.user_id != user_id,
             )
-            .count()
+            .order_by(ProjectMember.id)
+            .first()
         )
-        if remaining_owners == 0:
+        if successor is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Impossible de retirer le dernier owner du projet",
             )
+        if project.owner_id == user_id:
+            project.owner_id = successor.user_id
 
     db.delete(target)
     db.commit()

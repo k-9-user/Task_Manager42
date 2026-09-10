@@ -10,7 +10,7 @@ from app.database import Base
 
 class Project(Base):
     """
-    Table `projects` — cf 00-contrat-commun.md section 1.
+    Table `projects`.
     Un projet a un owner (celui qui l'a créé) et plusieurs membres
     (via project_members, avec un rôle chacun).
     """

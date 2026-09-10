@@ -32,3 +32,7 @@ class NotificationListResponse(BaseModel):
 
     notifications: list[NotificationResponse]
     total: int
+
+
+class NotificationData(BaseModel):
+    notification: NotificationResponse

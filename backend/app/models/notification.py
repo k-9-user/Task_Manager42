@@ -17,7 +17,7 @@ class NotificationType(str, enum.Enum):
 
 class Notification(Base):
     """
-    Table `notifications` — cf 00-contrat-commun.md section 1 (module bonus).
+    Table `notifications`.
     Une notification appartient à son destinataire (`user_id`) et référence
     optionnellement la tâche/le projet concerné.
     """
@@ -25,11 +25,14 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    type = Column(Enum(NotificationType), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(
+        Enum(NotificationType, name="notificationtype", values_callable=lambda cls: [kind.value for kind in cls]),
+        nullable=False,
+    )
     content = Column(Text, nullable=False)
-    related_task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id"), nullable=True)
-    related_project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True)
+    related_task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    related_project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     read = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user, require_admin
+from app.auth.project_permissions import lock_user_projects_for_write
 from app.database import get_db
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
@@ -394,6 +395,7 @@ def delete_user(
                 detail="At least one administrator is required",
             )
 
+    lock_user_projects_for_write(db, target_id)
     db.delete(target)
     try:
         db.commit()

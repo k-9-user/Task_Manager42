@@ -17,10 +17,12 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import lock_project_for_write
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
@@ -56,16 +58,8 @@ MAX_IMPORT_SIZE_BYTES = 5 * 1024 * 1024
 MAX_IMPORT_RECORDS = 1000
 
 
-def get_export_import_current_user() -> User:
-    """Fail closed until the shared JWT current-user dependency is available."""
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Shared current-user authentication is not available",
-    )
-
-
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_export_import_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.get(
@@ -73,13 +67,10 @@ AuthenticatedUser = Annotated[User, Depends(get_export_import_current_user)]
     summary="Export visible projects and tasks",
     description=(
         "Download visible project and task data as deterministic JSON or flat CSV. "
-        "Only projects owned by or shared with the authenticated user are exported."
+        "Only projects where the authenticated user is a member are exported."
     ),
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Unsupported export format."},
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Shared current-user authentication is not integrated."
-        },
     },
 )
 def export_data(
@@ -146,9 +137,6 @@ def export_data(
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {
             "description": "Import file must be JSON or CSV."
         },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Shared current-user authentication is not integrated."
-        },
     },
 )
 async def import_data(
@@ -164,7 +152,13 @@ async def import_data(
     records = _parse_import_records(raw_content, import_format)
 
     try:
-        project_cache: dict[UUID, Project] = {}
+        project_ids = sorted({_parse_uuid(record.get("project_id"), "project_id") for record in records})
+        project_cache = {
+            project_id: lock_project_for_write(
+                db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+            )
+            for project_id in project_ids
+        }
         validated_tasks = [
             _build_imported_task(db, record, current_user.id, project_cache)
             for record in records
@@ -210,10 +204,7 @@ def _project_access_filter(user_id: UUID):
     member_project_ids = select(ProjectMember.project_id).where(
         ProjectMember.user_id == user_id
     )
-    return or_(
-        Project.owner_id == user_id,
-        Project.id.in_(member_project_ids),
-    )
+    return Project.id.in_(member_project_ids)
 
 
 def _serialize_project_with_tasks(
@@ -429,32 +420,9 @@ def _build_imported_task(
 
 
 def _get_writable_project(db: Session, project_id: UUID, user_id: UUID) -> Project:
-    project = db.scalar(
-        select(Project).where(
-            Project.id == project_id,
-            _project_access_filter(user_id),
-        )
+    return lock_project_for_write(
+        db, project_id, user_id, ProjectRole.OWNER, ProjectRole.EDITOR,
     )
-    if project is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-    if project.owner_id == user_id:
-        return project
-
-    role = db.scalar(
-        select(ProjectMember.role).where(
-            ProjectMember.project_id == project.id,
-            ProjectMember.user_id == user_id,
-        )
-    )
-    if role not in {ProjectRole.OWNER, ProjectRole.EDITOR}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Project membership is read-only",
-        )
-    return project
 
 
 def _parse_uuid(value: Any, field_name: str) -> UUID:

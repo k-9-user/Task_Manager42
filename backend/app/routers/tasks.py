@@ -16,17 +16,19 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import lock_project_for_write
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
-from app.routers.projects import _get_membership_or_404, _require_role, _user_is_notifiable
+from app.routers.projects import _get_membership_or_404, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
-from app.schemas.task import TaskCreate, TaskListResponse, TaskResponse, TaskUpdate
+from app.schemas.task import TaskCreate, TaskData, TaskListResponse, TaskResponse, TaskUpdate
 
 router = APIRouter(tags=["tasks"])
 
@@ -134,7 +136,7 @@ def list_tasks(
 
 @router.post(
     "/api/projects/{project_id}/tasks",
-    response_model=SuccessEnvelope[TaskResponse],
+    response_model=SuccessEnvelope[TaskData],
     status_code=status.HTTP_201_CREATED,
 )
 def create_task(
@@ -147,8 +149,10 @@ def create_task(
     lecture seule (cf 02-fiche-personne-B.md, "un viewer ne peut pas modifier
     une tâche")."""
 
-    membership = _get_membership_or_404(db, project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER, ProjectRole.EDITOR)
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
+    )
 
     if payload.assignee_id is not None:
         _assert_valid_assignee(db, project_id, payload.assignee_id)
@@ -176,7 +180,7 @@ def create_task(
     db.commit()
     db.refresh(task)
 
-    return SuccessEnvelope(data=TaskResponse.model_validate(task))
+    return SuccessEnvelope(data=TaskData(task=TaskResponse.model_validate(task)))
 
 
 # ---------------------------------------------------------------------------
@@ -184,19 +188,26 @@ def create_task(
 # ---------------------------------------------------------------------------
 
 
-@router.put("/api/tasks/{task_id}", response_model=SuccessEnvelope[TaskResponse])
+@router.put("/api/tasks/{task_id}", response_model=SuccessEnvelope[TaskData])
 def update_task(
     task_id: uuid.UUID,
     payload: TaskUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if task is None:
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
-    membership = _get_membership_or_404(db, task.project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER, ProjectRole.EDITOR)
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Tâche introuvable", forbidden_detail="Permission refusée",
+    )
+    task = db.scalar(
+        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -237,7 +248,7 @@ def update_task(
     db.commit()
     db.refresh(task)
 
-    return SuccessEnvelope(data=TaskResponse.model_validate(task))
+    return SuccessEnvelope(data=TaskData(task=TaskResponse.model_validate(task)))
 
 
 # ---------------------------------------------------------------------------
@@ -251,12 +262,19 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if task is None:
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
-    membership = _get_membership_or_404(db, task.project_id, current_user.id)
-    _require_role(membership, ProjectRole.OWNER, ProjectRole.EDITOR)
+    lock_project_for_write(
+        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        not_found_detail="Tâche introuvable", forbidden_detail="Permission refusée",
+    )
+    task = db.scalar(
+        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
     db.delete(task)
     db.commit()

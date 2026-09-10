@@ -18,7 +18,7 @@ class ProjectRole(str, enum.Enum):
 
 class ProjectMember(Base):
     """
-    Table `project_members` — cf 00-contrat-commun.md section 1.
+    Table `project_members`.
     Table de liaison project <-> user avec un rôle par membre.
     Utilisée pour vérifier les permissions (ex: un viewer ne peut pas
     modifier une tâche, cf semaine 3).
@@ -31,9 +31,13 @@ class ProjectMember(Base):
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    role = Column(Enum(ProjectRole), nullable=False, default=ProjectRole.VIEWER)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(
+        Enum(ProjectRole, name="projectrole", values_callable=lambda cls: [role.value for role in cls]),
+        nullable=False,
+        default=ProjectRole.VIEWER,
+    )
 
     # Relations
     project = relationship("Project", back_populates="members")

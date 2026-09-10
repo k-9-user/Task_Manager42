@@ -2,11 +2,12 @@ from enum import Enum
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.auth.dependencies import get_current_user
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task, TaskStatus
@@ -19,30 +20,17 @@ router = APIRouter(
 )
 
 
-def get_search_current_user() -> User:
-    """Fail closed until the shared JWT current-user dependency is available."""
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail="Shared current-user authentication is not available",
-    )
-
-
 DatabaseSession = Annotated[Session, Depends(get_db)]
-AuthenticatedUser = Annotated[User, Depends(get_search_current_user)]
+AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.get(
     "/tasks",
     summary="Search accessible tasks",
     description=(
-        "Search tasks in projects owned by or shared with the authenticated user. "
+        "Search tasks in projects where the authenticated user is a member. "
         "Visibility is enforced before filtering and pagination."
     ),
-    responses={
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Shared current-user authentication is not integrated."
-        }
-    },
 )
 def search_tasks(
     db: DatabaseSession,
@@ -114,10 +102,7 @@ def _project_access_filter(user_id: UUID):
     member_project_ids = select(ProjectMember.project_id).where(
         ProjectMember.user_id == user_id
     )
-    return or_(
-        Project.owner_id == user_id,
-        Project.id.in_(member_project_ids),
-    )
+    return Project.id.in_(member_project_ids)
 
 
 def _serialize_task(task: Task) -> dict[str, Any]:

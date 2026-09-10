@@ -6,6 +6,9 @@ une vraie base Postgres de test.
 """
 
 import uuid
+import pytest
+
+from tests.conftest import member_client as client
 
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
@@ -35,24 +38,25 @@ def test_delete_account_removes_user_and_owned_projects(client, db_session):
     project_id = uuid.UUID(
         client.post("/api/projects", json={"name": "A supprimer", "description": None}).json()[
             "data"
-        ]["id"]
+        ]["project"]["id"]
     )
     user_id = client.current_user.id
 
     response = client.request("DELETE", "/api/gdpr/account", json={"confirm": True})
 
     assert response.status_code == 200
-    assert response.json() == {"success": True}
+    assert response.json() == {"success": True, "data": {}}
     assert db_session.query(User).filter(User.id == user_id).first() is None
     assert db_session.query(Project).filter(Project.id == project_id).first() is None
 
 
+@pytest.mark.xfail(strict=True, reason="AUD-B-GDPR: UUID order is not membership chronology; add joined_at and succession policy")
 def test_delete_account_transfers_ownership_to_oldest_remaining_member(
     client, make_user, db_session
 ):
     project = client.post(
         "/api/projects", json={"name": "A transferer", "description": None}
-    ).json()["data"]
+    ).json()["data"]["project"]
     project_id = uuid.UUID(project["id"])
     departing_owner_id = client.current_user.id
 
@@ -66,6 +70,15 @@ def test_delete_account_transfers_ownership_to_oldest_remaining_member(
         f"/api/projects/{project_id}/members",
         json={"user_id": str(second_member.id), "role": "editor"},
     )
+
+    # UUID ordering must not masquerade as membership chronology.
+    db_session.query(ProjectMember).filter_by(
+        project_id=project_id, user_id=first_member.id,
+    ).update({"id": uuid.UUID("ffffffff-ffff-ffff-ffff-fffffffffffe")})
+    db_session.query(ProjectMember).filter_by(
+        project_id=project_id, user_id=second_member.id,
+    ).update({"id": uuid.UUID("00000000-0000-0000-0000-000000000002")})
+    db_session.commit()
 
     response = client.request("DELETE", "/api/gdpr/account", json={"confirm": True})
     assert response.status_code == 200
@@ -94,7 +107,7 @@ def test_delete_account_transfers_ownership_to_oldest_remaining_member(
 def test_delete_account_prefers_existing_owner_as_successor(client, make_user, db_session):
     project = client.post(
         "/api/projects", json={"name": "Deja un autre owner", "description": None}
-    ).json()["data"]
+    ).json()["data"]["project"]
     project_id = uuid.UUID(project["id"])
 
     early_viewer = make_user()

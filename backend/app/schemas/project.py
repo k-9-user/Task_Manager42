@@ -79,6 +79,10 @@ class ProjectListResponse(BaseModel):
     projects: list[ProjectResponse]
 
 
+class ProjectData(BaseModel):
+    project: ProjectResponse
+
+
 # ---------------------------------------------------------------------------
 # Project members
 # ---------------------------------------------------------------------------
@@ -100,6 +104,10 @@ class ProjectMemberResponse(BaseModel):
     project_id: uuid.UUID
     user_id: uuid.UUID
     role: ProjectRole
+
+
+class ProjectMemberData(BaseModel):
+    member: ProjectMemberResponse
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,8 @@ une vraie base Postgres de test.
 
 import uuid
 
+from tests.conftest import member_client as client
+
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 
@@ -21,7 +23,7 @@ def _add_member(db_session, project_id, user_id, role: ProjectRole) -> ProjectMe
 def _create_project_via_api(client, name="Projet test", description="desc"):
     response = client.post("/api/projects", json={"name": name, "description": description})
     assert response.status_code == 201, response.text
-    return response.json()["data"]
+    return response.json()["data"]["project"]
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +132,7 @@ def test_update_project_as_owner(client):
     response = client.put(f"/api/projects/{data['id']}", json={"name": "Nouveau nom"})
 
     assert response.status_code == 200
-    assert response.json()["data"]["name"] == "Nouveau nom"
+    assert response.json()["data"]["project"]["name"] == "Nouveau nom"
 
 
 def test_update_project_as_editor_forbidden(client, make_user, db_session, login_as):
@@ -167,7 +169,7 @@ def test_delete_project_as_owner_cascades(client, db_session):
     response = client.delete(f"/api/projects/{project_id}")
 
     assert response.status_code == 200
-    assert response.json() == {"success": True}
+    assert response.json() == {"success": True, "data": {}}
     assert db_session.query(Project).filter(Project.id == project_id).first() is None
     assert (
         db_session.query(ProjectMember).filter(ProjectMember.project_id == project_id).count()
@@ -201,7 +203,7 @@ def test_add_member_as_owner(client, make_user):
     )
 
     assert response.status_code == 201
-    assert response.json()["data"]["role"] == "editor"
+    assert response.json()["data"]["member"]["role"] == "editor"
 
 
 def test_add_member_as_viewer_forbidden(client, make_user, db_session, login_as):
@@ -263,7 +265,34 @@ def test_remove_member_success(client, make_user):
     response = client.delete(f"/api/projects/{data['id']}/members/{member.id}")
 
     assert response.status_code == 200
-    assert response.json() == {"success": True}
+    assert response.json() == {"success": True, "data": {}}
+
+
+def test_removing_designated_owner_transfers_owner_id(
+    client, make_user, db_session, login_as,
+):
+    project = _create_project_via_api(client)
+    project_id = uuid.UUID(project["id"])
+    departing_owner = client.current_user
+    successor = make_user()
+    _add_member(db_session, project_id, successor.id, ProjectRole.OWNER)
+
+    response = client.delete(
+        f"/api/projects/{project_id}/members/{departing_owner.id}"
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"success": True, "data": {}}
+    db_session.expire_all()
+    assert db_session.get(Project, project_id).owner_id == successor.id
+    assert db_session.query(ProjectMember).filter_by(
+        project_id=project_id, user_id=departing_owner.id,
+    ).first() is None
+    assert client.get(f"/api/projects/{project_id}").status_code == 404
+    login_as(successor)
+    updated = client.put(f"/api/projects/{project_id}", json={"name": "Transferred"})
+    assert updated.status_code == 200
+    assert updated.json()["data"]["project"]["owner_id"] == str(successor.id)
 
 
 def test_remove_last_owner_forbidden(client):
