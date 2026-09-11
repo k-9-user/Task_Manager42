@@ -1,0 +1,25 @@
+
+.profile-page {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	align-items: center;
+	background: linear-gradient(
+		135deg,
+		#0f172a 0%,
+		#1e3a8a 50%,
+		#2563eb 100%
+	);
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.profile-page h1 {
+	font-size: 1.6rem;
+	color: #ffffff;
+}
+
+.profile-page p {
+	font-size: 0.85rem;
+	color: black;
+}

@@ -4,9 +4,13 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
 
 # Environment
 .env
+
+# Local TLS
+nginx/certs/*
 
 # Node / frontend
 node_modules/
