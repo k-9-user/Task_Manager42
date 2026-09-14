@@ -4,12 +4,8 @@
 		"projects": "Projects",
 		"login": "Log in",
 		"logout": "Log out",
-<<<<<<< HEAD
-		"search": "To Search"
-=======
 		"search": "To Search",
 		"profile": "Profile"
->>>>>>> D
 	},
 	"login":
 	{
@@ -30,13 +26,7 @@
 		"email": "Please enter an email address",
 		"password": "Please enter a password",
 		"cpassword": "Please confirm your password",
-<<<<<<< HEAD
-		"invaemail": "Invalid email address",
-		"shortpassword": "Password must be at least 12 characters long",
-		"invausername": "Username must be 3-50 characters (letters, digits, . _ -)"
-=======
 		"invaemail": "Invalid email address"
->>>>>>> D
 	},
 	"loading":
 	{
@@ -82,39 +72,11 @@
 		"envoi": "Sending ...",
 		"ajfichier": "Add the file",
 		"erupload": "Upload error",
-<<<<<<< HEAD
-		"ersurv": "An error has occurred",
-		"addbanniere": "+ Add a banner",
-		"nametask": "The task title is required",
-		"tasknameplaceholder": "Task title",
-		"createtask": "Create task",
-		"voircommentaires": "View comments",
-		"ecrirecommentaire": "Write a comment",
-		"commenter": "Comment",
-		"suppcommentaire": "Delete"
-=======
 		"ersurv": "An error has occurred"
->>>>>>> D
 	},
 	"footer":
 	{
 		"pc": "Privacy Policy",
 		"cdu": "Terms of Use"
-<<<<<<< HEAD
-	},
-	"members":
-	{
-		"title": "Project members",
-		"add": "Add",
-		"remove": "Remove",
-		"emailPlaceholder": "Email of the person to add",
-		"role":
-		{
-			"owner": "Owner",
-			"editor": "Editor",
-			"viewer": "Viewer"
-		}
-=======
->>>>>>> D
 	}
 }

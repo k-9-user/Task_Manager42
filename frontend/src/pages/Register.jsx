@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import './register.css';
-<<<<<<< HEAD
-import { Link, useNavigate } from "react-router-dom";
-import { isvalidemail } from '../utils/validation';
-import { useTranslation } from 'react-i18next';
-import { register } from '../services/authService';
-=======
 import { Link } from "react-router-dom";
 import { isvalidemail } from '../utils/validation';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { register } from "../services/authService";
->>>>>>> D
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 function Register()
@@ -48,24 +41,6 @@ function Register()
 			setError(t("register.falsepassword"));
 			return ;
 		}
-<<<<<<< HEAD
-		if (password.length < 12)
-		{
-			setError(t("register.shortpassword"));
-			return ;
-		}
-		if (!/^[A-Za-z0-9._-]{3,50}$/.test(username))
-		{
-			setError(t("register.invausername"));
-			return ;
-		}
-		setError("");
-		try {
-			const { token } = await register(username, email, password);
-			localStorage.setItem("token", token);
-			navigate("/projects");
-		} catch (err) {
-=======
 		setError("");
 		// console.log(`Nouveau compte : ${username}, ${email}`);
 		try
@@ -75,7 +50,6 @@ function Register()
 		}
 		catch (err)
 		{
->>>>>>> D
 			setError(err.message);
 		}
 	}

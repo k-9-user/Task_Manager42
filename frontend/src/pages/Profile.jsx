@@ -4,17 +4,6 @@ import { useTranslation } from "react-i18next";
 import './Profile.css';
 
 
-<<<<<<< HEAD
-const USE_MOCK = true; // a retirer
-
-const mockUser = {
-  username: "Pingouin",
-  email: "tintin@test.com",
-  avatar_url: "https://api.dicebear.com/10.x/bottts/svg",
-};
-
-=======
->>>>>>> D
 function Profile() {
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState("");
@@ -23,18 +12,6 @@ function Profile() {
 
 	useEffect(() => {
 	  async function fetchProfile() {
-<<<<<<< HEAD
-	    try {
-        if (USE_MOCK) {
-          setUser(mockUser);
-        } else {
-          const data = await apiFetch("/api/users/me");
-          setUser(data.user);
-        }
-	    } catch (err) {
-	      setError(err.message);
-	    } finally {
-=======
 	    try
 		{
           const data = await apiFetch("/api/users/me");
@@ -45,7 +22,6 @@ function Profile() {
 	    }
 		finally
 		{
->>>>>>> D
 	      setLoading(false);
 	    }
 	  }

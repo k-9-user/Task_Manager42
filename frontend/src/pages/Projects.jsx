@@ -4,8 +4,6 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import './Projects.css';
 
-<<<<<<< HEAD
-=======
 
 const USE_MOCK = false;
 
@@ -13,7 +11,6 @@ const mockProjects = [
 	{ id: "1", name: "site vitrine", description: "Refonte du site client"},
 ];
 
->>>>>>> D
 function Projects()
 {
 	const [projects, setProjects] = useState([]);
@@ -28,10 +25,6 @@ function Projects()
 		async function fetchProjects() {
 		try
 		{
-<<<<<<< HEAD
-			const data = await getProjects();
-			setProjects(data.projects);
-=======
 			if (USE_MOCK)
 			{
 				setProjects(mockProjects);
@@ -41,7 +34,6 @@ function Projects()
 				const data = await getProjects();
 				setProjects(data.projects);
 			}
->>>>>>> D
 		}
 		catch (err)
 		{
@@ -65,10 +57,6 @@ function Projects()
 		}
 		try
 		{
-<<<<<<< HEAD
-			const data = await createProject(name, description);
-			setProjects([...projects, data.project]);
-=======
 			if (USE_MOCK) {
 				const newProject = { id: Date.now().toString(), name, description };
 				setProjects([...projects, newProject]);
@@ -78,7 +66,6 @@ function Projects()
 				const data = await createProject(name, description);
 				setProjects([...projects, data.project]);
 			}
->>>>>>> D
 			setName("");
 			setDescription("");
 			setError("");

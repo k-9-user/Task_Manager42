@@ -130,33 +130,6 @@ def get_me(
     return _user_response(current_user)
 
 
-@router.get(
-    "/lookup",
-    summary="Look up a user by exact email",
-    description=(
-        "Find a single user by their exact email address. Available to any "
-        "authenticated user (not just admins) so a project owner can find "
-        "the account to invite as a project member without browsing the "
-        "full user directory."
-    ),
-    response_model=CurrentUserResponse,
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
-        status.HTTP_404_NOT_FOUND: {"model": ErrorResponse},
-    },
-)
-def lookup_user(
-    email: Annotated[str, Query(min_length=1)],
-    _current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-) -> CurrentUserResponse:
-    normalized_email = email.strip().lower()
-    user = db.scalar(select(User).where(func.lower(User.email) == normalized_email))
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return _user_response(user)
-
-
 @router.put(
     "/me",
     summary="Update current user",
