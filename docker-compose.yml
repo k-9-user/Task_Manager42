@@ -26,6 +26,7 @@ x-backend-environment: &backend-environment
 services:
   db:
     image: postgres:17-alpine
+    # image: docker.io/library/postgres:17-alpine
     environment: *postgres-credentials
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -106,6 +107,7 @@ services:
 
   nginx:
     image: nginxinc/nginx-unprivileged:1.28-alpine
+    # image: docker.io/nginxinc/nginx-unprivileged:1.28-alpine
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:8443:8443"
