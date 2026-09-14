@@ -1,5 +1,9 @@
 import { apiFetch } from "./api";
+<<<<<<< HEAD
 import i18n from "../i18n";
+=======
+import { useTranslation } from "react-i18next";
+>>>>>>> D
 
 export function getProjectTasks(projectID) {
 	return apiFetch(`/api/projects/${projectID}/tasks`);
@@ -39,10 +43,18 @@ export async function uploadAttachement(taskID, file)
 {
 	const token = localStorage.getItem("token");
 	const formData = new FormData();
+<<<<<<< HEAD
 
 	formData.append("file", file);
 
 	const reponse = await fetch(`${API_URL}/api/tasks/${taskID}/attachments`,
+=======
+	const { t } = useTranslation();
+
+	formData.append("file", file);
+
+	const reponse = await fetch(`${API_URL}/api/tasks/${taskID}/attachements`,
+>>>>>>> D
 		{
 			method: "POST",
 			headers:
@@ -54,17 +66,26 @@ export async function uploadAttachement(taskID, file)
 	);
 	const result = await reponse.json();
 	if (!result.success)
+<<<<<<< HEAD
 		throw new Error(result.error || i18n.t("random.upload"));
+=======
+		throw new Error(result.error || t("random.upload"));
+>>>>>>> D
 	return result.data;
 }
 
 export function deleteAttachment(attachmentId)
 {
+<<<<<<< HEAD
 	return apiFetch(`/api/attachments/${attachmentId}`,
+=======
+	return apiFetch(`/api/attachments/${attachmentId} `,
+>>>>>>> D
 		{
 			method: "DELETE"
 		}
 		);
+<<<<<<< HEAD
 }
 
 export async function uploadTaskBanner(taskID, file)
@@ -121,4 +142,6 @@ export function deleteComment(commentId)
 			method: "DELETE",
 		}
 	);
+=======
+>>>>>>> D
 }

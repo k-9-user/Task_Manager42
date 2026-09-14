@@ -112,6 +112,10 @@ class ProjectMemberData(BaseModel):
     member: ProjectMemberResponse
 
 
+class ProjectMemberData(BaseModel):
+    member: ProjectMemberResponse
+
+
 # ---------------------------------------------------------------------------
 # GET /api/projects/{id} -> {project, members, tasks}
 # ---------------------------------------------------------------------------

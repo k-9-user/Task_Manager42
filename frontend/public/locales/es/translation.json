@@ -4,7 +4,12 @@
 		"projects": "Proyectos",
 		"login": "Iniciar sesión",
 		"logout": "Cerrar sesión",
+<<<<<<< HEAD
 		"search": "Bucar"
+=======
+		"search": "Bucar",
+		"profile": "Perfil"
+>>>>>>> D
 	},
 	"login":
 	{
@@ -25,9 +30,13 @@
 		"email": "Introduce una dirección de correo electrónico",
 		"password": "Introduce una contraseña",
 		"cpassword": "Confirma tu contraseña",
+<<<<<<< HEAD
 		"invaemail": "Dirección de correo electrónico no válida",
 		"shortpassword": "La contraseña debe tener al menos 12 caracteres",
 		"invausername": "El nombre de usuario debe tener entre 3 y 50 caracteres (letras, números, . _ -)"
+=======
+		"invaemail": "Dirección de correo electrónico no válida"
+>>>>>>> D
 	},
 	"loading":
 	{
@@ -73,6 +82,7 @@
 		"envoi": "Enviando ...",
 		"ajfichier": "Añadir el archivo",
 		"erupload": "Error al subir el archivo",
+<<<<<<< HEAD
 		"ersurv": "Se ha producido un error",
 		"addbanniere": "+ Añadir un banner",
 		"nametask": "El título de la tarea es obligatorio",
@@ -82,11 +92,15 @@
 		"ecrirecommentaire": "Escribir un comentario",
 		"commenter": "Comentar",
 		"suppcommentaire": "Eliminar"
+=======
+		"ersurv": "Se ha producido un error"
+>>>>>>> D
 	},
 	"footer":
 	{
 		"pc": "Política de privacidad",
 		"cdu": "Condiciones de uso"
+<<<<<<< HEAD
 	},
 	"members":
 	{
@@ -100,5 +114,7 @@
 			"editor": "Editor",
 			"viewer": "Lector"
 		}
+=======
+>>>>>>> D
 	}
 }

@@ -28,7 +28,11 @@ function Search ()
 		try
 		{
 			const data = await searchtask(query, status);
+<<<<<<< HEAD
 			setresults(data.tasks);
+=======
+			setresults(data.task);
+>>>>>>> D
 		}
 		catch (err)
 		{
@@ -57,11 +61,19 @@ function Search ()
 							<option value="done">{t("random.termine")}</option>
 						</select>
 						<button type="submit">{t("navbar.search")}</button>
+<<<<<<< HEAD
+=======
+						{error && <p className="error">{error}</p>}
+>>>>>>> D
 						{loading && <p>{t("random.rechercheencours")}.</p>}
 
 						{error && <p className="error">{t("random.impossibleserv")}{error}</p>}
 
+<<<<<<< HEAD
 						{!loading && !error && searched && results.length === 0 && (<p>{t("random.noreult")}</p>)}
+=======
+						{!loading && !error && searched && results.length === 0 && (<p>{t("noresult")}</p>)}
+>>>>>>> D
 						<ul className="search-results">
 							{
 								results.map((task) =>

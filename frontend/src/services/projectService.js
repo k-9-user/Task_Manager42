@@ -4,6 +4,7 @@ export function getProjects() {
 	return apiFetch("/api/projects");
 }
 
+<<<<<<< HEAD
 export function getProject(projectId) {
 	return apiFetch(`/api/projects/${projectId}`);
 }
@@ -25,6 +26,8 @@ export function removeProjectMember(projectId, userId) {
 	});
 }
 
+=======
+>>>>>>> D
 export function createProject(name, description) {
 	return apiFetch("/api/projects", {
 		method: "POST",

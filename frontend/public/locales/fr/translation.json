@@ -4,7 +4,12 @@
 		"projects": "Projets",
 		"login": "Se connecter",
 		"logout": "Déconnexion",
+<<<<<<< HEAD
 		"search": "Rechercher"
+=======
+		"search": "Rechercher",
+		"profile": "Profile"
+>>>>>>> D
 	},
 	"login":
 	{
@@ -25,9 +30,13 @@
 		"email": "Veuillez entrer une adresse mail",
 		"password": "Veuillez entrer un mot de passe",
 		"cpassword": "Veuillez confirmer votre mot de passe",
+<<<<<<< HEAD
 		"invaemail": "Adresse email invalide",
 		"shortpassword": "Le mot de passe doit contenir au moins 12 caractères",
 		"invausername": "Le nom d'utilisateur doit contenir 3 à 50 caractères (lettres, chiffres, . _ -)"
+=======
+		"invaemail": "Adresse email invalide"
+>>>>>>> D
 	},
 	"loading":
 	{
@@ -73,6 +82,7 @@
 		"envoi": "Envoi ...",
 		"ajfichier": "Ajouter le fichier",
 		"erupload": "Erreur d'upload",
+<<<<<<< HEAD
 		"ersurv": "Une erreur est survenue",
 		"addbanniere": "+ Ajouter une bannière",
 		"nametask": "Le titre de la tâche est obligatoire",
@@ -82,11 +92,15 @@
 		"ecrirecommentaire": "Écrire un commentaire",
 		"commenter": "Commenter",
 		"suppcommentaire": "Supprimer"
+=======
+		"ersurv": "Une erreur est survenue"
+>>>>>>> D
 	},
 	"footer":
 	{
 		"pc": "Politique de confidentialité",
 		"cdu": "Conditions d'utilisation"
+<<<<<<< HEAD
 	},
 	"members":
 	{
@@ -100,5 +114,7 @@
 			"editor": "Éditeur",
 			"viewer": "Lecteur"
 		}
+=======
+>>>>>>> D
 	}
 }

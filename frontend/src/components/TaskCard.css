@@ -1,7 +1,11 @@
 
 .task-card {
 	display: flex;
+<<<<<<< HEAD
 	flex-direction: column;
+=======
+	flex-direction:row;
+>>>>>>> D
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 	font-size: 0.9rem;
 	color: black;
@@ -63,6 +67,7 @@
 
 }
 
+<<<<<<< HEAD
 .task-banner {
 	width: 100%;
 	max-height: 160px;
@@ -115,6 +120,8 @@
 	font-family: inherit;
 }
 
+=======
+>>>>>>> D
 @media (max-width: 480px)
 {
 	.task-card {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import TaskBoard from "../components/TaskBoard";
+<<<<<<< HEAD
 import MembersPanel from "../components/MembersPanel";
 import { createTask, updateTaskStatus } from "../services/taskService.js";
 import { getProject } from "../services/projectService.js";
@@ -30,6 +31,36 @@ function ProjectDetail()
 				setMembers(data.members);
 				setTasks(data.tasks);
 				setCurrentUserId(user.user.id);
+=======
+import { getProjectTasks, updateTaskStatus } from "../services/taskService.js";
+import { useTranslation } from "react-i18next";
+import './ProjectDetail.css';
+
+const USE_MOCK = false;
+
+
+const mockTasks = [{ id: "1", title: "Créer la maquette", status: "todo" }, { id: "2", title: "Setup Vite", status: "done" }, { id: "3", title: "Page login", status: "in_progress" },];
+
+function ProjectDetail()
+{
+	const { id } = useParams();
+	const [tasks, setTasks] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const { t } = useTranslation();
+
+	useEffect(() =>
+	{ async function fetchTasks()
+		{
+			try {
+				if (USE_MOCK)
+					setTasks(mockTasks);
+				else
+				{
+					const data = await getProjectTasks(id);
+					setTasks(data.tasks);
+				}
+>>>>>>> D
 			}
 			catch (err)
 			{
@@ -40,6 +71,7 @@ function ProjectDetail()
 				setLoading(false);
 			}
 		}
+<<<<<<< HEAD
 		fetchProject();
 	}, [id]);
 
@@ -65,10 +97,16 @@ function ProjectDetail()
 		}
 	}
 
+=======
+		fetchTasks();
+	}, [id]);
+
+>>>>>>> D
 	async function handleStatusChange(taskId, newStatus)
 	{
 		setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
 
+<<<<<<< HEAD
 		try
 		{
 			await updateTaskStatus(taskId, newStatus);
@@ -76,6 +114,18 @@ function ProjectDetail()
 		catch (err)
 		{
 			setError(err.message);
+=======
+		if (!USE_MOCK)
+		{
+			try
+			{
+				await updateTaskStatus(taskId, newStatus);
+			}
+			catch (err)
+			{
+				setError(err.message);
+			}
+>>>>>>> D
 		}
 	}
 	
@@ -84,6 +134,7 @@ function ProjectDetail()
 	else if (error)
 		return (<p className="error">{t("error.err")} : {error}</p>);
 	return (<div className="project-detail-page">
+<<<<<<< HEAD
 		<h1>{project.name}</h1>
 		{project.description && <p>{project.description}</p>}
 		{error && <p className="error">{error}</p>}
@@ -98,6 +149,9 @@ function ProjectDetail()
 			currentUserId={currentUserId}
 			onMembersChange={setMembers}
 		/>
+=======
+		<h1>{t("random.projet")} #{id}</h1>
+>>>>>>> D
 		<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} />
 	</div>
 	);

@@ -47,8 +47,11 @@ DEFAULT_EXTENSION_BY_MIME_TYPE = {
 UPLOAD_URL_PREFIX = "/uploads"
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
+<<<<<<< HEAD
 ALLOWED_BANNER_MIME_TYPES = frozenset({"image/jpeg", "image/png"})
 
+=======
+>>>>>>> D
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
 AuthenticatedUser = Annotated[User, Depends(get_current_user)]
@@ -214,6 +217,7 @@ def delete_attachment(
     return _success_response()
 
 
+<<<<<<< HEAD
 @router.post(
     "/api/tasks/{task_id}/banner",
     summary="Upload a task banner image",
@@ -345,6 +349,8 @@ def delete_task_banner(
     return _success_response()
 
 
+=======
+>>>>>>> D
 def _validate_content_type(content_type: str | None) -> None:
     if content_type not in ALLOWED_ATTACHMENT_MIME_TYPES:
         raise HTTPException(
@@ -353,6 +359,7 @@ def _validate_content_type(content_type: str | None) -> None:
         )
 
 
+<<<<<<< HEAD
 def _validate_banner_content_type(content_type: str | None) -> None:
     if content_type not in ALLOWED_BANNER_MIME_TYPES:
         raise HTTPException(
@@ -361,6 +368,8 @@ def _validate_banner_content_type(content_type: str | None) -> None:
         )
 
 
+=======
+>>>>>>> D
 def _generate_stored_filename(original_filename: str, content_type: str) -> str:
     original_suffix = Path(original_filename).suffix.lower()
     safe_extensions = SAFE_EXTENSIONS_BY_MIME_TYPE[content_type]

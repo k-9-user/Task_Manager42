@@ -16,7 +16,14 @@ function Navbar()
 				<Link to="/projects">{t("navbar.projects")} </Link>
 				{ isAuthen ?
 					(
+<<<<<<< HEAD
 						<button onClick={logout}>{t("navbar.logout")}</button>
+=======
+						<>
+							<button onClick={logout}>{t("navbar.logout")}</button>
+							<Link to="/profile">{t("navbar.profile")}</Link>
+						</>
+>>>>>>> D
 					)
 					:
 					(

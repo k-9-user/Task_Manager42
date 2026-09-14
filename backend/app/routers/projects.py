@@ -326,7 +326,11 @@ def add_member(
     db.commit()
     db.refresh(new_member)
 
+<<<<<<< HEAD
     return SuccessEnvelope(data=ProjectMemberData(member=_serialize_member(new_member)))
+=======
+    return SuccessEnvelope(data=ProjectMemberData(member=ProjectMemberResponse.model_validate(new_member)))
+>>>>>>> D
 
 
 # ---------------------------------------------------------------------------
