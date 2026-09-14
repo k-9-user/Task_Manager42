@@ -4,10 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-<<<<<<< HEAD
 from fastapi.staticfiles import StaticFiles
-=======
->>>>>>> D
 from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
@@ -23,10 +20,7 @@ from app.routers.notifications import router as notifications_router
 from app.routers.public_api import router as public_api_router
 from app.routers.search import router as search_router
 from app.routers.attachments import router as attachments_router
-<<<<<<< HEAD
 from app.routers.comments import router as comments_router
-=======
->>>>>>> D
 from app.routers.export_import import router as export_import_router
 
 
@@ -61,13 +55,9 @@ app.include_router(notifications_router)
 app.include_router(public_api_router)
 app.include_router(search_router)
 app.include_router(attachments_router)
-<<<<<<< HEAD
 app.include_router(comments_router)
 app.include_router(export_import_router)
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
-=======
-app.include_router(export_import_router)
->>>>>>> D
 
 
 @app.exception_handler(IntegrityError)

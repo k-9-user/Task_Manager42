@@ -168,11 +168,6 @@ def check():
     require(all(path.stat().st_mode & 0o004 for path in (CERT, KEY)),
             "TLS files need read permission for unprivileged nginx inside private nginx/certs")
     run(["openssl", "x509", "-in", str(CERT), "-checkend", "0", "-noout"], quiet=True)
-<<<<<<< HEAD
-    san = run(["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"], quiet=True)
-    names = {name.strip() for name in san.splitlines()[-1].split(",")}
-    require({"DNS:localhost", "IP Address:127.0.0.1"} <= names, "TLS SAN must include localhost and 127.0.0.1")
-=======
     # san = run(["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"], quiet=True)
     # names = {name.strip() for name in san.splitlines()[-1].split(",")}
     # require({"DNS:localhost", "IP Address:127.0.0.1"} <= names, "TLS SAN must include localhost and 127.0.0.1")
@@ -196,7 +191,6 @@ def check():
         "TLS SAN must include localhost and 127.0.0.1",
     )
     
->>>>>>> D
     public = run(["openssl", "x509", "-in", str(CERT), "-pubkey", "-noout"], quiet=True)
     private_public = run(["openssl", "pkey", "-in", str(KEY), "-passin", "pass:", "-pubout"], quiet=True)
     require(public == private_public, "TLS certificate and key do not match")

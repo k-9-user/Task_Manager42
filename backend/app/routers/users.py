@@ -130,7 +130,6 @@ def get_me(
     return _user_response(current_user)
 
 
-<<<<<<< HEAD
 @router.get(
     "/lookup",
     summary="Look up a user by exact email",
@@ -158,8 +157,6 @@ def lookup_user(
     return _user_response(user)
 
 
-=======
->>>>>>> D
 @router.put(
     "/me",
     summary="Update current user",
