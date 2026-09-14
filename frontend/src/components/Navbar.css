@@ -45,6 +45,16 @@
   font-weight: 600;
 }
 
+.navbar-links button{
+  color: #cfcfe0;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 /* Responsive : passe en colonne sur petit écran */
 @media (max-width: 600px) {
   .navbar {

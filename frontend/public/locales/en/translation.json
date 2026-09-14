@@ -4,7 +4,8 @@
 		"projects": "Projects",
 		"login": "Log in",
 		"logout": "Log out",
-		"search": "To Search"
+		"search": "To Search",
+		"profile": "Profile"
 	},
 	"login":
 	{
