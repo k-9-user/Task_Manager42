@@ -128,7 +128,7 @@
 
 #### `GET /api/export`
 
-- [ ] Prevent spreadsheet formula injection in CSV cells that begin with formula or control prefixes.
+- [x] Prevent spreadsheet formula injection in CSV cells that begin with formula or control prefixes.
 - [ ] Define whether CSV is a task-copy format or a round-trip export; preserve empty projects and null/empty distinctions only if round-trip behavior is promised.
 
 #### `POST /api/import`

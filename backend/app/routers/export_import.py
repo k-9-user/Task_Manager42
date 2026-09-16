@@ -43,6 +43,7 @@ CSV_COLUMNS = (
     "created_at",
     "updated_at",
 )
+CSV_FORMULA_PREFIXES = frozenset("=+-@")
 SUPPORTED_EXPORT_FORMATS = frozenset({"json", "csv"})
 SUPPORTED_IMPORT_MIME_TYPES = {
     ".json": frozenset({"application/json"}),
@@ -247,10 +248,10 @@ def _serialize_csv(
             writer.writerow(
                 {
                     "project_id": _serialize_value(project.id),
-                    "project_name": project.name,
+                    "project_name": _safe_csv_cell(project.name),
                     "task_id": _serialize_value(task.id),
-                    "title": task.title,
-                    "description": task.description or "",
+                    "title": _safe_csv_cell(task.title),
+                    "description": _safe_csv_cell(task.description or ""),
                     "status": _serialize_value(task.status),
                     "assignee_id": _serialize_value(task.assignee_id) or "",
                     "due_date": _serialize_value(task.due_date) or "",
@@ -259,6 +260,14 @@ def _serialize_csv(
                 }
             )
     return output.getvalue()
+
+
+def _safe_csv_cell(value: str) -> str:
+    """Prefix formula-like spreadsheet cells without changing stored values."""
+    meaningful_value = value.lstrip()
+    if meaningful_value and meaningful_value[0] in CSV_FORMULA_PREFIXES:
+        return f"'{value}"
+    return value
 
 
 def _serialize_value(value: Any) -> Any:
