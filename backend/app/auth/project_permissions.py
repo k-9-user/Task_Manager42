@@ -9,6 +9,26 @@ from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 
 
+def assert_valid_task_assignee(
+    db: Session,
+    project_id: UUID,
+    assignee_id: UUID,
+) -> None:
+    """Reject task assignments to users outside the target project."""
+
+    membership_id = db.scalar(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == assignee_id,
+        )
+    )
+    if membership_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="L'utilisateur assigné doit être membre du projet",
+        )
+
+
 def lock_user_projects_for_write(db: Session, user_id: UUID) -> list[Project]:
     """Lock every project the user owns, belongs to, or has an assignment in."""
 

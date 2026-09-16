@@ -21,10 +21,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
-from app.auth.project_permissions import lock_project_for_write
+from app.auth.project_permissions import (
+    assert_valid_task_assignee,
+    lock_project_for_write,
+)
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
-from app.models.project_member import ProjectMember, ProjectRole
+from app.models.project_member import ProjectRole
 from app.models.task import Task, TaskStatus
 from app.routers.projects import _get_membership_or_404, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
@@ -37,26 +40,6 @@ router = APIRouter(tags=["tasks"])
 # donc une taille de page constante ici — à discuter si l'équipe veut plutôt
 # un `?limit=` réglable, comme sur les autres routes paginées.
 PAGE_SIZE = 20
-
-
-def _assert_valid_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUID) -> None:
-    """Refuse d'assigner une tâche à quelqu'un qui n'est pas membre du projet.
-
-    Décision prise pour combler un point non précisé par le contrat (cf
-    SUIVI-PERSONNE-B.md) : assigner une tâche à un non-membre n'aurait pas de
-    sens (il ne pourrait même pas voir le projet). À valider en équipe.
-    """
-
-    is_member = (
-        db.query(ProjectMember)
-        .filter(ProjectMember.project_id == project_id, ProjectMember.user_id == assignee_id)
-        .first()
-    )
-    if is_member is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="L'utilisateur assigné doit être membre du projet",
-        )
 
 
 def _notify(
@@ -155,7 +138,7 @@ def create_task(
     )
 
     if payload.assignee_id is not None:
-        _assert_valid_assignee(db, project_id, payload.assignee_id)
+        assert_valid_task_assignee(db, project_id, payload.assignee_id)
 
     task = Task(
         project_id=project_id,
@@ -212,7 +195,7 @@ def update_task(
     updates = payload.model_dump(exclude_unset=True)
 
     if updates.get("assignee_id") is not None:
-        _assert_valid_assignee(db, task.project_id, updates["assignee_id"])
+        assert_valid_task_assignee(db, task.project_id, updates["assignee_id"])
 
     reassigned_to = (
         updates["assignee_id"]

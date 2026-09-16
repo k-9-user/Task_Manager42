@@ -133,8 +133,8 @@
 
 #### `POST /api/import`
 
-- [ ] Require every non-null assignee to be a member of the target project.
-- [ ] Reuse private task title, status, length and nullable-field validation.
+- [x] Require every non-null assignee to be a member of the target project.
+- [x] Reuse private task title, status, length and nullable-field validation.
 - [ ] Define and test duplicate headers, duplicate records, empty projects and null/empty CSV values.
 - [ ] Make task-copy semantics explicit so repeated imports are not mistaken for idempotent restore operations.
 - [ ] Emit required creation and assignment notifications only after the complete import has validated successfully.

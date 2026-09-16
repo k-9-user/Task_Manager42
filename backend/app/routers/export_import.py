@@ -17,16 +17,21 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.auth.dependencies import get_current_user
-from app.auth.project_permissions import lock_project_for_write
+from app.auth.project_permissions import (
+    assert_valid_task_assignee,
+    lock_project_for_write,
+)
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.schemas.task import TaskCreate
 
 
 router = APIRouter(tags=["Export / Import"])
@@ -395,15 +400,7 @@ def _build_imported_task(
     if project_id not in project_cache:
         project_cache[project_id] = _get_writable_project(db, project_id, user_id)
 
-    title = record.get("title")
-    if not isinstance(title, str) or not title.strip():
-        raise _invalid_import("Each task requires a non-empty title")
-
-    description = record.get("description")
-    if description == "":
-        description = None
-    if description is not None and not isinstance(description, str):
-        raise _invalid_import("Task description must be a string or null")
+    task_data = _validate_imported_task_data(record)
 
     raw_status = record.get("status") or TaskStatus.TODO.value
     try:
@@ -411,21 +408,38 @@ def _build_imported_task(
     except (TypeError, ValueError) as error:
         raise _invalid_import("Invalid task status") from error
 
-    assignee_id = _parse_optional_uuid(record.get("assignee_id"), "assignee_id")
-    if assignee_id is not None and db.scalar(
-        select(User.id).where(User.id == assignee_id)
-    ) is None:
-        raise _invalid_import("Unknown task assignee")
+    if task_data.assignee_id is not None:
+        assert_valid_task_assignee(db, project_id, task_data.assignee_id)
 
-    due_date = _parse_optional_date(record.get("due_date"))
     return Task(
         project_id=project_id,
-        title=title.strip(),
-        description=description,
+        title=task_data.title,
+        description=task_data.description,
         status=task_status,
-        assignee_id=assignee_id,
-        due_date=due_date,
+        assignee_id=task_data.assignee_id,
+        due_date=task_data.due_date,
     )
+
+
+def _validate_imported_task_data(record: dict[str, Any]) -> TaskCreate:
+    title = record.get("title")
+    if isinstance(title, str):
+        title = title.strip()
+
+    values = {
+        "title": title,
+        "description": record.get("description"),
+        "assignee_id": record.get("assignee_id"),
+        "due_date": record.get("due_date"),
+    }
+    for nullable_field in ("description", "assignee_id", "due_date"):
+        if values[nullable_field] == "":
+            values[nullable_field] = None
+
+    try:
+        return TaskCreate.model_validate(values)
+    except ValidationError as error:
+        raise _invalid_import("Invalid task data") from error
 
 
 def _get_writable_project(db: Session, project_id: UUID, user_id: UUID) -> Project:
@@ -439,23 +453,6 @@ def _parse_uuid(value: Any, field_name: str) -> UUID:
         return UUID(str(value))
     except (AttributeError, TypeError, ValueError) as error:
         raise _invalid_import(f"Invalid {field_name}") from error
-
-
-def _parse_optional_uuid(value: Any, field_name: str) -> UUID | None:
-    if value in (None, ""):
-        return None
-    return _parse_uuid(value, field_name)
-
-
-def _parse_optional_date(value: Any) -> date | None:
-    if value in (None, ""):
-        return None
-    if not isinstance(value, str):
-        raise _invalid_import("Invalid due_date")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise _invalid_import("Invalid due_date") from error
 
 
 def _invalid_import(detail: str) -> HTTPException:
