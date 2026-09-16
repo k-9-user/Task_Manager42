@@ -46,7 +46,11 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 def _get_membership_or_404(
-    db: Session, project_id: uuid.UUID, user_id: uuid.UUID
+    db: Session,
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    not_found_detail: str = "Projet introuvable",
 ) -> ProjectMember:
     """Renvoie l'appartenance (avec son rôle) de `user_id` au projet `project_id`.
 
@@ -66,7 +70,7 @@ def _get_membership_or_404(
     )
     if membership is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable"
+            status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail
         )
     return membership
 

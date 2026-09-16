@@ -141,6 +141,7 @@ Toutes les routes sous préfixe `/api`. Format de réponse JSON standard :
 | GET | `/api/v1/public/projects` | header `X-API-Key` | `{projects: []}` |
 | GET | `/api/search/tasks` | query `?q=&status=&project_id=&page=&limit=` | `{tasks: [], total}` |
 | POST | `/api/tasks/{id}/attachments` | multipart file | `{attachment}` |
+| GET | `/api/tasks/{id}/attachments` | header `Authorization: Bearer <token>` | `{attachments: [{id, filename, content_type, created_at}]}` |
 | GET | `/api/attachments/{id}` | header `Authorization: Bearer <token>` | fichier téléchargeable (membres du projet) |
 | DELETE | `/api/attachments/{id}` | — | `{success}` |
 | GET | `/api/export?format=json\|csv` | — | fichier téléchargeable |

@@ -56,6 +56,47 @@ AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 ApplicationSettings = Annotated[Settings, Depends(get_settings)]
 
 
+@router.get(
+    "/api/tasks/{task_id}/attachments",
+    summary="List task attachments",
+    description=(
+        "List attachment metadata for an authenticated member of the task's "
+        "project. Files are retrieved through the attachment download route."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required."},
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Task not found or not visible."
+        },
+    },
+)
+def list_task_attachments(
+    task_id: UUID,
+    db: DatabaseSession,
+    current_user: AuthenticatedUser,
+) -> dict[str, Any]:
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found",
+        )
+    _get_membership_or_404(
+        db, project_id, current_user.id, not_found_detail="Task not found",
+    )
+
+    task_attachments = db.scalars(
+        select(Attachment)
+        .where(Attachment.task_id == task_id)
+        .order_by(Attachment.created_at.asc(), Attachment.id.asc())
+    ).all()
+    return _success_response(
+        attachments=[
+            _serialize_attachment_metadata(attachment)
+            for attachment in task_attachments
+        ]
+    )
+
+
 @router.post(
     "/api/tasks/{task_id}/attachments",
     summary="Upload a task attachment",
@@ -187,7 +228,9 @@ def download_attachment(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
         )
-    _get_membership_or_404(db, project_id, current_user.id)
+    _get_membership_or_404(
+        db, project_id, current_user.id, not_found_detail="Attachment not found",
+    )
 
     stored_path = _safe_stored_path(
         attachment.file_url, _upload_directory(settings)
@@ -333,6 +376,20 @@ def _safe_download_filename(file_name: str) -> str:
     if filename in {"", ".", ".."}:
         return "attachment"
     return filename
+
+
+def _attachment_content_type(file_url: str) -> str:
+    stored_filename = PurePosixPath(file_url).name
+    return mimetypes.guess_type(stored_filename)[0] or "application/octet-stream"
+
+
+def _serialize_attachment_metadata(attachment: Attachment) -> dict[str, Any]:
+    return {
+        "id": attachment.id,
+        "filename": _safe_download_filename(attachment.file_name),
+        "content_type": _attachment_content_type(attachment.file_url),
+        "created_at": attachment.created_at,
+    }
 
 
 def _serialize_attachment(attachment: Attachment) -> dict[str, Any]:
