@@ -1,10 +1,12 @@
 import logging
+import mimetypes
 import uuid
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +18,7 @@ from app.models.attachment import Attachment
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User
+from app.routers.projects import _get_membership_or_404
 
 
 router = APIRouter(tags=["Attachments"])
@@ -148,6 +151,62 @@ async def upload_attachment(
     return _success_response(attachment=_serialize_attachment(attachment))
 
 
+@router.get(
+    "/api/attachments/{attachment_id}",
+    response_class=FileResponse,
+    summary="Download a task attachment",
+    description=(
+        "Return an attachment to an authenticated member of its project. "
+        "Compatible file types can be previewed by the browser."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required."},
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Attachment not found, not visible, or unavailable."
+        },
+    },
+)
+def download_attachment(
+    attachment_id: UUID,
+    db: DatabaseSession,
+    current_user: AuthenticatedUser,
+    settings: ApplicationSettings,
+) -> FileResponse:
+    attachment = db.scalar(
+        select(Attachment).where(Attachment.id == attachment_id)
+    )
+    if attachment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
+        )
+
+    project_id = db.scalar(
+        select(Task.project_id).where(Task.id == attachment.task_id)
+    )
+    if project_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
+        )
+    _get_membership_or_404(db, project_id, current_user.id)
+
+    stored_path = _safe_stored_path(
+        attachment.file_url, _upload_directory(settings)
+    )
+    if stored_path is None or not stored_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attachment file not found",
+        )
+
+    media_type = mimetypes.guess_type(stored_path.name)[0]
+    return FileResponse(
+        stored_path,
+        filename=_safe_download_filename(attachment.file_name),
+        media_type=media_type or "application/octet-stream",
+        content_disposition_type="inline",
+    )
+
+
 @router.delete(
     "/api/attachments/{attachment_id}",
     summary="Delete a task attachment",
@@ -267,6 +326,13 @@ def _safe_stored_path(file_url: str, upload_directory: Path) -> Path | None:
     if candidate.parent != upload_directory:
         return None
     return candidate
+
+
+def _safe_download_filename(file_name: str) -> str:
+    filename = PurePosixPath(file_name.replace("\\", "/")).name
+    if filename in {"", ".", ".."}:
+        return "attachment"
+    return filename
 
 
 def _serialize_attachment(attachment: Attachment) -> dict[str, Any]:

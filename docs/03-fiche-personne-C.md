@@ -43,6 +43,7 @@ backend/tests/test_public_api.py
 - [ ] `backend/app/routers/search.py` : `GET /api/search/tasks` avec filtres (statut, projet) + pagination
 - [ ] `backend/app/routers/attachments.py` :
   - `POST /api/tasks/{id}/attachments` (upload multipart, validation type/taille)
+  - `GET /api/attachments/{id}` (téléchargement authentifié, membres du projet)
   - `DELETE /api/attachments/{id}`
 - [ ] Stockage fichiers dans `backend/app/static/uploads/` (cf `UPLOAD_DIR` du `.env`)
 

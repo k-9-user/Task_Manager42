@@ -123,7 +123,7 @@
 #### Missing attachment list/download routes
 
 - [ ] Add authenticated attachment listing or include attachment metadata in task responses.
-- [ ] Add an authenticated download route that rechecks current project membership.
+- [x] Add an authenticated download route that rechecks current project membership.
 - [ ] Do not expose the upload directory as unrestricted static content.
 
 #### `GET /api/export`
