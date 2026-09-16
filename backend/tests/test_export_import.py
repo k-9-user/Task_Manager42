@@ -244,20 +244,106 @@ def test_csv_export_uses_standard_csv_escaping(
     db: Session,
     current_user: User,
 ):
-    project = _create_project(db, current_user, "Quoted, project")
+    project = _create_project(db, current_user, "Projet café, normal")
     _create_task(
         db,
         project,
-        "Quoted, task",
-        description="First line\nSecond line",
+        'Quoted "task", normal',
+        description='First line\nSecond "quoted" line — été',
     )
 
     response = client.get("/api/export", params={"format": "csv"})
     row = list(csv.DictReader(io.StringIO(response.text)))[0]
 
-    assert row["project_name"] == "Quoted, project"
-    assert row["title"] == "Quoted, task"
-    assert row["description"] == "First line\nSecond line"
+    assert row["project_name"] == "Projet café, normal"
+    assert row["title"] == 'Quoted "task", normal'
+    assert row["description"] == 'First line\nSecond "quoted" line — été'
+
+
+@pytest.mark.parametrize(
+    "dangerous_title",
+    [
+        "=SUM(1,2)",
+        "+SUM(1,1)",
+        "-1+2",
+        "@SUM(A1:A2)",
+    ],
+)
+def test_csv_export_neutralizes_formula_prefixes(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    dangerous_title: str,
+):
+    project = _create_project(db, current_user, "Formula-safe project")
+    task = _create_task(db, project, dangerous_title)
+    task_id = task.id
+
+    response = client.get("/api/export", params={"format": "csv"})
+    row = list(csv.DictReader(io.StringIO(response.text)))[0]
+
+    assert response.status_code == status.HTTP_200_OK
+    assert row["title"] == f"'{dangerous_title}"
+    db.expire_all()
+    assert db.get(Task, task_id).title == dangerous_title
+
+
+def test_csv_export_protects_leading_whitespace_in_all_user_text_fields(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "   =Project formula")
+    task = _create_task(
+        db,
+        project,
+        "  +Task formula",
+        description="	-Description formula",
+    )
+    project_id = project.id
+    task_id = task.id
+
+    response = client.get("/api/export", params={"format": "csv"})
+    row = list(csv.DictReader(io.StringIO(response.text)))[0]
+
+    assert row["project_name"] == "'   =Project formula"
+    assert row["title"] == "'  +Task formula"
+    assert row["description"] == "'	-Description formula"
+    db.expire_all()
+    assert db.get(Project, project_id).name == "   =Project formula"
+    persisted_task = db.get(Task, task_id)
+    assert persisted_task.title == "  +Task formula"
+    assert persisted_task.description == "	-Description formula"
+
+
+def test_json_export_does_not_neutralize_formula_like_text(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "=JSON project")
+    project.description = "-JSON project description"
+    task = _create_task(
+        db,
+        project,
+        "+JSON task",
+        description="@JSON task description",
+    )
+    db.commit()
+    project_id = project.id
+    task_id = task.id
+
+    response = client.get("/api/export", params={"format": "json"})
+    exported_project = response.json()["projects"][0]
+    exported_task = exported_project["tasks"][0]
+
+    assert exported_project["name"] == "=JSON project"
+    assert exported_project["description"] == "-JSON project description"
+    assert exported_task["title"] == "+JSON task"
+    assert exported_task["description"] == "@JSON task description"
+    db.expire_all()
+    assert db.get(Project, project_id).name == "=JSON project"
+    assert db.get(Task, task_id).title == "+JSON task"
 
 
 def test_owner_can_import_valid_json(
