@@ -145,7 +145,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
         response = test_client.options(
             "/api/auth/login",
             headers={
-                "Origin": "https://localhost:8443",
+                "Origin": "https://localhost",
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": "authorization,content-type",
             },
@@ -160,7 +160,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
         api_key_denied = test_client.options(
             "/api/v1/public/projects",
             headers={
-                "Origin": "https://localhost:8443",
+                "Origin": "https://localhost",
                 "Access-Control-Request-Method": "GET",
                 "Access-Control-Request-Headers": "x-api-key",
             },
@@ -168,7 +168,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == (
-        "https://localhost:8443"
+        "https://localhost"
     )
     assert "authorization" in response.headers[
         "access-control-allow-headers"

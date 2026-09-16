@@ -11,7 +11,7 @@ Task Manager 42 is a collaborative project/task-management application built wit
 - Make and Python 3 (the local wrapper uses only the standard library).
 - OpenSSL supporting `req -addext` and `x509 -ext`, plus curl.
 - Latest stable Google Chrome for eventual mandatory browser verification.
-- Free local ports 8080 and 8443; network access for container images/dependency downloads.
+- Free local ports 80 and 443; network access for container images/dependency downloads.
 
 Run the following commands from the repository root. Application runtimes are containerized: Python 3.12, Node 24 and PostgreSQL 17. A host Node/Python backend environment is not needed for the container workflow. The root `package.json` is not the frontend application; its package lives in `frontend/`.
 
@@ -24,22 +24,24 @@ make up
 make smoke
 ```
 
-`make setup` creates non-secret `.env` configuration plus independent ignored files under `secrets/` for the database URL/password, JWT and OAuth signing, optional Google client secret, and bootstrap-admin password. On a legacy install it validates and migrates existing `.env` secret values before atomically rewriting `.env`. New-format configuration and certificates are preserved; missing or conflicting secret files are refused rather than regenerated. Never commit credentials or private keys.
+`make setup` creates non-secret `.env` configuration plus independent ignored files under `secrets/` for the database URL/password, JWT and OAuth signing, optional Google client secret, and bootstrap-admin password. On a legacy install it validates and migrates existing `.env` secret values before atomically rewriting `.env`; it also migrates the exact former `:8443` local URLs to the default HTTPS port. Other new-format configuration and certificates are preserved; mixed/custom URLs and missing or conflicting secret files are refused rather than guessed or regenerated. Never commit credentials or private keys.
 
 The wrapper accepts plain `KEY=value` entries in `.env`: no quotes, interpolation, inline comments, duplicates or undocumented keys. Secret files contain exactly one value without a newline. `make check` verifies the private directory, regular non-symlink files, permissions, placeholders, secret independence, Google pairing, and consistency between `database_url`, `postgres_password`, and non-secret `POSTGRES_*` values. Host variables cannot override checked configuration or secrets.
 
 `make check` validates local tools, daemon, configuration, secrets, local URLs, certificate validity/SAN/key matching and Compose configuration. `make up` performs checks, builds and starts the development stack with the frontend enabled by default. Migrations and administrator bootstrap must complete before the backend starts; nginx waits for backend and frontend health.
 
-**Use localhost only.** The canonical address remains **https://localhost:8443**. Only nginx publishes ports, on `127.0.0.1:8080` and `127.0.0.1:8443`; HTTP redirects to HTTPS. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
+Compose builds two local application images, `task-manager-back:latest` and `task-manager-front:latest`. This localhost-only stack has no development/production image variants.
+
+**Use localhost only.** The canonical address is **https://localhost**. Only nginx publishes ports, on `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged container listens internally on 8080/8443. HTTP redirects to HTTPS while preserving the request URI. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
 
 Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic.
 
 | Address | Purpose |
 |---|---|
-| https://localhost:8443 | Development frontend shell; known broken/mock flows |
-| https://localhost:8443/docs | Swagger UI for the real API |
-| https://localhost:8443/openapi.json | Generated API specification |
-| https://localhost:8443/health | Backend/database health JSON; not a complete status/backup system |
+| https://localhost | Development frontend shell; known broken/mock flows |
+| https://localhost/docs | Swagger UI for the real API |
+| https://localhost/openapi.json | Generated API specification |
+| https://localhost/health | Backend/database health JSON; not a complete status/backup system |
 
 `make smoke` makes read-only HTTPS requests for health, the frontend root and representative OpenAPI paths. It does **not** create users, authenticate, test browser JavaScript, validate every route or prove feature completion. Its TLS client uses the generated certificate explicitly with `--cacert`, rather than disabling verification.
 

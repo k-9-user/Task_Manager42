@@ -19,17 +19,24 @@ make fclean
 make re
 ```
 
-The frontend is enabled by default at **https://localhost:8443**. Only Nginx
-publishes ports, bound to `127.0.0.1:8080` and `127.0.0.1:8443`. HTTP redirects
-to HTTPS on 8443. The backend, database and frontend have no published ports.
+The frontend is enabled by default at **https://localhost**. Only Nginx
+publishes ports, bound to `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged
+container keeps internal ports 8080/8443. HTTP redirects to HTTPS. The backend,
+database and frontend have no published ports.
 Nginx waits for healthy frontend and backend services; the backend waits for
 the database and successful migrations.
 
+Compose builds exactly two local application images: `task-manager-back:latest`
+and `task-manager-front:latest`. There are no development/production image
+variants; this repository ships one localhost runtime for each application role.
+
 `setup` creates non-secret `.env` configuration and ignored file-backed Docker
 secrets under `secrets/`. A legacy `.env` is validated and migrated without
-rotating its database/signing values; a new-format configuration is preserved
-and missing/conflicting files are refused. Values in `.env` remain plain
-`KEY=value`; secret files contain one value without a newline. Host environment
+rotating its database/signing values. Exact former `:8443` local URLs migrate
+atomically to the default HTTPS port; mixed/custom URLs are refused. Other
+new-format configuration is preserved and missing/conflicting files are refused.
+Values in `.env` remain plain `KEY=value`; secret files contain one value without
+a newline. Host environment
 variables cannot override checked configuration or secrets. OAuth credentials
 remain optional: leave both client ID and secret file empty to disable Google
 login. The redirect remains fixed at the localhost callback.
@@ -72,6 +79,12 @@ These asset checks do not replace browser execution tests.
 
 Run host-only configuration safety tests without containers or third-party
 dependencies using `python3 -m unittest scripts.test_dev`.
+
+`scripts/dev.py` is only the command entry point. Implementation lives under
+`scripts/localdev/`: shared process helpers, configuration/secret lifecycle,
+Docker safety, and command orchestration are separated by concern. Host tests
+mirror those boundaries under `scripts/tests/`; `scripts/test_dev.py` remains
+the compatibility aggregator.
 
 ## Resetting an Old Dev Database
 

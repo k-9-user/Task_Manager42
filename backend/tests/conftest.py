@@ -26,7 +26,7 @@ os.environ.update(
     JWT_SECRET="test-jwt-signing-secret-not-for-deployment-42",
     OAUTH_SESSION_SECRET="test-oauth-signing-secret-not-for-deployment-42",
     JWT_EXPIRATION="3600",
-    CORS_ORIGINS="https://localhost:8443",
+    CORS_ORIGINS="https://localhost",
     OAUTH_GOOGLE_CLIENT_ID="test-google-client",
     OAUTH_GOOGLE_CLIENT_SECRET="test-google-secret",
     OAUTH_GOOGLE_REDIRECT_URI="https://testserver/api/auth/oauth/google/callback",

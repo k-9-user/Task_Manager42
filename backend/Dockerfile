@@ -15,7 +15,8 @@ RUN python -m venv /opt/venv
 COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir --requirement /tmp/requirements.txt
 
-FROM base AS application
+FROM base
+COPY --from=dependencies /opt/venv /opt/venv
 
 COPY --chown=app:app . /app
 RUN mkdir -p /app/uploads /run/secrets \
@@ -24,14 +25,4 @@ RUN mkdir -p /app/uploads /run/secrets \
 USER app
 EXPOSE 8000
 
-FROM application AS development
-
-COPY --from=dependencies /opt/venv /opt/venv
-
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--no-access-log"]
-
-FROM application AS production
-
-COPY --from=dependencies /opt/venv /opt/venv
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

@@ -84,7 +84,7 @@ def test_google_redirect_uri_must_be_a_plain_https_url() -> None:
 def test_google_redirect_uri_accepts_https_and_an_unset_value() -> None:
     configured = _settings(
         oauth_google_redirect_uri=(
-            "https://localhost:8443/api/auth/oauth/google/callback"
+            "https://localhost/api/auth/oauth/google/callback"
         )
     )
     unset = _settings(oauth_google_redirect_uri="")
@@ -176,14 +176,14 @@ def test_cached_settings_redact_model_validation_inputs(
 
 
 def test_cors_origins_parse_from_a_comma_separated_string() -> None:
-    parsed = _settings(cors_origins="https://localhost:8443, https://localhost:5173")
-    single = _settings(cors_origins="https://localhost:8443")
+    parsed = _settings(cors_origins="https://localhost, https://localhost:5173")
+    single = _settings(cors_origins="https://localhost")
 
     assert parsed.cors_origins == [
-        "https://localhost:8443",
+        "https://localhost",
         "https://localhost:5173",
     ]
-    assert single.cors_origins == ["https://localhost:8443"]
+    assert single.cors_origins == ["https://localhost"]
 
 
 def test_cors_origins_reject_an_empty_declaration() -> None:

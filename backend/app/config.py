@@ -45,7 +45,7 @@ class Settings(DatabaseSettings):
     oauth_google_redirect_uri: str = ""
     oauth_session_secret: SecretStr = Field(min_length=32)
     cors_origins: Annotated[list[str], NoDecode] = Field(
-        default_factory=lambda: ["https://localhost:8443"]
+        default_factory=lambda: ["https://localhost"]
     )
     upload_dir: str = "/app/uploads"
     max_upload_size_mb: int = Field(default=10, gt=0)
