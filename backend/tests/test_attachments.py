@@ -86,6 +86,7 @@ def test_router_exposes_exact_attachment_routes():
 
     assert routes == {
         ("POST", "/api/tasks/{task_id}/attachments"),
+        ("GET", "/api/attachments/{attachment_id}"),
         ("DELETE", "/api/attachments/{attachment_id}"),
     }
 
@@ -93,15 +94,17 @@ def test_router_exposes_exact_attachment_routes():
 def test_openapi_documents_multipart_upload_without_api_key(app: FastAPI):
     schema = app.openapi()
     upload_operation = schema["paths"]["/api/tasks/{task_id}/attachments"]["post"]
+    download_operation = schema["paths"]["/api/attachments/{attachment_id}"]["get"]
     delete_operation = schema["paths"]["/api/attachments/{attachment_id}"]["delete"]
 
     assert upload_operation["summary"] == "Upload a task attachment"
     assert delete_operation["summary"] == "Delete a task attachment"
+    assert download_operation["summary"] == "Download a task attachment"
     assert upload_operation["requestBody"]["required"] is True
     assert "multipart/form-data" in upload_operation["requestBody"]["content"]
     assert all(
         parameter["name"] != "X-API-Key"
-        for operation in (upload_operation, delete_operation)
+        for operation in (upload_operation, download_operation, delete_operation)
         for parameter in operation.get("parameters", [])
     )
 
@@ -453,6 +456,168 @@ def test_internal_stored_filenames_are_unique_and_safe(
     assert UUID(first_path.stem)
     assert UUID(second_path.stem)
     assert first_path.parent == second_path.parent == Path(test_settings.upload_dir)
+
+
+def test_owner_can_download_attachment_with_metadata(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+):
+    project = _create_project(db, current_user, "Owner download project")
+    task = _create_task(db, project, "Owner download task")
+    attachment, stored_path = _create_attachment(
+        db, task, current_user, test_settings,
+    )
+    stored_path.write_bytes(b"%PDF-secure-download")
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content == b"%PDF-secure-download"
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.headers["content-disposition"] == 'inline; filename="original.pdf"'
+
+
+@pytest.mark.parametrize("role", [ProjectRole.EDITOR, ProjectRole.VIEWER])
+def test_project_member_can_download_attachment(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+    role: ProjectRole,
+):
+    owner = _create_user(db, f"{role.value}-download-owner")
+    project = _create_project(db, owner, f"{role.value} download project")
+    _add_member(db, project, current_user, role)
+    task = _create_task(db, project, f"{role.value} download task")
+    attachment, _ = _create_attachment(db, task, owner, test_settings)
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content == b"stored attachment"
+
+
+def test_unrelated_user_cannot_download_attachment(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+):
+    owner = _create_user(db, "private-download-owner")
+    project = _create_project(db, owner, "Private download project")
+    task = _create_task(db, project, "Private download task")
+    attachment, _ = _create_attachment(db, task, owner, test_settings)
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_unknown_attachment_download_returns_404(client: TestClient):
+    response = client.get(f"/api/attachments/{uuid4()}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_missing_physical_attachment_returns_404(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+):
+    project = _create_project(db, current_user, "Missing download file project")
+    task = _create_task(db, project, "Missing download file task")
+    attachment, stored_path = _create_attachment(
+        db,
+        task,
+        current_user,
+        test_settings,
+        create_physical_file=False,
+    )
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert not stored_path.exists()
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert db.get(Attachment, attachment.id) is not None
+
+
+def test_unsafe_database_file_url_cannot_be_downloaded(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+    tmp_path: Path,
+):
+    project = _create_project(db, current_user, "Unsafe download URL project")
+    task = _create_task(db, project, "Unsafe download URL task")
+    outside_file = tmp_path / "outside.pdf"
+    outside_file.write_bytes(b"private outside bytes")
+    attachment = Attachment(
+        task_id=task.id,
+        file_url="/uploads/../outside.pdf",
+        file_name="outside.pdf",
+        uploaded_by=current_user.id,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert outside_file.read_bytes() == b"private outside bytes"
+
+
+def test_symlink_escape_cannot_be_downloaded(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+    tmp_path: Path,
+):
+    project = _create_project(db, current_user, "Symlink download project")
+    task = _create_task(db, project, "Symlink download task")
+    upload_directory = Path(test_settings.upload_dir)
+    upload_directory.mkdir(parents=True)
+    outside_file = tmp_path / "outside-target.pdf"
+    outside_file.write_bytes(b"private symlink target")
+    stored_path = upload_directory / "linked.pdf"
+    stored_path.symlink_to(outside_file)
+    attachment = Attachment(
+        task_id=task.id,
+        file_url="/uploads/linked.pdf",
+        file_name="linked.pdf",
+        uploaded_by=current_user.id,
+    )
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert outside_file.read_bytes() == b"private symlink target"
+
+
+def test_path_like_original_filename_is_sanitized_for_download(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+):
+    project = _create_project(db, current_user, "Safe response filename project")
+    task = _create_task(db, project, "Safe response filename task")
+    attachment, _ = _create_attachment(db, task, current_user, test_settings)
+    attachment.file_name = r"..\..\private.pdf"
+    db.commit()
+
+    response = client.get(f"/api/attachments/{attachment.id}")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.headers["content-disposition"] == 'inline; filename="private.pdf"'
 
 
 def test_owner_can_delete_attachment_and_file(

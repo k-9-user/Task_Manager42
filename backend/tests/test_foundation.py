@@ -1,7 +1,7 @@
 """Assembly checks and a real JWT flow, without dependency overrides."""
 
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import select
@@ -40,6 +40,7 @@ def test_real_app_registers_all_feature_routes():
         ("PUT", "/api/notifications/read-all"),
         ("GET", "/api/search/tasks"),
         ("POST", "/api/tasks/{task_id}/attachments"),
+        ("GET", "/api/attachments/{attachment_id}"),
         ("DELETE", "/api/attachments/{attachment_id}"),
         ("GET", "/api/export"),
         ("POST", "/api/import"),
@@ -55,6 +56,29 @@ def test_real_app_registers_all_feature_routes():
         for method in getattr(route, "methods", ())
     }
     assert expected <= actual, f"Missing routes: {sorted(expected - actual)}"
+
+
+def test_attachment_download_auth_and_missing_errors_are_normalized(
+    client, user_factory, auth_headers,
+):
+    attachment_id = uuid4()
+
+    unauthenticated = client.get(f"/api/attachments/{attachment_id}")
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.json() == {
+        "success": False,
+        "error": "Could not validate credentials",
+    }
+
+    user = user_factory()
+    missing = client.get(
+        f"/api/attachments/{attachment_id}", headers=auth_headers(user),
+    )
+    assert missing.status_code == 404
+    assert missing.json() == {
+        "success": False,
+        "error": "Attachment not found",
+    }
 
 
 def test_real_jwt_project_task_flow_enforces_membership(client, db_session):
