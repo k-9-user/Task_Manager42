@@ -411,6 +411,126 @@ def test_valid_csv_import_works(
     assert imported_task.status is TaskStatus.IN_PROGRESS
 
 
+def test_json_import_allows_explicit_null_assignee(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "Null assignee project")
+    response = _import_json(
+        client,
+        {
+            "tasks": [
+                {
+                    "project_id": str(project.id),
+                    "title": "Unassigned task",
+                    "assignee_id": None,
+                }
+            ]
+        },
+    )
+    imported_task = db.scalar(select(Task))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert imported_task is not None
+    assert imported_task.assignee_id is None
+
+
+@pytest.mark.parametrize("import_format", ["json", "csv"])
+def test_import_accepts_target_project_member_as_assignee(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    import_format: str,
+):
+    project = _create_project(db, current_user, "Member assignee project")
+    assignee = _create_user(db, f"{import_format}-valid-assignee")
+    _add_member(db, project, assignee, ProjectRole.VIEWER)
+    record = {
+        "project_id": str(project.id),
+        "title": "Assigned imported task",
+        "assignee_id": str(assignee.id),
+    }
+
+    response = _import_task_records(client, [record], import_format)
+    imported_task = db.scalar(select(Task))
+
+    assert response.status_code == status.HTTP_200_OK
+    assert imported_task is not None
+    assert imported_task.assignee_id == assignee.id
+
+
+@pytest.mark.parametrize("import_format", ["json", "csv"])
+def test_import_rejects_assignee_from_another_project(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    import_format: str,
+):
+    target_project = _create_project(db, current_user, "Target import project")
+    other_owner = _create_user(db, f"{import_format}-other-project-owner")
+    _create_project(db, other_owner, "Other assignee project")
+    record = {
+        "project_id": str(target_project.id),
+        "title": "Cross-project assignment",
+        "assignee_id": str(other_owner.id),
+    }
+
+    response = _import_task_records(client, [record], import_format)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
+@pytest.mark.parametrize("import_format", ["json", "csv"])
+def test_import_rejects_nonexistent_assignee(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    import_format: str,
+):
+    project = _create_project(db, current_user, "Unknown assignee project")
+    record = {
+        "project_id": str(project.id),
+        "title": "Unknown assignee task",
+        "assignee_id": str(uuid4()),
+    }
+
+    response = _import_task_records(client, [record], import_format)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
+@pytest.mark.parametrize("import_format", ["json", "csv"])
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value"),
+    [
+        ("title", "x" * 256),
+        ("description", "x" * 5001),
+    ],
+)
+def test_import_reuses_normal_task_length_validation(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    import_format: str,
+    field_name: str,
+    invalid_value: str,
+):
+    project = _create_project(db, current_user, "Task validation project")
+    record = {
+        "project_id": str(project.id),
+        "title": "Valid title",
+        field_name: invalid_value,
+    }
+
+    response = _import_task_records(client, [record], import_format)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
 def test_imported_count_matches_all_inserted_tasks(
     client: TestClient,
     db: Session,
@@ -500,25 +620,48 @@ def test_unknown_project_is_rejected(client: TestClient):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_invalid_task_status_is_rejected(
+def test_nested_task_cannot_override_target_project(
     client: TestClient,
     db: Session,
     current_user: User,
 ):
-    project = _create_project(db, current_user, "Invalid status project")
+    target_project = _create_project(db, current_user, "Authoritative project")
+    other_project = _create_project(db, current_user, "Foreign project")
+    payload = {
+        "projects": [
+            {
+                "id": str(target_project.id),
+                "tasks": [
+                    {
+                        "project_id": str(other_project.id),
+                        "title": "Cross-project task",
+                    }
+                ],
+            }
+        ]
+    }
 
-    response = _import_json(
-        client,
-        {
-            "tasks": [
-                {
-                    "project_id": str(project.id),
-                    "title": "Invalid status task",
-                    "status": "blocked",
-                }
-            ]
-        },
-    )
+    response = _import_json(client, payload)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
+@pytest.mark.parametrize("import_format", ["json", "csv"])
+def test_invalid_task_status_is_rejected(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    import_format: str,
+):
+    project = _create_project(db, current_user, "Invalid status project")
+    record = {
+        "project_id": str(project.id),
+        "title": "Invalid status task",
+        "status": "blocked",
+    }
+
+    response = _import_task_records(client, [record], import_format)
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert db.scalars(select(Task)).all() == []
@@ -666,6 +809,34 @@ def test_critical_validation_error_does_not_partially_import(
     assert db.scalars(select(Task)).all() == []
 
 
+def test_invalid_assignee_rolls_back_entire_import(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    project = _create_project(db, current_user, "Atomic assignee project")
+    outsider = _create_user(db, "atomic-assignee-outsider")
+    rollback_spy = MagicMock(wraps=db.rollback)
+    monkeypatch.setattr(db, "rollback", rollback_spy)
+    payload = {
+        "tasks": [
+            {"project_id": str(project.id), "title": "Would be valid"},
+            {
+                "project_id": str(project.id),
+                "title": "Invalid assignment",
+                "assignee_id": str(outsider.id),
+            },
+        ]
+    }
+
+    response = _import_json(client, payload)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert rollback_spy.call_count == 1
+    assert db.scalars(select(Task)).all() == []
+
+
 def test_successful_import_uses_one_commit(
     client: TestClient,
     db: Session,
@@ -688,6 +859,16 @@ def test_successful_import_uses_one_commit(
 
     assert response.status_code == status.HTTP_200_OK
     assert commit_spy.call_count == 1
+
+
+def _import_task_records(
+    client: TestClient,
+    records: list[dict],
+    import_format: str,
+):
+    if import_format == "json":
+        return _import_json(client, {"tasks": records})
+    return _import_csv(client, _csv_import_content(records))
 
 
 def _import_json(client: TestClient, payload: dict):
