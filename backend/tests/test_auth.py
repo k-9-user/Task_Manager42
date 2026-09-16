@@ -157,6 +157,14 @@ def test_cors_allows_configured_frontend_preflight() -> None:
                 "Access-Control-Request-Method": "POST",
             },
         )
+        api_key_denied = test_client.options(
+            "/api/v1/public/projects",
+            headers={
+                "Origin": "https://localhost:8443",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "x-api-key",
+            },
+        )
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == (
@@ -167,6 +175,10 @@ def test_cors_allows_configured_frontend_preflight() -> None:
     ].lower()
     assert denied.status_code == 400
     assert "access-control-allow-origin" not in denied.headers
+    assert api_key_denied.status_code == 400
+    assert "x-api-key" not in api_key_denied.headers[
+        "access-control-allow-headers"
+    ].lower()
 
 
 def test_registration_bootstraps_exactly_one_admin(client: TestClient) -> None:

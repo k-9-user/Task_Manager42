@@ -1,13 +1,13 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, func
+from sqlalchemy import Column, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
 
 
-class ApiKey(Base):
-    __tablename__ = "api_keys"
+class OAuthHandoff(Base):
+    __tablename__ = "oauth_handoffs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(
@@ -15,9 +15,5 @@ class ApiKey(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    key_hash = Column(String, unique=True, nullable=False)
-    created_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-    )
+    token_hash = Column(String, unique=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)

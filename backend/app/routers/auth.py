@@ -1,5 +1,8 @@
+import hashlib
 import logging
+import secrets
 from collections.abc import Mapping
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 
 import httpx
@@ -8,11 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from joserfc.errors import JoseError
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.oauth import (
+    GoogleClaims,
     get_google_oauth_client,
     google_username_candidates,
     validate_google_claims,
@@ -25,6 +29,7 @@ from app.auth.security import (
 from app.config import get_settings
 from app.database import get_db
 from app.models.user import User, UserRole, UserStatus
+from app.models.oauth_handoff import OAuthHandoff
 from app.schemas.user import (
     AuthData,
     AuthResponse,
@@ -43,6 +48,8 @@ GOOGLE_ISSUERS = (
     "accounts.google.com",
     "https://accounts.google.com",
 )
+OAUTH_HANDOFF_KEY = "google_handoff"
+OAUTH_HANDOFF_MAX_AGE_SECONDS = 60
 
 
 def _auth_response(user: User) -> AuthResponse:
@@ -67,6 +74,100 @@ def _new_user_role_locked(db: Session) -> UserRole:
 
     first_user_id = db.scalar(select(User.id).limit(1))
     return UserRole.ADMIN if first_user_id is None else UserRole.USER
+
+
+def _oauth_redirect(destination: str) -> RedirectResponse:
+    return RedirectResponse(destination, status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _oauth_exchange_error() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="OAuth handoff expired or invalid",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def _hash_oauth_handoff(raw_handoff: str) -> str:
+    return hashlib.sha256(raw_handoff.encode("utf-8")).hexdigest()
+
+
+def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
+    existing_user = db.scalar(
+        select(User).where(
+            User.oauth_provider == "google",
+            User.oauth_id == claims.sub,
+        )
+    )
+    if existing_user is not None:
+        _ensure_active_user(existing_user)
+        return existing_user
+
+    lock_admin_invariants(db)
+    existing_user = db.scalar(
+        select(User).where(
+            User.oauth_provider == "google",
+            User.oauth_id == claims.sub,
+        )
+    )
+    if existing_user is not None:
+        _ensure_active_user(existing_user)
+        return existing_user
+
+    email = str(claims.email)
+    email_exists = db.scalar(select(User.id).where(User.email == email))
+    if email_exists is not None:
+        logger.warning("google_oauth_failed category=email_collision")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists",
+        )
+
+    username = next(
+        (
+            candidate
+            for candidate in google_username_candidates(email, claims.sub)
+            if db.scalar(
+                select(User.id).where(func.lower(User.username) == candidate.lower())
+            )
+            is None
+        ),
+        None,
+    )
+    if username is None:
+        logger.warning("google_oauth_failed category=username_collision")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google account could not be created",
+        )
+
+    user = User(
+        email=email,
+        username=username,
+        password_hash=None,
+        oauth_provider="google",
+        oauth_id=claims.sub,
+        role=_new_user_role_locked(db),
+    )
+    if claims.picture is not None:
+        user.avatar_url = claims.picture
+    db.add(user)
+    try:
+        db.commit()
+        db.refresh(user)
+    except IntegrityError as exc:
+        db.rollback()
+        logger.warning("google_oauth_failed category=account_integrity")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google account could not be created",
+        ) from exc
+    if user.role == UserRole.ADMIN:
+        logger.info(
+            "bootstrap_admin_created user_id=%s auth_method=google",
+            user.id,
+        )
+    return user
 
 
 def get_google_client(request: Request) -> Any:
@@ -210,11 +311,10 @@ async def google_oauth_login(
 @router.get(
     "/oauth/google/callback",
     summary="Complete Google OAuth",
-    response_model=AuthResponse,
     responses={
-        status.HTTP_400_BAD_REQUEST: {"model": ErrorResponse},
-        status.HTTP_409_CONFLICT: {"model": ErrorResponse},
-        status.HTTP_502_BAD_GATEWAY: {"model": ErrorResponse},
+        status.HTTP_303_SEE_OTHER: {
+            "description": "Redirect to the frontend OAuth completion route",
+        },
         status.HTTP_503_SERVICE_UNAVAILABLE: {"model": ErrorResponse},
     },
 )
@@ -222,8 +322,8 @@ async def google_oauth_callback(
     request: Request,
     google_client: Annotated[Any, Depends(get_google_client)],
     db: Annotated[Session, Depends(get_db)],
-) -> AuthResponse:
-    """Validate Google's OIDC response and return the normal auth envelope."""
+) -> RedirectResponse:
+    """Validate Google's OIDC response and create a token-free browser handoff."""
 
     try:
         token = await google_client.authorize_access_token(
@@ -239,107 +339,84 @@ async def google_oauth_callback(
         if not isinstance(userinfo, Mapping):
             raise ValueError("Missing validated user information")
         claims = validate_google_claims(userinfo)
-    except httpx.HTTPError as exc:
+    except OAuthError as exc:
+        if exc.error == "access_denied":
+            logger.info("google_oauth_cancelled")
+            return _oauth_redirect("/login?oauth=cancelled")
+        logger.warning("google_oauth_failed category=protocol_or_claims")
+        return _oauth_redirect("/login?oauth=failed")
+    except httpx.HTTPError:
         logger.warning("google_oauth_failed category=provider_transport")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Google OAuth unavailable",
-        ) from exc
-    except RuntimeError as exc:
+        return _oauth_redirect("/login?oauth=failed")
+    except RuntimeError:
         logger.warning("google_oauth_failed category=provider_metadata")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Google OAuth unavailable",
-        ) from exc
+        return _oauth_redirect("/login?oauth=failed")
     except (
-        OAuthError,
         JoseError,
         PydanticValidationError,
         TypeError,
         ValueError,
-    ) as exc:
+    ):
         logger.warning("google_oauth_failed category=protocol_or_claims")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Google OAuth failed",
-        ) from exc
+        return _oauth_redirect("/login?oauth=failed")
     finally:
         request.session.clear()
 
-    existing_user = db.scalar(
-        select(User).where(
-            User.oauth_provider == "google",
-            User.oauth_id == claims.sub,
-        )
-    )
-    if existing_user is not None:
-        _ensure_active_user(existing_user)
-        return _auth_response(existing_user)
+    try:
+        user = _resolve_google_user(db, claims)
+    except HTTPException:
+        return _oauth_redirect("/login?oauth=failed")
 
-    lock_admin_invariants(db)
-    existing_user = db.scalar(
-        select(User).where(
-            User.oauth_provider == "google",
-            User.oauth_id == claims.sub,
-        )
-    )
-    if existing_user is not None:
-        _ensure_active_user(existing_user)
-        return _auth_response(existing_user)
-
-    email = str(claims.email)
-    email_exists = db.scalar(
-        select(User.id).where(User.email == email)
-    )
-    if email_exists is not None:
-        logger.warning("google_oauth_failed category=email_collision")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists",
-        )
-
-    username = next(
-        (
-            candidate
-            for candidate in google_username_candidates(email, claims.sub)
-            if db.scalar(
-                select(User.id).where(func.lower(User.username) == candidate.lower())
-            )
-            is None
+    raw_handoff = secrets.token_urlsafe(32)
+    db.execute(delete(OAuthHandoff).where(OAuthHandoff.expires_at < func.now()))
+    db.add(OAuthHandoff(
+        user_id=user.id,
+        token_hash=_hash_oauth_handoff(raw_handoff),
+        expires_at=datetime.now(timezone.utc) + timedelta(
+            seconds=OAUTH_HANDOFF_MAX_AGE_SECONDS
         ),
-        None,
-    )
-    if username is None:
-        logger.warning("google_oauth_failed category=username_collision")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Google account could not be created",
-        )
-
-    user = User(
-        email=email,
-        username=username,
-        password_hash=None,
-        oauth_provider="google",
-        oauth_id=claims.sub,
-        role=_new_user_role_locked(db),
-    )
-    if claims.picture is not None:
-        user.avatar_url = claims.picture
-    db.add(user)
+    ))
     try:
         db.commit()
-        db.refresh(user)
-    except IntegrityError as exc:
+    except IntegrityError:
         db.rollback()
-        logger.warning("google_oauth_failed category=account_integrity")
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Google account could not be created",
-        ) from exc
-    if user.role == UserRole.ADMIN:
-        logger.info(
-            "bootstrap_admin_created user_id=%s auth_method=google",
-            user.id,
+        logger.warning("google_oauth_failed category=handoff_integrity")
+        return _oauth_redirect("/login?oauth=failed")
+    request.session[OAUTH_HANDOFF_KEY] = raw_handoff
+    return _oauth_redirect("/oauth/callback")
+
+
+@router.post(
+    "/oauth/google/exchange",
+    summary="Exchange a Google OAuth browser handoff",
+    response_model=AuthResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
+        status.HTTP_403_FORBIDDEN: {"model": ErrorResponse},
+    },
+)
+def exchange_google_oauth_handoff(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> AuthResponse:
+    handoff = request.session.pop(OAUTH_HANDOFF_KEY, None)
+    request.session.clear()
+    if not isinstance(handoff, str) or not handoff:
+        raise _oauth_exchange_error()
+    user_id = db.execute(
+        delete(OAuthHandoff)
+        .where(
+            OAuthHandoff.token_hash == _hash_oauth_handoff(handoff),
+            OAuthHandoff.expires_at >= func.now(),
         )
+        .returning(OAuthHandoff.user_id)
+    ).scalar_one_or_none()
+    db.commit()
+    if user_id is None:
+        raise _oauth_exchange_error()
+
+    user = db.get(User, user_id)
+    if user is None:
+        raise _oauth_exchange_error()
+    _ensure_active_user(user)
     return _auth_response(user)

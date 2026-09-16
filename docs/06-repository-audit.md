@@ -6,16 +6,16 @@
 
 #### `GET /api/auth/oauth/google/callback`
 
-- [ ] Complete a safe browser handoff to the frontend instead of ending on a JSON token response.
-- [ ] Keep bearer tokens out of URLs and browser history.
+- [x] Complete a safe browser handoff to the frontend instead of ending on a JSON token response. — short-lived signed session + one-time POST exchange (2026-09-13).
+- [x] Keep bearer tokens out of URLs and browser history. — fixed token-free redirects; bearer returned only in POST response body (2026-09-13).
 - [ ] Verify the complete Google sign-in, cancellation and provider-error flows with real configuration.
 
 #### Missing API-key lifecycle routes - shared with C
 
-- [ ] Add an authenticated mechanism to issue, list, revoke and rotate API keys.
-- [ ] Show a raw key only once and persist only its hash.
-- [ ] Document and test issued, rotated and revoked key behavior.
-- [ ] Allow `X-API-Key` through CORS only if browser clients are explicitly supported.
+- [x] Add an authenticated mechanism to issue, list, revoke and rotate API keys. — JWT-protected `/api/api-keys` lifecycle (2026-09-13).
+- [x] Show a raw key only once and persist only its hash. — SHA-256 storage with legacy-key migration (2026-09-13).
+- [x] Document and test issued, rotated and revoked key behavior. (2026-09-13)
+- [x] Allow `X-API-Key` through CORS only if browser clients are explicitly supported. — browser clients are not supported; header remains blocked (2026-09-13).
 
 ### Owner B - Projects, tasks, GDPR and notifications
 
@@ -30,11 +30,7 @@
 
 #### `POST /api/projects/{project_id}/members`
 
-<<<<<<< HEAD
 - [x] Provide project owners with a supported user lookup or invitation identifier; the admin-only user list cannot be the normal member-discovery flow. — `GET /api/users/lookup?email=` (2026-09-11).
-=======
-- [ ] Provide project owners with a supported user lookup or invitation identifier; the admin-only user list cannot be the normal member-discovery flow.
->>>>>>> D
 - [ ] Define whether an existing member can have their project role changed; add a dedicated route only if that behavior is required.
 
 #### `DELETE /api/projects/{project_id}/members/{user_id}`
@@ -149,19 +145,11 @@
 
 #### All frontend routes
 
-<<<<<<< HEAD
 - [x] Replace `useTranslation()` inside ordinary service functions with component translation or a non-hook i18n API. — `api.js`/`taskService.js` now import the `i18n` singleton directly (2026-09-11).
 - [ ] Make the API client handle HTTP status, empty responses, non-JSON proxy errors and binary downloads.
 - [ ] Use one shared session provider backed by `GET /api/users/me`; token presence alone is not authentication.
 - [ ] Clear shared session state on logout, token expiry, ban, deletion and authorization failure.
 - [x] Fix `PrivateRoute` so unauthenticated users redirect and authenticated users receive the actual child element. (2026-09-11)
-=======
-- [ ] Replace `useTranslation()` inside ordinary service functions with component translation or a non-hook i18n API.
-- [ ] Make the API client handle HTTP status, empty responses, non-JSON proxy errors and binary downloads.
-- [ ] Use one shared session provider backed by `GET /api/users/me`; token presence alone is not authentication.
-- [ ] Clear shared session state on logout, token expiry, ban, deletion and authorization failure.
-- [ ] Fix `PrivateRoute` so unauthenticated users redirect and authenticated users receive the actual child element.
->>>>>>> D
 - [ ] Add an admin-only route guard and a not-found route.
 - [ ] Complete EN/FR/ES translations for visible copy, errors, loading states, legal text and notifications.
 - [ ] Add semantic labels, keyboard focus behavior, responsive layouts and a clean browser-console check.
@@ -173,49 +161,29 @@
 #### `/login`
 
 - [ ] Remove all credential logging.
-<<<<<<< HEAD
 - [x] Call `POST /api/auth/login`, store the returned token through shared session state and navigate on success. — stored in `localStorage`, not yet a shared session provider (2026-09-11).
-=======
-- [ ] Call `POST /api/auth/login`, store the returned token through shared session state and navigate on success.
->>>>>>> D
 - [ ] Label and validate the identifier as email to match the backend payload.
 - [ ] Disable duplicate submissions and display backend authentication errors.
-- [ ] Add the Google sign-in entry point and complete the frontend side of the OAuth callback flow.
+- [x] Add the Google sign-in entry point and complete the frontend side of the OAuth callback flow. — token-free callback route and one-time exchange (2026-09-16).
 
 #### `/register`
 
-<<<<<<< HEAD
 - [x] Call `POST /api/auth/register` and establish the shared authenticated session from its response. — stored in `localStorage`, not yet a shared session provider (2026-09-11).
 - [x] Display backend validation and uniqueness conflicts without logging submitted account data. (2026-09-11)
-=======
-- [ ] Call `POST /api/auth/register` and establish the shared authenticated session from its response.
-- [ ] Display backend validation and uniqueness conflicts without logging submitted account data.
->>>>>>> D
 - [ ] Disable duplicate submissions and navigate only after confirmed success.
 
 #### `/projects`
 
-<<<<<<< HEAD
 - [x] Remove `USE_MOCK` and all production mock project data. (2026-09-11)
 - [x] Load projects from `GET /api/projects` and persist creation through `POST /api/projects`. (2026-09-11)
-=======
-- [ ] Remove `USE_MOCK` and all production mock project data.
-- [ ] Load projects from `GET /api/projects` and persist creation through `POST /api/projects`.
->>>>>>> D
 - [ ] Add empty, loading and recoverable error states.
 - [ ] Show project actions only when the current project role permits them.
 
 #### `/projects/:id`
 
-<<<<<<< HEAD
 - [x] Remove shared mock tasks and load the requested project ID from the real API. (2026-09-11)
 - [ ] Add paginated task loading and persistent task create, edit, status, assignment, due-date and delete actions. — create/status done, edit/assignment/due-date/delete/pagination still missing (2026-09-11).
 - [ ] Add project update/delete and member list/invite/remove controls. — member list/invite/remove done via `MembersPanel`; project update/delete still missing (2026-09-11).
-=======
-- [ ] Remove shared mock tasks and load the requested project ID from the real API.
-- [ ] Add paginated task loading and persistent task create, edit, status, assignment, due-date and delete actions.
-- [ ] Add project update/delete and member list/invite/remove controls.
->>>>>>> D
 - [ ] Render owner, editor and viewer capabilities correctly; viewers must remain read-only.
 - [ ] Load attachment metadata after refresh and add validated upload, progress, authenticated download/preview and delete controls.
 - [ ] Roll back optimistic UI changes when the server rejects a mutation.
@@ -239,19 +207,11 @@
 
 #### `/Search`
 
-<<<<<<< HEAD
 - [x] Consume `data.tasks` rather than `data.task`. (2026-09-11)
 - [ ] Allow filter-only searches without requiring text.
 - [ ] Add project, sorting, page and limit controls that match `GET /api/search/tasks`.
 - [ ] Display total results and navigable links to each task's project.
 - [x] Remove duplicate error rendering. (2026-09-11)
-=======
-- [ ] Consume `data.tasks` rather than `data.task`.
-- [ ] Allow filter-only searches without requiring text.
-- [ ] Add project, sorting, page and limit controls that match `GET /api/search/tasks`.
-- [ ] Display total results and navigable links to each task's project.
-- [ ] Remove duplicate error rendering.
->>>>>>> D
 
 #### `/PrivacyPolicy`
 

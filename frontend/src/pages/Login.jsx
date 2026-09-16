@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import './login.css';
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
+import { googleOAuthUrl, login } from '../services/authService';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import { login } from '../services/authService';
 
 function Login()
 {
@@ -12,6 +12,11 @@ function Login()
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [error, setError] = useState("");
+	const [searchParams] = useSearchParams();
+	const oauthStatus = searchParams.get("oauth");
+	const oauthError = oauthStatus === "cancelled"
+		? t("login.oauthCancelled")
+		: oauthStatus === "failed" ? t("login.oauthFailed") : "";
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -36,8 +41,8 @@ function Login()
 			<div className='login-window'>
 				<div className='login-titlebar'>Connexion</div>
 				<form className="login-box" onSubmit={handleSubmit}>
-					{error && <p className='error'>{error}</p>}
 					<div className="input-group">
+						{(error || oauthError) && <p className='error'>{error || oauthError}</p>}
 						<div className='input-field'>
 							<label htmlFor='username'>{t("login.username")} : </label>
 							<input id='username' type="text" value={email} onChange={(e) => setEmail(e.target.value)}
@@ -50,6 +55,9 @@ function Login()
 						</div>
 						<div className='login-action'>
 							<button>{t("login.submit")}</button>
+						</div>
+						<div className='oauth-action'>
+							<a href={googleOAuthUrl} className='btn-link'>{t("login.google")}</a>
 						</div>
 						<div className='register-link'>
 							<Link to="/register" className='btn-link'>{t("login.register")}</Link>

@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 
 from fastapi import Depends, Header, HTTPException, status
@@ -10,14 +11,20 @@ from app.models.user import User, UserStatus
 
 
 def generate_api_key() -> str:
-    return secrets.token_urlsafe(32)
+    return "tm42_" + secrets.token_urlsafe(32)
+
+
+def hash_api_key(raw_api_key: str) -> str:
+    return hashlib.sha256(raw_api_key.encode("utf-8")).hexdigest()
 
 
 def authenticate_api_key(raw_api_key: str | None, db: Session) -> User:
     if not raw_api_key:
         raise _api_key_authentication_error()
 
-    api_key = db.scalar(select(ApiKey).where(ApiKey.key == raw_api_key))
+    api_key = db.scalar(
+        select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_api_key))
+    )
     if api_key is None:
         raise _api_key_authentication_error()
 

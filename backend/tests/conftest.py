@@ -30,7 +30,9 @@ os.environ.update(
     OAUTH_GOOGLE_CLIENT_ID="test-google-client",
     OAUTH_GOOGLE_CLIENT_SECRET="test-google-secret",
     OAUTH_GOOGLE_REDIRECT_URI="https://testserver/api/auth/oauth/google/callback",
+    UPLOAD_DIR="/tmp/test-uploads",
 )
+Path(os.environ["UPLOAD_DIR"]).mkdir(parents=True, exist_ok=True)
 
 from app.auth.dependencies import get_current_user
 from app.auth.security import create_access_token, hash_password
@@ -39,6 +41,7 @@ from app.main import app
 from app.models.api_key import ApiKey
 from app.models.attachment import Attachment
 from app.models.notification import Notification
+from app.models.oauth_handoff import OAuthHandoff
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task

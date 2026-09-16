@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.auth.api_key_auth import hash_api_key
 from app.database import Base, get_db
 from app.models.api_key import ApiKey
 from app.models.project import Project
@@ -66,7 +67,7 @@ def limiter(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 @pytest.fixture
 def api_user(db: Session) -> User:
     user = _create_user(db, "api-user")
-    db.add(ApiKey(user_id=user.id, key=VALID_API_KEY))
+    db.add(ApiKey(user_id=user.id, key_hash=hash_api_key(VALID_API_KEY)))
     db.commit()
     return user
 

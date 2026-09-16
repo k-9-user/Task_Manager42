@@ -107,6 +107,21 @@
 	justify-content: flex-start;
 }
 
+.oauth-action {
+	display: flex;
+	justify-content: flex-start;
+}
+
+.oauth-callback {
+	justify-content: center;
+	padding: 1rem;
+}
+
+.oauth-callback .login-box {
+	color: #ffffff;
+	text-align: center;
+}
+
 .btn-link {
 	/* all:unset; */
 	/* display: inline-flex; */

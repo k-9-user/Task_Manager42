@@ -19,6 +19,9 @@ CERT = CERTS / "localhost.crt"
 KEY = CERTS / "localhost.key"
 COMPOSE = ["docker", "compose", "--project-name", "task-manager", "--file",
            str(ROOT / "docker-compose.yml"), "--env-file", str(ROOT / ".env")]
+ACTIONS = {"setup", "check", "up", "down", "clean", "fclean", "re",
+           "logs", "ps", "smoke", "test", "reset-db"}
+APP_IMAGES = ("task-manager-backend:development", "task-manager-frontend:latest")
 
 
 def require(condition, message):
@@ -156,6 +159,19 @@ def validate_env(values):
         print("Warning: Google OAuth is disabled; both Google credentials are empty.", file=sys.stderr)
 
 
+def validate_certificate_sans(output):
+    names = {
+        name.strip()
+        for line in output.splitlines()
+        for name in line.split(",")
+    }
+    require(
+        {"DNS:localhost", "IP Address:127.0.0.1"} <= names,
+        "TLS certificate SAN must include localhost and 127.0.0.1; "
+        "remove both local TLS files and run make setup to regenerate them",
+    )
+
+
 def check():
     validate_env(read_env(ROOT / ".env"))
     tools("docker", "openssl", "curl")
@@ -168,29 +184,8 @@ def check():
     require(all(path.stat().st_mode & 0o004 for path in (CERT, KEY)),
             "TLS files need read permission for unprivileged nginx inside private nginx/certs")
     run(["openssl", "x509", "-in", str(CERT), "-checkend", "0", "-noout"], quiet=True)
-    # san = run(["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"], quiet=True)
-    # names = {name.strip() for name in san.splitlines()[-1].split(",")}
-    # require({"DNS:localhost", "IP Address:127.0.0.1"} <= names, "TLS SAN must include localhost and 127.0.0.1")
-    
-    san = run(
-    ["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"],
-    quiet=True,
-    )
-    
-    san_lines = [line.strip() for line in san.splitlines() if line.strip()]
-    
-    require(
-        san_lines,
-        "TLS certificate has no subjectAltName extension",
-    )
-    
-    san_text = " ".join(san_lines)
-    
-    require(
-        "DNS:localhost" in san_text and "IP Address:127.0.0.1" in san_text,
-        "TLS SAN must include localhost and 127.0.0.1",
-    )
-    
+    san = run(["openssl", "x509", "-in", str(CERT), "-noout", "-ext", "subjectAltName"], quiet=True)
+    validate_certificate_sans(san)
     public = run(["openssl", "x509", "-in", str(CERT), "-pubkey", "-noout"], quiet=True)
     private_public = run(["openssl", "pkey", "-in", str(KEY), "-passin", "pass:", "-pubout"], quiet=True)
     require(public == private_public, "TLS certificate and key do not match")
@@ -220,27 +215,96 @@ def smoke():
                 "/api/projects": "get", "/api/tasks/{task_id}": "put",
                 "/api/notifications": "get", "/api/search/tasks": "get", "/api/gdpr/export": "get",
                 "/api/users/me": "get", "/api/v1/public/tasks": "get",
-                "/api/export": "get", "/api/import": "post",
-                "/api/tasks/{task_id}/attachments": "post", "/api/attachments/{attachment_id}": "delete"}
+                 "/api/export": "get", "/api/import": "post",
+                 "/api/tasks/{task_id}/attachments": "post", "/api/attachments/{attachment_id}": "delete",
+                 "/api/auth/oauth/google/exchange": "post", "/api/api-keys": "post",
+                 "/api/api-keys/{key_id}/rotate": "post"}
     require(all(method in paths.get(path, {}) for path, method in expected.items()),
             "Expected OpenAPI routes are missing")
     print("Smoke passed: trusted local TLS, database health, frontend entry/locale and all API families; no user mutations.")
 
 
+def fclean(env, context, *, confirmation):
+    config = json.loads(run(COMPOSE + ["config", "--format", "json"], quiet=True, env=env))
+    configured = config.get("volumes") or {}
+    volumes = {}
+    for logical, details in configured.items():
+        require(isinstance(details, dict) and isinstance(details.get("name"), str),
+                f"Compose volume {logical} has no resolved name")
+        volumes[logical] = details["name"]
+
+    existing = set(run(["docker", "volume", "ls", "--quiet"], quiet=True, env=env).splitlines())
+    for logical, name in volumes.items():
+        if name not in existing:
+            continue
+        info = json.loads(run(["docker", "volume", "inspect", name], quiet=True, env=env))[0]
+        labels = info.get("Labels") or {}
+        require(
+            labels.get("com.docker.compose.project") == "task-manager"
+            and labels.get("com.docker.compose.volume") == logical,
+            f"Refusing to remove volume without matching project labels: {name}",
+        )
+
+    images = []
+    for name in APP_IMAGES:
+        image_id = run(
+            ["docker", "image", "ls", "--quiet", "--no-trunc", name],
+            quiet=True,
+            env=env,
+        ).strip()
+        if not image_id:
+            continue
+        info = json.loads(run(["docker", "image", "inspect", name], quiet=True, env=env))[0]
+        labels = (info.get("Config") or {}).get("Labels") or {}
+        require(
+            labels.get("com.docker.compose.project") == "task-manager",
+            f"Refusing to remove image without matching project label: {name}",
+        )
+        images.append(name)
+
+    volume_list = "\n".join(f"  - {name}" for name in volumes.values()) or "  - none"
+    prompt = (
+        "WARNING: this permanently deletes the project database and uploads.\n"
+        f"Docker context: {context!r}\nEndpoint: {env['DOCKER_HOST']!r}\n"
+        f"Project volumes:\n{volume_list}\n"
+        f"Type {confirmation}: "
+    )
+    require(input(prompt) == confirmation, "Cleanup cancelled")
+    run(COMPOSE + ["--profile", "test", "down", "--volumes", "--rmi", "local"], env=env)
+    for name in images:
+        remaining = run(
+            ["docker", "image", "ls", "--quiet", "--no-trunc", name],
+            quiet=True,
+            env=env,
+        ).strip()
+        if remaining:
+            run(["docker", "image", "rm", name], env=env)
+
+
 def main():
+    require(len(sys.argv) == 2 and sys.argv[1] in ACTIONS,
+            "Usage: dev.py {" + "|".join(sorted(ACTIONS)) + "}")
     action = sys.argv[1]
     if action == "setup":
         setup()
         return
-    if action in {"check", "up", "test", "smoke", "reset-db"}:
+    if action in {"check", "up", "test", "smoke", "reset-db", "re"}:
         env, context = check()
     else:
         env, context = local_docker_env(compose_env())
     if action == "up":
         run(COMPOSE + ["up", "--build", "--detach", "--wait"], env=env)
-    elif action in {"down", "logs", "ps"}:
-        args = {"down": ["--profile", "test", "down"], "logs": ["logs", "--follow", "--tail", "100"], "ps": ["--profile", "test", "ps"]}
+    elif action in {"down", "clean", "logs", "ps"}:
+        args = {"down": ["--profile", "test", "down"],
+                "clean": ["--profile", "test", "down"],
+                "logs": ["logs", "--follow", "--tail", "100"],
+                "ps": ["--profile", "test", "ps"]}
         run(COMPOSE + args[action], env=env)
+    elif action == "fclean":
+        fclean(env, context, confirmation="fclean")
+    elif action == "re":
+        fclean(env, context, confirmation="re")
+        run(COMPOSE + ["up", "--build", "--detach", "--wait"], env=env)
     elif action == "smoke":
         smoke()
     elif action == "test":

@@ -14,7 +14,11 @@
 		"password": "Contraseña",
 		"submit": "Iniciar sesión",
 		"noAccount": "¿Sin cuenta?",
-		"register": "Registrarse"
+		"register": "Registrarse",
+		"google": "Continuar con Google",
+		"oauthLoading": "Completando el inicio de sesión con Google...",
+		"oauthCancelled": "Se canceló el inicio de sesión con Google.",
+		"oauthFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
 	},
 	"register":
 	{

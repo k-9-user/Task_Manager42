@@ -76,6 +76,22 @@ class ConfigTests(unittest.TestCase):
             dev.check()
         run.assert_not_called()
 
+    def test_certificate_sans_accept_wrapped_output(self):
+        dev.validate_certificate_sans(
+            "X509v3 Subject Alternative Name:\n"
+            "    DNS:localhost,\n"
+            "    IP Address:127.0.0.1\n"
+        )
+
+    def test_certificate_sans_reject_empty_output_cleanly(self):
+        with self.assertRaisesRegex(ValueError, "SAN must include"):
+            dev.validate_certificate_sans("")
+
+    def test_certificate_sans_reject_missing_name(self):
+        for output in ("DNS:localhost", "IP Address:127.0.0.1"):
+            with self.subTest(output=output), self.assertRaisesRegex(ValueError, "SAN must include"):
+                dev.validate_certificate_sans(output)
+
     def test_smoke_rejects_untransformed_entry(self):
         with patch.object(dev, "run", side_effect=[
             '{"status":"ok","db":"ok"}',
@@ -164,6 +180,81 @@ class DockerSafetyTests(unittest.TestCase):
         for call in run.call_args_list:
             self.assertIs(call.kwargs["env"], env)
         self.assertEqual(run.call_args.args[0], ["docker", "volume", "rm", volume])
+
+    def test_fclean_verifies_project_volumes_and_removes_only_local_images(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        volumes = {
+            "postgres_data": {"name": "task-manager_postgres_data"},
+            "backend_uploads": {"name": "task-manager_backend_uploads"},
+            "frontend_node_modules": {"name": "task-manager_frontend_node_modules"},
+        }
+        existing = "\n".join(item["name"] for item in volumes.values()) + "\n"
+        inspections = [
+            json.dumps([{"Labels": {
+                "com.docker.compose.project": "task-manager",
+                "com.docker.compose.volume": logical,
+            }}])
+            for logical in volumes
+        ]
+        with patch.object(dev, "run", side_effect=[
+            json.dumps({"volumes": volumes}), existing, *inspections,
+            "", "", None,
+        ]) as run, patch("builtins.input", return_value="fclean") as confirm:
+            dev.fclean(env, "default", confirmation="fclean")
+
+        prompt = confirm.call_args.args[0]
+        self.assertIn("database and uploads", prompt)
+        for item in volumes.values():
+            self.assertIn(item["name"], prompt)
+        command = run.call_args.args[0]
+        self.assertEqual(command[-4:], ["down", "--volumes", "--rmi", "local"])
+        self.assertNotIn("all", command)
+
+    def test_fclean_removes_verified_custom_image_left_by_compose(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        image = dev.APP_IMAGES[0]
+        with patch.object(dev, "run", side_effect=[
+            json.dumps({"volumes": {}}), "",
+            "sha256:backend\n",
+            json.dumps([{"Config": {"Labels": {
+                "com.docker.compose.project": "task-manager",
+            }}}]),
+            "",
+            None,
+            "sha256:backend\n",
+            None,
+        ]) as run, patch("builtins.input", return_value="fclean"):
+            dev.fclean(env, "default", confirmation="fclean")
+
+        self.assertEqual(run.call_args.args[0], ["docker", "image", "rm", image])
+
+    def test_fclean_refuses_unlabelled_volume_before_confirmation(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        name = "task-manager_postgres_data"
+        with patch.object(dev, "run", side_effect=[
+            json.dumps({"volumes": {"postgres_data": {"name": name}}}),
+            name + "\n",
+            json.dumps([{"Labels": {}}]),
+        ]), patch("builtins.input") as confirm, self.assertRaisesRegex(ValueError, "Refusing"):
+            dev.fclean(env, "default", confirmation="fclean")
+        confirm.assert_not_called()
+
+    def test_re_checks_before_destructive_cleanup_then_starts(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        events = []
+        with patch.object(dev.sys, "argv", ["dev.py", "re"]), \
+                patch.object(dev, "check", side_effect=lambda: (events.append("check") or (env, "default"))), \
+                patch.object(dev, "fclean", side_effect=lambda *_args, **_kwargs: events.append("fclean")), \
+                patch.object(dev, "run", side_effect=lambda *_args, **_kwargs: events.append("up")):
+            dev.main()
+        self.assertEqual(events, ["check", "fclean", "up"])
+
+    def test_missing_or_unknown_action_fails_before_setup(self):
+        for argv in (["dev.py"], ["dev.py", "unknown"]):
+            with self.subTest(argv=argv), patch.object(dev.sys, "argv", argv), \
+                    patch.object(dev, "setup") as setup, self.assertRaisesRegex(ValueError, "Usage"):
+                dev.main()
+            setup.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -14,6 +14,9 @@ make test TESTS='tests/test_foundation.py -k health'
 make logs
 make ps
 make down
+make clean
+make fclean
+make re
 ```
 
 The frontend is enabled by default at **https://localhost:8443**. Only Nginx
@@ -83,4 +86,9 @@ does not update an existing PostgreSQL volume; restore the matching credentials
 or explicitly reset the disposable dev database.
 
 Normal `make down` preserves named volumes, including the dev database and
-uploads. Never use `docker compose down -v` as a database-only reset.
+uploads. `make clean` is the same operation. `make fclean` and `make re` are
+intentionally destructive: after checking project volume labels and requiring
+the exact target name, they remove the development database, uploaded files,
+frontend dependency volume and locally built application images. They preserve
+`.env`, TLS files, source and pulled images. Use `make reset-db` when only the
+database should be removed.

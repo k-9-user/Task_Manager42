@@ -14,7 +14,11 @@
 		"password": "Password",
 		"submit": "Log in",
 		"noAccount": "No account?",
-		"register": "Sign up"
+		"register": "Sign up",
+		"google": "Continue with Google",
+		"oauthLoading": "Completing Google sign-in...",
+		"oauthCancelled": "Google sign-in was cancelled.",
+		"oauthFailed": "Google sign-in failed. Please try again."
 	},
 	"register":
 	{

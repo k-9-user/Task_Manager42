@@ -8,6 +8,7 @@ from app.models.notification import Notification
 from app.models.attachment import Attachment
 from app.models.comment import Comment
 from app.models.api_key import ApiKey
+from app.models.oauth_handoff import OAuthHandoff
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "Attachment",
     "Comment",
     "ApiKey",
+    "OAuthHandoff",
 ]

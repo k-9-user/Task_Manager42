@@ -10,6 +10,7 @@ from app.auth.api_key_auth import (
     authenticate_api_key,
     generate_api_key,
     get_current_api_user,
+    hash_api_key,
 )
 from app.models.user import UserStatus
 
@@ -26,6 +27,16 @@ def test_generate_api_key_returns_distinct_values():
     assert generate_api_key() != generate_api_key()
 
 
+def test_hash_api_key_is_deterministic_and_does_not_contain_raw_key():
+    raw_api_key = "super-secret-test-key"
+
+    digest = hash_api_key(raw_api_key)
+
+    assert digest == hash_api_key(raw_api_key)
+    assert digest != raw_api_key
+    assert raw_api_key not in digest
+
+
 def test_authenticate_api_key_returns_matching_user():
     api_key = SimpleNamespace(user_id="user-id")
     expected_user = SimpleNamespace(status=UserStatus.ACTIVE)
@@ -36,6 +47,9 @@ def test_authenticate_api_key_returns_matching_user():
 
     assert user is expected_user
     assert db.scalar.call_count == 2
+    query = db.scalar.call_args_list[0].args[0]
+    assert hash_api_key("valid-test-key") in query.compile().params.values()
+    assert "valid-test-key" not in query.compile().params.values()
 
 
 def test_authenticate_api_key_rejects_unknown_key():

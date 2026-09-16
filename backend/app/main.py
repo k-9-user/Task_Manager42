@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.routers.auth import router as auth_router
+from app.routers.api_keys import router as api_keys_router
 from app.routers.health import router as health_router
 from app.routers.users import router as users_router
 from app.routers.projects import router as projects_router
@@ -46,6 +47,7 @@ app.add_middleware(
     https_only=True,
 )
 app.include_router(auth_router)
+app.include_router(api_keys_router)
 app.include_router(users_router)
 app.include_router(health_router)
 app.include_router(projects_router)

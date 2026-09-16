@@ -12,7 +12,7 @@ def test_api_key_columns():
     assert list(ApiKey.__table__.columns.keys()) == [
         "id",
         "user_id",
-        "key",
+        "key_hash",
         "created_at",
     ]
 
@@ -35,8 +35,8 @@ def test_api_key_user_id_column():
     }
 
 
-def test_api_key_key_column():
-    column = ApiKey.__table__.c.key
+def test_api_key_hash_column():
+    column = ApiKey.__table__.c.key_hash
 
     assert isinstance(column.type, String)
     assert column.nullable is False

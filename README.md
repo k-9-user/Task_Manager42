@@ -49,12 +49,35 @@ The wrapper accepts plain `KEY=value` entries: no quotes, interpolation, inline 
 | `make check` | Validate local prerequisites/configuration/TLS/Compose |
 | `make up` | Check, build and start default development services |
 | `make down` | Stop/remove Compose services while preserving named volumes |
+| `make clean` | Alias of `make down`; preserve volumes and images |
+| `make fclean` | After typed confirmation, remove project containers, local app images and all project volumes |
+| `make re` | Check configuration, then confirmed `fclean`, rebuild and start an empty stack |
 | `make logs` | Follow service logs; avoid sharing secrets from application output |
 | `make ps` | Show Compose services including the test profile |
 | `make smoke` | Check read-only HTTPS health/frontend/OpenAPI; no account mutations |
 | `make test` | Build backend test image and run pytest against isolated test storage |
 | `make test TESTS='tests/test_health.py'` | Pass selected pytest arguments through the wrapper |
 | `make reset-db` | Explicitly confirmed deletion of development DB only |
+
+`make fclean` and `make re` permanently delete the development database,
+uploaded files and frontend dependency volume. They verify Compose project labels
+and require typing the target name before running. They preserve source files,
+`.env`, TLS certificates and pulled PostgreSQL/Nginx images.
+
+### Google OAuth and API keys
+
+Google sign-in starts from `/login`. The provider callback stores no bearer token
+in a URL: it creates a short-lived Secure/HttpOnly handoff, redirects to the
+frontend, and the frontend exchanges that handoff once with
+`POST /api/auth/oauth/google/exchange`.
+
+Authenticated users can issue and manage public-API credentials through
+`POST/GET /api/api-keys`, `DELETE /api/api-keys/{id}` and
+`POST /api/api-keys/{id}/rotate`. Issue and rotate responses show the raw key
+once. Lists expose metadata only; the database stores only SHA-256 hashes.
+Revocation and rotation invalidate the old key immediately. Public API calls use
+`X-API-Key`; browser clients are not supported, so that header is intentionally
+excluded from CORS.
 
 The test profile uses PostgreSQL 17 on an isolated internal network with tmpfs storage, no published DB port and fixed **test-only** credentials. `DATABASE_URL` and `TEST_DATABASE_URL` both target `taskmanager_test` on `test-db`. Fixtures guard the database name/host/credentials before destructive operations, run the initial Alembic migration and truncate only the dedicated test data. Development data/uploads are not mounted into tests. Do not override test URLs to the development DB.
 
@@ -71,7 +94,8 @@ All entity IDs are UUIDs. See [the detailed schema](docs/00-contrat-commun.md) a
 | `project_members` | Unique project/user pair, owner/editor/viewer role; canonical project authorization |
 | `tasks` | `project_id`, title/description/status, nullable assignee and due date, timestamps |
 | `attachments` | Task/uploader references, file name/URL, timestamp; restrictive parent deletion |
-| `api_keys` | User reference, unique stored key representation, timestamp |
+| `api_keys` | User reference, unique SHA-256 key hash, timestamp |
+| `oauth_handoffs` | One-time hashed OAuth browser handoff with user and expiry |
 | `notifications` | Recipient, type/content/read flag, nullable task/project context, timestamp |
 
 Project/member/task relations support cascades; deleted assignees and notification context can become null. Attachments intentionally restrict referenced-parent deletion. Project owner references and owner memberships must remain consistent. Five PostgreSQL enums encode global role, account status, project role, task status and current notification type.

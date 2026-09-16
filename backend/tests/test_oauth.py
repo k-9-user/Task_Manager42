@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
@@ -10,6 +11,7 @@ import pytest
 from authlib.integrations.base_client.errors import OAuthError
 from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from starlette.requests import Request
 
 from app.auth.oauth import get_google_oauth_client
@@ -156,10 +158,25 @@ def test_google_callback_rejects_invalid_oauth_protocol(
     )
     for error in protocol_errors:
         _override_google_client(CallbackClient(error=error))
-        response = client.get("/api/auth/oauth/google/callback")
+        response = client.get(
+            "/api/auth/oauth/google/callback", follow_redirects=False,
+        )
 
-        assert response.status_code == 400
-        assert response.json()["error"] == "Google OAuth failed"
+        assert response.status_code == 303
+        assert response.headers["location"] == "/login?oauth=failed"
+
+
+def test_google_callback_maps_provider_cancellation(client: TestClient) -> None:
+    _override_google_client(
+        CallbackClient(error=OAuthError(error="access_denied"))
+    )
+
+    response = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?oauth=cancelled"
 
 
 def test_google_callback_creates_then_reuses_a_provider_subject(
@@ -167,8 +184,14 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
 ) -> None:
     _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
 
-    response = client.get("/api/auth/oauth/google/callback")
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
 
+    assert callback.status_code == 303
+    assert callback.headers["location"] == "/oauth/callback"
+    assert "token" not in callback.headers["location"]
+    response = client.post("/api/auth/oauth/google/exchange")
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert response.json()["data"]["token"]
@@ -182,6 +205,7 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
         assert user.oauth_provider == "google"
         assert user.oauth_id == VALID_CLAIMS["sub"]
         assert user.password_hash is None
+    assert client.post("/api/auth/oauth/google/exchange").status_code == 401
 
     changed_claims = {
         **VALID_CLAIMS,
@@ -189,8 +213,12 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
     }
     _override_google_client(CallbackClient(result={"userinfo": changed_claims}))
 
-    response = client.get("/api/auth/oauth/google/callback")
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    response = client.post("/api/auth/oauth/google/exchange")
 
+    assert callback.status_code == 303
     assert response.status_code == 200
     assert response.json()["data"]["user"]["id"] == str(user.id)
 
@@ -202,9 +230,12 @@ def test_google_callback_rejects_invalid_claims(client: TestClient) -> None:
     )
     for claims in invalid_claims:
         _override_google_client(CallbackClient(result={"userinfo": claims}))
-        response = client.get("/api/auth/oauth/google/callback")
+        response = client.get(
+            "/api/auth/oauth/google/callback", follow_redirects=False,
+        )
 
-        assert response.status_code == 400
+        assert response.status_code == 303
+        assert response.headers["location"] == "/login?oauth=failed"
 
 
 def test_google_callback_maps_provider_transport_failure(
@@ -216,9 +247,12 @@ def test_google_callback_maps_provider_transport_failure(
     )
     _override_google_client(CallbackClient(error=error))
 
-    response = client.get("/api/auth/oauth/google/callback")
+    response = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
 
-    assert response.status_code == 502
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?oauth=failed"
 
 
 def test_google_callback_never_auto_links_a_local_email(
@@ -228,10 +262,12 @@ def test_google_callback_never_auto_links_a_local_email(
     user_factory(email=VALID_CLAIMS["email"])
     _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
 
-    response = client.get("/api/auth/oauth/google/callback")
+    response = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
 
-    assert response.status_code == 409
-    assert response.json()["error"] == "An account with this email already exists"
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?oauth=failed"
 
 
 def test_oauth_only_account_rejects_password_login(
@@ -260,10 +296,70 @@ def test_google_callback_rejects_a_banned_provider_account(
     )
     _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
 
-    response = client.get("/api/auth/oauth/google/callback")
+    response = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
 
-    assert response.status_code == 403
-    assert response.json()["error"] == "Account is banned"
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?oauth=failed"
+
+
+def test_oauth_exchange_rejects_deleted_user(
+    client: TestClient,
+    user_factory: Any,
+) -> None:
+    user = user_factory(
+        email=VALID_CLAIMS["email"],
+        oauth_id=VALID_CLAIMS["sub"],
+    )
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    assert callback.status_code == 303
+    with SessionLocal() as session:
+        session.delete(session.get(User, user.id))
+        session.commit()
+
+    response = client.post("/api/auth/oauth/google/exchange")
+
+    assert response.status_code == 401
+
+
+def test_oauth_exchange_consumes_handoff_atomically(client: TestClient) -> None:
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    assert callback.status_code == 303
+    cookie = client.cookies.get("task_manager_oauth")
+
+    def exchange() -> int:
+        with TestClient(app, base_url="https://testserver") as replay_client:
+            return replay_client.post(
+                "/api/auth/oauth/google/exchange",
+                headers={"Cookie": f"task_manager_oauth={cookie}"},
+            ).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        statuses = list(executor.map(lambda _index: exchange(), range(2)))
+
+    assert sorted(statuses) == [200, 401]
+
+
+def test_oauth_exchange_rejects_expired_handoff(client: TestClient) -> None:
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    assert callback.status_code == 303
+    with SessionLocal() as session:
+        session.execute(text(
+            "UPDATE oauth_handoffs SET expires_at = now() - interval '1 second'"
+        ))
+        session.commit()
+
+    assert client.post("/api/auth/oauth/google/exchange").status_code == 401
 
 
 def test_oauth_failures_do_not_log_secrets(
@@ -279,9 +375,11 @@ def test_oauth_failures_do_not_log_secrets(
     caplog.set_level(logging.WARNING, logger="app.routers.auth")
 
     response = client.get(
-        f"/api/auth/oauth/google/callback?code={secret}&state={secret}"
+        f"/api/auth/oauth/google/callback?code={secret}&state={secret}",
+        follow_redirects=False,
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login?oauth=failed"
     assert secret not in caplog.text
     assert "category=protocol_or_claims" in caplog.text

@@ -43,7 +43,8 @@ def test_complete_initial_migration_upgrades_and_downgrades(
         inspector = inspect(database_engine)
         assert set(inspector.get_table_names()) == {
             "alembic_version", "users", "projects", "project_members", "tasks",
-            "notifications", "attachments", "api_keys",
+            "notifications", "attachments", "api_keys", "comments",
+            "oauth_handoffs",
         }
         for table in Base.metadata.sorted_tables:
             assert {column["name"] for column in inspector.get_columns(table.name)} == {

@@ -45,8 +45,6 @@
   font-weight: 600;
 }
 
-<<<<<<< HEAD
-=======
 .navbar-links button{
   color: #cfcfe0;
   text-decoration: none;
@@ -57,7 +55,6 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
->>>>>>> D
 /* Responsive : passe en colonne sur petit écran */
 @media (max-width: 600px) {
   .navbar {

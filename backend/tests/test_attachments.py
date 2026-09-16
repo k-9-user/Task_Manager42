@@ -87,6 +87,8 @@ def test_router_exposes_exact_attachment_routes():
     assert routes == {
         ("POST", "/api/tasks/{task_id}/attachments"),
         ("DELETE", "/api/attachments/{attachment_id}"),
+        ("POST", "/api/tasks/{task_id}/banner"),
+        ("DELETE", "/api/tasks/{task_id}/banner"),
     }
 
 

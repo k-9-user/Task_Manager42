@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AdminUsers from "./pages/AdminUsers";
 import Login from "./pages/Login";
+import OAuthCallback from "./pages/OAuthCallback";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PrivateRoute from "./pages/PrivateRoute";
 import Profile from "./pages/Profile";
@@ -17,7 +18,7 @@ import "./App.css";
 
 function AppContent() {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/login" || location.pathname === "/register";
+  const hideNavbar = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/oauth/callback";
 
   return (
     <div className="app-container">
@@ -27,6 +28,7 @@ function AppContent() {
          <Route path="/" element={<Navigate to="/login" />} />
          <Route path="/admin/users" element={<AdminUsers />} />
          <Route path="/login" element={<Login />} />
+         <Route path="/oauth/callback" element={<OAuthCallback />} />
          <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
          <Route path="/Profile" element={<Profile />} />
          <Route path="/projects/:id" element={<ProjectDetail />} />

@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy import select
 
+from app.auth.api_key_auth import hash_api_key
 from app.main import app
 from app.config import get_settings
 from app.models.api_key import ApiKey
@@ -20,6 +21,11 @@ def test_real_app_registers_all_feature_routes():
     expected = {
         ("POST", "/api/auth/register"),
         ("POST", "/api/auth/login"),
+        ("POST", "/api/auth/oauth/google/exchange"),
+        ("POST", "/api/api-keys"),
+        ("GET", "/api/api-keys"),
+        ("DELETE", "/api/api-keys/{key_id}"),
+        ("POST", "/api/api-keys/{key_id}/rotate"),
         ("GET", "/api/users/me"),
         ("GET", "/health"),
         ("GET", "/api/projects"),
@@ -120,11 +126,12 @@ def test_owner_id_alone_grants_no_c_access(client, user_factory, auth_headers, d
     db_session.add(project)
     db_session.flush()
     task = Task(project_id=project.id, title="Hidden owner task")
-    key = ApiKey(user_id=owner.id, key="owner-without-membership-key")
+    raw_key = "owner-without-membership-key"
+    key = ApiKey(user_id=owner.id, key_hash=hash_api_key(raw_key))
     db_session.add_all([task, key])
     db_session.commit()
     headers = auth_headers(owner)
-    key_headers = {"X-API-Key": key.key}
+    key_headers = {"X-API-Key": raw_key}
     assert db_session.query(ProjectMember).filter_by(project_id=project.id).count() == 0
 
     search = client.get("/api/search/tasks", headers=headers)

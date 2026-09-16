@@ -67,7 +67,7 @@ make test TESTS='tests/test_foundation.py'
 The approved disposable database reset recreates a complete initial schema.
 The former test for an incremental status migration/admin backfill has therefore
 been replaced, not skipped: tests now verify base-to-head round-trip of all
-seven tables, column parity, Alembic metadata parity, populated-head idempotency,
+all migrated tables, column parity, Alembic metadata parity, populated-head idempotency,
 authentication constraints, and case-insensitive username uniqueness.
 This does not claim compatibility with databases stamped by the old incomplete
 `db_install`; those require the approved disposable reset.

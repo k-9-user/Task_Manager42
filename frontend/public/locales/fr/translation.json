@@ -14,7 +14,11 @@
 		"password": "Mot de passe",
 		"submit": "Se connecter",
 		"noAccount": "Pas de compte ?",
-		"register": "S'inscrire"
+		"register": "S'inscrire",
+		"google": "Continuer avec Google",
+		"oauthLoading": "Connexion Google en cours...",
+		"oauthCancelled": "La connexion Google a été annulée.",
+		"oauthFailed": "La connexion Google a échoué. Veuillez réessayer."
 	},
 	"register":
 	{
