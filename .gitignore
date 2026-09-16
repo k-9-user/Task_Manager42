@@ -8,6 +8,8 @@ venv/
 
 # Environment
 .env
+secrets/*
+!secrets/README.md
 
 # Local TLS
 nginx/certs/*

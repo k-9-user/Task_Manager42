@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.config import get_settings
+from app.config import get_database_settings
 from app.database import Base
 from app import models
 
@@ -12,7 +12,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-database_url = get_settings().database_url.replace("%", "%%")
+database_url = get_database_settings().database_url.get_secret_value().replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata

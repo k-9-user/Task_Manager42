@@ -1,7 +1,15 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
-from app.config import Settings
+from app.config import (
+    BootstrapSettings,
+    ConfigurationError,
+    DatabaseSettings,
+    Settings,
+    get_settings,
+)
 
 
 VALID_SECRET = "f" * 40
@@ -83,6 +91,88 @@ def test_google_redirect_uri_accepts_https_and_an_unset_value() -> None:
 
     assert configured.oauth_google_redirect_uri.endswith("/callback")
     assert unset.oauth_google_redirect_uri == ""
+
+
+def test_google_client_id_and_secret_must_be_configured_together() -> None:
+    with pytest.raises(ValidationError):
+        _settings(
+            oauth_google_client_id="local-client",
+            oauth_google_client_secret="",
+        )
+    with pytest.raises(ValidationError):
+        _settings(
+            oauth_google_client_id="",
+            oauth_google_client_secret="local-secret",
+        )
+
+
+def test_database_settings_load_database_url_from_secret_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    value = "postgresql://user:private-password@db:5432/taskmanager"
+    (tmp_path / "database_url").write_text(value)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    settings = DatabaseSettings(_secrets_dir=tmp_path, _env_file=None)
+
+    assert settings.database_url.get_secret_value() == value
+
+
+def test_bootstrap_settings_validate_identity_and_password() -> None:
+    valid = BootstrapSettings(
+        database_url="sqlite+pysqlite:///:memory:",
+        bootstrap_admin_email="admin@example.com",
+        bootstrap_admin_username="admin",
+        bootstrap_admin_password="valid-password-42",
+    )
+    assert str(valid.bootstrap_admin_email) == "admin@example.com"
+
+    for overrides in (
+        {"bootstrap_admin_email": "invalid"},
+        {"bootstrap_admin_username": "bad user"},
+        {"bootstrap_admin_password": "too-short"},
+    ):
+        with pytest.raises(ValidationError):
+            BootstrapSettings(**({
+                "database_url": "sqlite+pysqlite:///:memory:",
+                "bootstrap_admin_email": "admin@example.com",
+                "bootstrap_admin_username": "admin",
+                "bootstrap_admin_password": "valid-password-42",
+            } | overrides))
+
+
+def test_cached_settings_redact_invalid_secret_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    leaked = "short-secret-value"
+    monkeypatch.setenv("JWT_SECRET", leaked)
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ConfigurationError) as error:
+            get_settings()
+    finally:
+        get_settings.cache_clear()
+
+    assert "jwt_secret" in str(error.value)
+    assert leaked not in str(error.value)
+
+
+def test_cached_settings_redact_model_validation_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    leaked = "private-google-client-id"
+    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_ID", leaked)
+    monkeypatch.setenv("OAUTH_GOOGLE_CLIENT_SECRET", "")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ConfigurationError) as error:
+            get_settings()
+    finally:
+        get_settings.cache_clear()
+
+    assert "oauth_google_client_secret" in str(error.value)
+    assert leaked not in str(error.value)
 
 
 def test_cors_origins_parse_from_a_comma_separated_string() -> None:

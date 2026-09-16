@@ -195,7 +195,7 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
     assert response.status_code == 200
     assert response.json()["success"] is True
     assert response.json()["data"]["token"]
-    assert response.json()["data"]["user"]["role"] == "admin"
+    assert response.json()["data"]["user"]["role"] == "user"
     with SessionLocal() as session:
         user = session.get(
             User,

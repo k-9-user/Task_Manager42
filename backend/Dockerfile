@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir --requirement /tmp/requirements.txt
 FROM base AS application
 
 COPY --chown=app:app . /app
-RUN mkdir -p /app/uploads && chown app:app /app/uploads
+RUN mkdir -p /app/uploads /run/secrets \
+    && chown app:app /app/uploads
 
 USER app
 EXPOSE 8000

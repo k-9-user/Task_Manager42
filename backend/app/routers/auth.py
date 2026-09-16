@@ -69,13 +69,6 @@ def _ensure_active_user(user: User) -> None:
         )
 
 
-def _new_user_role_locked(db: Session) -> UserRole:
-    """Choose a new account role while the admin invariant lock is held."""
-
-    first_user_id = db.scalar(select(User.id).limit(1))
-    return UserRole.ADMIN if first_user_id is None else UserRole.USER
-
-
 def _oauth_redirect(destination: str) -> RedirectResponse:
     return RedirectResponse(destination, status_code=status.HTTP_303_SEE_OTHER)
 
@@ -147,7 +140,7 @@ def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
         password_hash=None,
         oauth_provider="google",
         oauth_id=claims.sub,
-        role=_new_user_role_locked(db),
+        role=UserRole.USER,
     )
     if claims.picture is not None:
         user.avatar_url = claims.picture
@@ -162,11 +155,6 @@ def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
             status_code=status.HTTP_409_CONFLICT,
             detail="Google account could not be created",
         ) from exc
-    if user.role == UserRole.ADMIN:
-        logger.info(
-            "bootstrap_admin_created user_id=%s auth_method=google",
-            user.id,
-        )
     return user
 
 
@@ -202,7 +190,6 @@ def register(
 
     email = str(payload.email)
     password_hash = hash_password(payload.password.get_secret_value())
-    lock_admin_invariants(db)
     email_exists = db.scalar(select(User.id).where(User.email == email))
     if email_exists is not None:
         raise HTTPException(
@@ -223,7 +210,7 @@ def register(
         email=email,
         username=payload.username,
         password_hash=password_hash,
-        role=_new_user_role_locked(db),
+        role=UserRole.USER,
     )
     db.add(user)
     try:
@@ -235,11 +222,6 @@ def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email or username already exists",
         ) from exc
-    if user.role == UserRole.ADMIN:
-        logger.info(
-            "bootstrap_admin_created user_id=%s auth_method=local",
-            user.id,
-        )
     return _auth_response(user)
 
 

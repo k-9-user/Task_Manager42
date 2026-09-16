@@ -25,14 +25,14 @@ to HTTPS on 8443. The backend, database and frontend have no published ports.
 Nginx waits for healthy frontend and backend services; the backend waits for
 the database and successful migrations.
 
-`setup` creates `.env` only if absent, with independent JWT/OAuth secrets and
-a random URL-safe database password. Existing `.env` and TLS files are never
-overwritten. Values must be plain `KEY=value`: no quotes, interpolation,
-inline comments, duplicate keys or keys not present in `.env.example`. The
-wrapper uses `.env`, not conflicting host environment values or Compose
-project/profile overrides. OAuth provider credentials remain optional: leave
-both empty to disable Google login (preflight warns), or set both. The redirect
-must always be `https://localhost:8443/api/auth/oauth/google/callback`.
+`setup` creates non-secret `.env` configuration and ignored file-backed Docker
+secrets under `secrets/`. A legacy `.env` is validated and migrated without
+rotating its database/signing values; a new-format configuration is preserved
+and missing/conflicting files are refused. Values in `.env` remain plain
+`KEY=value`; secret files contain one value without a newline. Host environment
+variables cannot override checked configuration or secrets. OAuth credentials
+remain optional: leave both client ID and secret file empty to disable Google
+login. The redirect remains fixed at the localhost callback.
 
 `setup` generates a 365-day self-signed certificate with localhost and
 127.0.0.1 SANs. It never modifies the host trust store. A browser may warn;
@@ -41,13 +41,20 @@ The host certificate directory is private (0700); its files are readable by
 unprivileged Nginx via individual read-only bind mounts. Do not widen directory
 permissions. To renew an expired pair, remove both local files and rerun setup.
 
-`check` validates tools, daemon, env secrets/placeholders, secret independence,
-DB credential consistency, positive integer JWT expiration and upload limit,
+`check` validates tools, daemon, exact env/secret manifests, private directory
+and file permissions, placeholders, secret independence, DB consistency,
+positive integer JWT expiration and upload limit,
 the persistent `/app/uploads` path, local URLs, paired Google credentials,
 IP/CIDR proxy allowlist, TLS readability/expiration/SAN/key pair,
 and Compose configuration without printing secret-bearing output. It runs
 before `up`, `test`, `smoke`, and `reset-db`. Direct `docker compose up` bypasses
 these checks; use Make. `down`, `logs`, and `ps` remain usable with expired TLS.
+
+Compose runs migrations, then a one-shot `bootstrap-admin`, then the backend.
+The service creates the configured admin only in an empty database. On later
+starts, the first account must match the configured identity, active admin role,
+and password. Mismatches fail safely and require restoring matching credentials
+or an explicitly confirmed reset; public registration never grants admin.
 
 `test` builds the same backend development image before running pytest (no
 source bind mount, so edits are included by rebuilding). The test-only profile
@@ -81,7 +88,7 @@ make up
 The reset checks the volume's Compose project and database labels, stops dev
 writers, removes only the `db` container and its `postgres_data` volume, and
 leaves uploads and frontend dependencies intact. If no database volume exists,
-there is nothing to reset: use `make up`. Changing `.env` database credentials
+there is nothing to reset: use `make up`. Changing file-backed database credentials
 does not update an existing PostgreSQL volume; restore the matching credentials
 or explicitly reset the disposable dev database.
 
@@ -90,5 +97,5 @@ uploads. `make clean` is the same operation. `make fclean` and `make re` are
 intentionally destructive: after checking project volume labels and requiring
 the exact target name, they remove the development database, uploaded files,
 frontend dependency volume and locally built application images. They preserve
-`.env`, TLS files, source and pulled images. Use `make reset-db` when only the
+`.env`, secret files, TLS files, source and pulled images. Use `make reset-db` when only the
 database should be removed.

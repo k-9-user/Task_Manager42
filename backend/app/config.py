@@ -1,22 +1,43 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeVar
 
-from pydantic import Field, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from pydantic import EmailStr, Field, SecretStr, ValidationError, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict, SettingsError
 
 from app.utils.validators import (
+    USERNAME_MAX_LENGTH,
+    USERNAME_MIN_LENGTH,
+    USERNAME_PATTERN,
     has_control_or_space_characters,
     has_unsafe_url_characters,
     is_safe_https_url,
+    normalize_email,
+    validate_username,
 )
 
 
 ROOT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+DOCKER_SECRETS_DIR = Path("/run/secrets")
+SettingsType = TypeVar("SettingsType", bound=BaseSettings)
 
 
-class Settings(BaseSettings):
-    database_url: str = Field(min_length=1)
+class ConfigurationError(RuntimeError):
+    """Safe configuration failure whose message never contains input values."""
+
+
+class DatabaseSettings(BaseSettings):
+    database_url: SecretStr = Field(min_length=1)
+
+    model_config = SettingsConfigDict(
+        env_file=ROOT_ENV_FILE,
+        env_file_encoding="utf-8",
+        secrets_dir=DOCKER_SECRETS_DIR,
+        extra="ignore",
+    )
+
+
+class Settings(DatabaseSettings):
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_expiration: int = Field(default=3600, gt=0)
     oauth_google_client_id: str = ""
@@ -28,12 +49,6 @@ class Settings(BaseSettings):
     )
     upload_dir: str = "/app/uploads"
     max_upload_size_mb: int = Field(default=10, gt=0)
-
-    model_config = SettingsConfigDict(
-        env_file=ROOT_ENV_FILE,
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -89,7 +104,70 @@ class Settings(BaseSettings):
             raise ValueError("JWT and OAuth session secrets must be distinct")
         return self
 
+    @model_validator(mode="after")
+    def require_paired_google_credentials(self) -> "Settings":
+        client_secret = self.oauth_google_client_secret.get_secret_value()
+        if bool(self.oauth_google_client_id) != bool(client_secret):
+            raise ValueError(
+                "OAUTH_GOOGLE_CLIENT_ID and oauth_google_client_secret "
+                "must both be set or both be empty"
+            )
+        return self
+
+
+class BootstrapSettings(DatabaseSettings):
+    bootstrap_admin_email: EmailStr
+    bootstrap_admin_username: str = Field(
+        min_length=USERNAME_MIN_LENGTH,
+        max_length=USERNAME_MAX_LENGTH,
+        pattern=USERNAME_PATTERN,
+    )
+    bootstrap_admin_password: SecretStr = Field(min_length=12, max_length=128)
+
+    _email_normalizer = field_validator("bootstrap_admin_email", mode="before")(
+        normalize_email
+    )
+    _username_validator = field_validator(
+        "bootstrap_admin_username", mode="before"
+    )(validate_username)
+
+    @field_validator("bootstrap_admin_password")
+    @classmethod
+    def validate_admin_password(cls, value: SecretStr) -> SecretStr:
+        password = value.get_secret_value()
+        if any(ord(character) < 0x20 or ord(character) == 0x7F for character in password):
+            raise ValueError("bootstrap admin password must contain printable characters")
+        return value
+
+
+def _load_settings(settings_type: type[SettingsType]) -> SettingsType:
+    try:
+        return settings_type()
+    except ValidationError as exc:
+        fields = sorted({str(error["loc"][0]) for error in exc.errors() if error["loc"]})
+        model_errors = sorted({
+            str(error["msg"]).removeprefix("Value error, ")
+            for error in exc.errors()
+            if not error["loc"]
+        })
+        details = fields + model_errors
+        raise ConfigurationError(
+            "Invalid configuration: " + ", ".join(details or ["unknown field"])
+        ) from None
+    except (OSError, SettingsError):
+        raise ConfigurationError("Configuration secret files are unreadable") from None
+
+
+@lru_cache
+def get_database_settings() -> DatabaseSettings:
+    return _load_settings(DatabaseSettings)
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return _load_settings(Settings)
+
+
+@lru_cache
+def get_bootstrap_settings() -> BootstrapSettings:
+    return _load_settings(BootstrapSettings)

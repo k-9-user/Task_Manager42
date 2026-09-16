@@ -24,13 +24,15 @@ make up
 make smoke
 ```
 
-`make setup` creates `.env` only if absent, generating independent JWT/OAuth secrets and a random database password. It creates a local self-signed TLS pair only if absent. Existing configuration and certificates are preserved, not overwritten. Review `.env.example` and your local `.env`; never commit credentials or private keys. Setup does not repair stale existing secrets or change credentials inside an existing database volume.
+`make setup` creates non-secret `.env` configuration plus independent ignored files under `secrets/` for the database URL/password, JWT and OAuth signing, optional Google client secret, and bootstrap-admin password. On a legacy install it validates and migrates existing `.env` secret values before atomically rewriting `.env`. New-format configuration and certificates are preserved; missing or conflicting secret files are refused rather than regenerated. Never commit credentials or private keys.
 
-The wrapper accepts plain `KEY=value` entries: no quotes, interpolation, inline comments, duplicate keys or extra keys absent from `.env.example`. It uses that checked file instead of conflicting host environment/Compose overrides. Keep `DATABASE_URL` consistent with `POSTGRES_*`; JWT, OAuth-session and database secrets must be independent, non-placeholder URL-safe values of at least 32 characters.
+The wrapper accepts plain `KEY=value` entries in `.env`: no quotes, interpolation, inline comments, duplicates or undocumented keys. Secret files contain exactly one value without a newline. `make check` verifies the private directory, regular non-symlink files, permissions, placeholders, secret independence, Google pairing, and consistency between `database_url`, `postgres_password`, and non-secret `POSTGRES_*` values. Host variables cannot override checked configuration or secrets.
 
-`make check` validates local tools, daemon, configuration, secrets, local URLs, certificate validity/SAN/key matching and Compose configuration. `make up` performs checks, builds and starts the development stack with the frontend enabled by default. The backend waits for database health and migration completion; nginx waits for backend and frontend health.
+`make check` validates local tools, daemon, configuration, secrets, local URLs, certificate validity/SAN/key matching and Compose configuration. `make up` performs checks, builds and starts the development stack with the frontend enabled by default. Migrations and administrator bootstrap must complete before the backend starts; nginx waits for backend and frontend health.
 
-**Use localhost only.** The canonical address remains **https://localhost:8443**. Only nginx publishes ports, on `127.0.0.1:8080` and `127.0.0.1:8443`; HTTP redirects to HTTPS. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. The first registration in an empty database becomes administrator, so bootstrap must remain local and under your control.
+**Use localhost only.** The canonical address remains **https://localhost:8443**. Only nginx publishes ports, on `127.0.0.1:8080` and `127.0.0.1:8443`; HTTP redirects to HTTPS. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
+
+Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic.
 
 | Address | Purpose |
 |---|---|
@@ -45,7 +47,7 @@ The wrapper accepts plain `KEY=value` entries: no quotes, interpolation, inline 
 
 | Command | Behavior |
 |---|---|
-| `make setup` | Create missing local env/certificate files; preserve existing files |
+| `make setup` | Create or migrate local env/secret files and create missing TLS files |
 | `make check` | Validate local prerequisites/configuration/TLS/Compose |
 | `make up` | Check, build and start default development services |
 | `make down` | Stop/remove Compose services while preserving named volumes |
@@ -62,7 +64,7 @@ The wrapper accepts plain `KEY=value` entries: no quotes, interpolation, inline 
 `make fclean` and `make re` permanently delete the development database,
 uploaded files and frontend dependency volume. They verify Compose project labels
 and require typing the target name before running. They preserve source files,
-`.env`, TLS certificates and pulled PostgreSQL/Nginx images.
+`.env`, secret files, TLS certificates and pulled PostgreSQL/Nginx images.
 
 ### Google OAuth and API keys
 

@@ -181,7 +181,7 @@ def test_cors_allows_configured_frontend_preflight() -> None:
     ].lower()
 
 
-def test_registration_bootstraps_exactly_one_admin(client: TestClient) -> None:
+def test_registration_never_bootstraps_an_admin(client: TestClient) -> None:
     first = client.post("/api/auth/register", json=VALID_REGISTRATION)
     second = client.post(
         "/api/auth/register",
@@ -193,12 +193,12 @@ def test_registration_bootstraps_exactly_one_admin(client: TestClient) -> None:
     )
 
     assert first.status_code == 201
-    assert first.json()["data"]["user"]["role"] == "admin"
+    assert first.json()["data"]["user"]["role"] == "user"
     assert second.status_code == 201
     assert second.json()["data"]["user"]["role"] == "user"
 
 
-def test_concurrent_registration_creates_one_admin(database: object) -> None:
+def test_concurrent_registration_creates_no_admin(database: object) -> None:
     barrier = Barrier(2)
 
     def register(index: int) -> int:
@@ -224,7 +224,7 @@ def test_concurrent_registration_creates_one_admin(database: object) -> None:
         user_count = session.scalar(select(func.count()).select_from(User))
 
     assert statuses == [201, 201]
-    assert admin_count == 1
+    assert admin_count == 0
     assert user_count == 2
 
 
