@@ -80,7 +80,8 @@
 
 #### `GET /api/v1/public/tasks`
 
-- [ ] Add bounded pagination, a total count and deterministic ordering.
+- [ ] Add bounded pagination and a total count if added to the shared contract.
+- [x] Add deterministic ordering.
 - [ ] Add supported filters only if they are included in the public API contract.
 
 #### `POST /api/v1/public/tasks`
@@ -100,7 +101,8 @@
 
 #### `GET /api/v1/public/projects`
 
-- [ ] Add bounded pagination, a total count and deterministic ordering.
+- [ ] Add bounded pagination and a total count if added to the shared contract.
+- [x] Add deterministic ordering.
 
 #### `GET /api/search/tasks`
 

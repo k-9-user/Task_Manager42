@@ -74,7 +74,7 @@ class PublicTaskUpdate(BaseModel):
     summary="List accessible tasks",
     description=(
         "Return tasks from projects where the API-key user is a member. "
-        "Project viewers are allowed to read tasks."
+        "Project viewers are allowed to read tasks. Results are ordered newest first."
     ),
     responses=AUTH_RESPONSES,
 )
@@ -88,6 +88,7 @@ def list_public_tasks(
         select(Task)
         .join(Project, Task.project_id == Project.id)
         .where(_project_access_filter(current_user.id))
+        .order_by(Task.created_at.desc(), Task.id.desc())
     ).all()
 
     return _success_response(tasks=[_serialize_task(task) for task in tasks])
@@ -199,7 +200,7 @@ def delete_public_task(
     "/projects",
     summary="List accessible projects",
     description=(
-        "Return projects where the API-key user is a member."
+        "Return projects where the API-key user is a member, ordered newest first."
     ),
     responses=AUTH_RESPONSES,
 )
@@ -210,7 +211,9 @@ def list_public_projects(
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
     projects = db.scalars(
-        select(Project).where(_project_access_filter(current_user.id))
+        select(Project)
+        .where(_project_access_filter(current_user.id))
+        .order_by(Project.created_at.desc(), Project.id.desc())
     ).all()
 
     return _success_response(
