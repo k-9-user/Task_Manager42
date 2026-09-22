@@ -105,6 +105,13 @@
 		"ecrirecommentaire": "Write a comment...",
 		"commenter": "Comment"
 	},
+	"attachments":
+	{
+		"preview": "Preview",
+		"openPreview": "Open preview",
+		"download": "Download",
+		"delete": "Delete"
+	},
 	"members":
 	{
 		"title": "Project members",

@@ -90,6 +90,8 @@ function ProjectDetail()
 		return (<p className="error">{t("error.err")} : {error}</p>);
 
 	const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
+	const currentMember = members.find((m) => m.user_id === currentUserId);
+	const canManageAttachments = ["owner", "editor"].includes(currentMember?.role);
 
 	return (<div className="project-detail-page">
 		<div className="project-detail-header">
@@ -104,7 +106,7 @@ function ProjectDetail()
 					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
 					<button type="submit">{t("random.creertache")}</button>
 				</form>
-				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} />
+				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} canManageAttachments={canManageAttachments} />
 			</div>
 			<div className="project-detail-side">
 				<MembersPanel

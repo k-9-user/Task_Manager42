@@ -29,7 +29,7 @@ function AttachmentUpload({ taskId, uploadsuccess})
 		try
 		{
 			const attachment = await uploadAttachement(taskId, file);
-			uploadsuccess(attachment);
+			await uploadsuccess(attachment);
 		}
 		catch (err)
 		{

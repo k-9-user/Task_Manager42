@@ -105,6 +105,13 @@
 		"ecrirecommentaire": "Escribe un comentario...",
 		"commenter": "Comentar"
 	},
+	"attachments":
+	{
+		"preview": "Vista previa",
+		"openPreview": "Abrir vista previa",
+		"download": "Descargar",
+		"delete": "Eliminar"
+	},
 	"members":
 	{
 		"title": "Miembros del proyecto",

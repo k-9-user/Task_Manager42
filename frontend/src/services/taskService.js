@@ -55,7 +55,12 @@ export async function uploadAttachement(taskID, file)
 	const result = await reponse.json();
 	if (!result.success)
 		throw new Error(result.error || i18n.t("random.erupload"));
-	return result.data;
+	return result.data.attachment;
+}
+
+export function getTaskAttachments(taskID)
+{
+	return apiFetch(`/api/tasks/${taskID}/attachments`);
 }
 
 export function deleteAttachment(attachmentId)
