@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { uploadAttachement } from "../services/taskService";
 import { useTranslation } from "react-i18next";
 
@@ -7,11 +7,12 @@ function AttachmentUpload({ taskId, uploadsuccess})
 	const [file, setfile] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState("");
+	const fileInputRef = useRef(null);
 	const { t } = useTranslation();
 
 	function handleFileChange(e)
 	{
-		setfile(e.target.files[0]);
+		setfile(e.target.files?.[0] ?? null);
 		setError("");
 	}
 
@@ -30,6 +31,9 @@ function AttachmentUpload({ taskId, uploadsuccess})
 		{
 			const attachment = await uploadAttachement(taskId, file);
 			await uploadsuccess(attachment);
+			setfile(null);
+			if (fileInputRef.current)
+				fileInputRef.current.value = "";
 		}
 		catch (err)
 		{
@@ -42,10 +46,16 @@ function AttachmentUpload({ taskId, uploadsuccess})
 	}
 	return (
 		<div className="attachement-upload">
-			<input type="file" onChange={handleFileChange} />
-			<button onClick={handleUpload} disabled={uploading}>
-				{uploading ? t("random.envoi") : t("random.ajfichier")}
+			<input ref={fileInputRef} type="file" onChange={handleFileChange} hidden />
+			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+				{t("random.addfichier")}
 			</button>
+			{file && <span>{file.name}</span>}
+			{file && (
+				<button type="button" onClick={handleUpload} disabled={uploading}>
+					{uploading ? t("random.envoi") : t("random.ajfichier")}
+				</button>
+			)}
 			{error && <p className="error">{error}</p>}
 		</div>
 	);
