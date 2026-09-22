@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { uploadTaskBanner } from "../services/taskService";
 import { useTranslation } from "react-i18next";
 
@@ -7,11 +7,12 @@ function BannerUpload({ taskId, uploadsuccess })
 	const [file, setfile] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [error, setError] = useState("");
+	const fileInputRef = useRef(null);
 	const { t } = useTranslation();
 
 	function handleFileChange(e)
 	{
-		setfile(e.target.files[0]);
+		setfile(e.target.files?.[0] ?? null);
 		setError("");
 	}
 
@@ -30,6 +31,9 @@ function BannerUpload({ taskId, uploadsuccess })
 		{
 			const data = await uploadTaskBanner(taskId, file);
 			uploadsuccess(data.banner_url);
+			setfile(null);
+			if (fileInputRef.current)
+				fileInputRef.current.value = "";
 		}
 		catch (err)
 		{
@@ -42,10 +46,16 @@ function BannerUpload({ taskId, uploadsuccess })
 	}
 	return (
 		<div className="banner-upload">
-			<input type="file" accept="image/png,image/jpeg" onChange={handleFileChange} />
-			<button onClick={handleUpload} disabled={uploading}>
-				{uploading ? t("random.envoi") : t("random.ajbanniere")}
+			<input ref={fileInputRef} type="file" accept="image/png,image/jpeg" onChange={handleFileChange} hidden />
+			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+				{t("random.addbanniere")}
 			</button>
+			{file && <span>{file.name}</span>}
+			{file && (
+				<button type="button" onClick={handleUpload} disabled={uploading}>
+					{uploading ? t("random.envoi") : t("random.ajbanniere")}
+				</button>
+			)}
 			{error && <p className="error">{error}</p>}
 		</div>
 	);
