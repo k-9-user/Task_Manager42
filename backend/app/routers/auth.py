@@ -119,7 +119,7 @@ def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
     username = next(
         (
             candidate
-            for candidate in google_username_candidates(email, claims.sub)
+            for candidate in google_username_candidates(email)
             if db.scalar(
                 select(User.id).where(func.lower(User.username) == candidate.lower())
             )

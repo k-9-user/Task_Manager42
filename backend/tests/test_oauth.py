@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
@@ -14,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from starlette.requests import Request
 
-from app.auth.oauth import get_google_oauth_client
+from app.auth.oauth import get_google_oauth_client, google_username_candidates
 from app.database import SessionLocal
 from app.main import app
 from app.models.user import User, UserRole, UserStatus
@@ -196,6 +197,7 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
     assert response.json()["success"] is True
     assert response.json()["data"]["token"]
     assert response.json()["data"]["user"]["role"] == "user"
+    assert response.json()["data"]["user"]["username"] == "google.user"
     with SessionLocal() as session:
         user = session.get(
             User,
@@ -221,6 +223,70 @@ def test_google_callback_creates_then_reuses_a_provider_subject(
     assert callback.status_code == 303
     assert response.status_code == 200
     assert response.json()["data"]["user"]["id"] == str(user.id)
+
+
+def test_google_username_candidates_preserve_readable_local_part() -> None:
+    candidates = list(islice(
+        google_username_candidates("Google.User_name-tag+alt@example.com"),
+        3,
+    ))
+
+    assert candidates == [
+        "google.user_name-tag_alt",
+        "google.user_name-tag_alt_2",
+        "google.user_name-tag_alt_3",
+    ]
+
+
+def test_google_username_candidates_bound_length_and_handle_empty_base() -> None:
+    long_candidates = list(islice(
+        google_username_candidates(f"{'a' * 60}@example.com"),
+        2,
+    ))
+    empty_candidate = next(google_username_candidates("+++@example.com"))
+
+    assert long_candidates == ["a" * 50, f"{'a' * 48}_2"]
+    assert empty_candidate == "google_user"
+
+
+def test_google_callback_uses_next_numeric_username_after_collisions(
+    client: TestClient,
+    user_factory: Any,
+) -> None:
+    user_factory(username="Google.User")
+    user_factory(username="google.user_2")
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    response = client.post("/api/auth/oauth/google/exchange")
+
+    assert callback.status_code == 303
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["username"] == "google.user_3"
+
+
+def test_google_callback_preserves_existing_oauth_username(
+    client: TestClient,
+    user_factory: Any,
+) -> None:
+    existing_user = user_factory(
+        email=VALID_CLAIMS["email"],
+        username="google_user_0123456789abcdef",
+        oauth_id=VALID_CLAIMS["sub"],
+    )
+    _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
+
+    callback = client.get(
+        "/api/auth/oauth/google/callback", follow_redirects=False,
+    )
+    response = client.post("/api/auth/oauth/google/exchange")
+
+    assert callback.status_code == 303
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["id"] == str(existing_user.id)
+    assert response.json()["data"]["user"]["username"] == existing_user.username
 
 
 def test_google_callback_rejects_invalid_claims(client: TestClient) -> None:

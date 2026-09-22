@@ -1,16 +1,18 @@
 import logging
 import re
-from base64 import urlsafe_b64encode
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from functools import lru_cache
-from hashlib import sha256
 from typing import Any, Literal
 
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.config import get_settings
-from app.utils.validators import has_unsafe_url_characters, is_safe_https_url
+from app.utils.validators import (
+    USERNAME_MAX_LENGTH,
+    has_unsafe_url_characters,
+    is_safe_https_url,
+)
 
 
 GOOGLE_CLIENT_NAME = "google"
@@ -24,9 +26,8 @@ _GOOGLE_SETTING_NAMES = (
     "oauth_google_client_secret",
     "oauth_google_redirect_uri",
 )
-_USERNAME_MAX_LENGTH = 50
-_PRIMARY_USERNAME_SUFFIX_LENGTH = 16
-_UNSAFE_USERNAME_CHARACTERS = re.compile(r"[^a-z0-9]+")
+_ALLOWED_USERNAME_CHARACTER = re.compile(r"[a-z0-9._-]")
+_UNSAFE_USERNAME_CHARACTERS = re.compile(r"[^a-z0-9._-]+")
 
 
 logging.getLogger("authlib.integrations.base_client.sync_app").setLevel(
@@ -130,24 +131,23 @@ def validate_google_claims(claims: Mapping[str, Any]) -> GoogleClaims:
     return GoogleClaims.model_validate(dict(claims))
 
 
-def google_username_candidates(email: str, sub: str) -> tuple[str, ...]:
-    """Build stable username candidates without treating SHA-256 as a secret hash."""
+def google_username_candidates(email: str) -> Iterator[str]:
+    """Yield readable, bounded username candidates from a Google email."""
 
     if not isinstance(email, str) or "@" not in email:
         raise ValueError("email must contain a local part")
-    if not isinstance(sub, str) or not 1 <= len(sub) <= 255 or not sub.isascii():
-        raise ValueError("sub must be between 1 and 255 ASCII characters")
 
     local_part = email.strip().lower().split("@", maxsplit=1)[0]
-    sanitized = _UNSAFE_USERNAME_CHARACTERS.sub("_", local_part).strip("_")
-    base = sanitized or "google_user"
+    sanitized = _UNSAFE_USERNAME_CHARACTERS.sub("_", local_part)
+    if not _ALLOWED_USERNAME_CHARACTER.search(local_part):
+        sanitized = ""
+    base = (sanitized or "google_user")[:USERNAME_MAX_LENGTH]
+    yield base
 
-    digest = sha256(b"google\0" + sub.encode("ascii")).digest()
-    digest_hex = digest.hex()
-    primary = (
-        f"{base[: _USERNAME_MAX_LENGTH - _PRIMARY_USERNAME_SUFFIX_LENGTH - 1]}_"
-        f"{digest_hex[:_PRIMARY_USERNAME_SUFFIX_LENGTH]}"
-    )
-    full_digest = urlsafe_b64encode(digest).decode("ascii").rstrip("=")
-    fallback = f"g_{full_digest}"
-    return primary, fallback
+    suffix_number = 2
+    while True:
+        suffix = f"_{suffix_number}"
+        if len(suffix) >= USERNAME_MAX_LENGTH:
+            return
+        yield f"{base[:USERNAME_MAX_LENGTH - len(suffix)]}{suffix}"
+        suffix_number += 1

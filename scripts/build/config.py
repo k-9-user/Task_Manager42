@@ -165,18 +165,16 @@ def validate_config(values, secret_values):
     for name in ("POSTGRES_DB", "POSTGRES_USER"):
         require(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", values[name]), f"Invalid {name}")
     require(values["POSTGRES_DB"] != "taskmanager_test", "Dev database must not be taskmanager_test")
-    expected = (f"postgresql://{values['POSTGRES_USER']}:{secret_values['postgres_password']}"
-                f"@db:5432/{values['POSTGRES_DB']}")
-    require(secret_values["database_url"] == expected,
-            "Secret file database_url must match POSTGRES_* and postgres_password")
+    expected = (f"postgresql://{values['POSTGRES_USER']}:{secret_values['postgres_password']}"f"@db:5432/{values['POSTGRES_DB']}")
+    require(secret_values["database_url"] == expected, "Secret file database_url must match POSTGRES_* and postgres_password")
+
     for name in ("CORS_ORIGINS", "VITE_API_URL"):
         require(values[name] == "https://localhost", f"{name} must be https://localhost")
+
     for name in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB"):
-        require(re.fullmatch(r"[0-9]+", values[name]) and values[name].lstrip("0"),
-                f"{name} must be a positive integer")
+        require(re.fullmatch(r"[0-9]+", values[name]) and values[name].lstrip("0"), f"{name} must be a positive integer")
     require(values["UPLOAD_DIR"] == "/app/uploads", "UPLOAD_DIR must be /app/uploads for persistent storage")
-    require(values["OAUTH_GOOGLE_REDIRECT_URI"] == "https://localhost/api/auth/oauth/google/callback",
-            "OAUTH_GOOGLE_REDIRECT_URI must be https://localhost/api/auth/oauth/google/callback")
+    require(values["OAUTH_GOOGLE_REDIRECT_URI"] == "https://localhost/api/auth/oauth/google/callback", "OAUTH_GOOGLE_REDIRECT_URI must be https://localhost/api/auth/oauth/google/callback")
     try:
         for network in values["FORWARDED_ALLOW_IPS"].split(","):
             ipaddress.ip_network(network)
