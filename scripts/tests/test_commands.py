@@ -6,6 +6,30 @@ from unittest.mock import patch
 from scripts.build import commands, core
 
 
+def nonced_page(nonce, *, stamped=None, placeholder=False, preamble=True):
+    """A frontend response as nginx returns it once sub_filter has run."""
+
+    stamped = nonce if stamped is None else stamped
+    headers = (
+        "HTTP/2 200\r\n"
+        "content-type: text/html\r\n"
+        "content-security-policy: default-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'\r\n"
+    )
+    preamble_tag = f'<script type="module" nonce="{stamped}">injectIntoGlobalHook</script>' if preamble else '<script type="module">injectIntoGlobalHook</script>'
+    body = (
+        "<!doctype html>"
+        + ("VITE_CSP_NONCE" if placeholder else "")
+        + preamble_tag
+        + '<div id="root"></div>'
+        + f'<script src="/src/main.jsx" nonce="{stamped}"></script>'
+    )
+    return headers + "\r\n" + body
+
+
+ROOT_PAGE = '<div id="root"></div><script src="/src/main.jsx"></script>'
+
+
 class CommandTests(unittest.TestCase):
     def test_run_passes_shell_metacharacters_as_literal_arguments(self):
         hostile_args = ["tool", "$(touch /tmp/injected)", ";", "`id`"]
@@ -55,7 +79,8 @@ class CommandTests(unittest.TestCase):
     def test_smoke_rejects_untransformed_entry(self):
         with patch.object(commands, "run", side_effect=[
             '{"status":"ok","db":"ok"}',
-            '<div id="root"></div><script src="/src/main.jsx"></script>',
+            ROOT_PAGE,
+            nonced_page("a" * 32), nonced_page("b" * 32),
             "import App from './App.jsx'; createRoot(root).render(<StrictMode />)",
         ]) as run, self.assertRaisesRegex(ValueError, "Vite-transformed"):
             commands.smoke()
@@ -64,12 +89,34 @@ class CommandTests(unittest.TestCase):
     def test_smoke_rejects_missing_locale(self):
         with patch.object(commands, "run", side_effect=[
             '{"status":"ok","db":"ok"}',
-            '<div id="root"></div><script src="/src/main.jsx"></script>',
+            ROOT_PAGE,
+            nonced_page("a" * 32), nonced_page("b" * 32),
             'import "/node_modules/.vite/deps/react.js"; import "/src/App.jsx"; createRoot(root);',
             '{}',
         ]) as run, self.assertRaisesRegex(ValueError, "locale"):
             commands.smoke()
         self.assertEqual(run.call_args.args[0][-1], "https://localhost/locales/en/translation.json")
+
+    def test_smoke_rejects_a_broken_frontend_nonce_pipeline(self):
+        cases = (
+            ([nonced_page("a" * 32, placeholder=True)], "did not substitute"),
+            ([nonced_page("a" * 32, stamped="c" * 32)], "do not match"),
+            ([nonced_page("a" * 32, preamble=False)], "not nonced"),
+            ([nonced_page("a" * 32), nonced_page("a" * 32)], "not unique per request"),
+        )
+        for pages, message in cases:
+            with self.subTest(message=message), patch.object(commands, "run", side_effect=[
+                '{"status":"ok","db":"ok"}', ROOT_PAGE, *pages,
+            ]), self.assertRaisesRegex(ValueError, message):
+                commands.smoke()
+
+    def test_nginx_declares_a_per_request_nonce_for_the_frontend_only(self):
+        config = (core.ROOT / "nginx/default.conf").read_text(encoding="utf-8")
+        self.assertEqual(config.count("script-src 'self' 'nonce-$request_id'"), 1)
+        self.assertEqual(config.count("sub_filter 'VITE_CSP_NONCE' $request_id;"), 1)
+        self.assertEqual(config.count("sub_filter_once off;"), 1)
+        self.assertNotIn("'unsafe-inline'; script-src", config)
+        self.assertNotIn("script-src 'self' 'unsafe-inline'", config)
 
     def test_remote_reset_rejected_before_confirmation_or_daemon_commands(self):
         with patch.object(commands.sys, "argv", ["dev.py", "reset-db"]), \

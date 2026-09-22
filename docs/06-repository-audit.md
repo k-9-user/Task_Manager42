@@ -8,7 +8,7 @@
 
 - [x] Complete a safe browser handoff to the frontend instead of ending on a JSON token response. — short-lived signed session + one-time POST exchange (2026-09-13).
 - [x] Keep bearer tokens out of URLs and browser history. — fixed token-free redirects; bearer returned only in POST response body (2026-09-13).
-- [ ] Verify the complete Google sign-in, cancellation and provider-error flows with real configuration.
+- [x] Verify the complete Google sign-in, cancellation and provider-error flows with real configuration.
 
 #### Missing API-key lifecycle routes - shared with C
 
@@ -85,7 +85,7 @@
 
 #### `POST /api/v1/public/tasks`
 
-- [ ] Reuse the private task validation rules that apply to common fields.
+- [x] Reuse the private task validation rules that apply to common fields.
 - [ ] Emit the same required creation notifications as the private task route.
 
 #### `PUT /api/v1/public/tasks/{task_id}`
@@ -124,17 +124,17 @@
 
 - [ ] Add authenticated attachment listing or include attachment metadata in task responses.
 - [ ] Add an authenticated download route that rechecks current project membership.
-- [ ] Do not expose the upload directory as unrestricted static content.
+- [x] Do not expose the upload directory as unrestricted static content.
 
 #### `GET /api/export`
 
-- [ ] Prevent spreadsheet formula injection in CSV cells that begin with formula or control prefixes.
+- [x] Prevent spreadsheet formula injection in CSV cells that begin with formula or control prefixes.
 - [ ] Define whether CSV is a task-copy format or a round-trip export; preserve empty projects and null/empty distinctions only if round-trip behavior is promised.
 
 #### `POST /api/import`
 
-- [ ] Require every non-null assignee to be a member of the target project.
-- [ ] Reuse private task title, status, length and nullable-field validation.
+- [x] Require every non-null assignee to be a member of the target project.
+- [x] Reuse private task title, status, length and nullable-field validation.
 - [ ] Define and test duplicate headers, duplicate records, empty projects and null/empty CSV values.
 - [ ] Make task-copy semantics explicit so repeated imports are not mistaken for idempotent restore operations.
 - [ ] Emit required creation and assignment notifications only after the complete import has validated successfully.

@@ -1,11 +1,49 @@
 """Docker endpoint and guarded cleanup tests."""
 
+import contextlib
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
 from scripts.build import core
 from scripts.build import docker as docker_tools
+
+
+@contextlib.contextmanager
+def bound_data(populate=True):
+    """Point the docker module at a throwaway data directory.
+
+    docker.py imports DATA by value, so the patch has to land on that module.
+    """
+
+    with tempfile.TemporaryDirectory() as temporary:
+        data = Path(temporary).resolve()
+        for name in core.DATA_DIRS:
+            directory = data / name
+            directory.mkdir()
+            if populate:
+                (directory / "payload").write_text("state")
+                (directory / "nested").mkdir()
+                (directory / "nested" / "deep").write_text("state")
+        with patch.object(docker_tools, "DATA", data):
+            yield data
+
+
+def compose_volumes(data, *, device_override=None):
+    """Compose config payload matching a bound data directory."""
+
+    volumes = {
+        logical: {
+            "name": f"task-manager_{logical}",
+            "driver_opts": {"type": "none", "o": "bind",
+                            "device": device_override or str(data / subdirectory)},
+        }
+        for logical, subdirectory in core.DATA_VOLUMES.items()
+    }
+    volumes["frontend_node_modules"] = {"name": "task-manager_frontend_node_modules"}
+    return volumes
 
 
 class DockerSafetyTests(unittest.TestCase):
@@ -60,38 +98,39 @@ class DockerSafetyTests(unittest.TestCase):
 
     def test_fclean_verifies_project_volumes_and_removes_only_local_images(self):
         env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
-        volumes = {
-            "postgres_data": {"name": "task-manager_postgres_data"},
-            "backend_uploads": {"name": "task-manager_backend_uploads"},
-            "frontend_node_modules": {"name": "task-manager_frontend_node_modules"},
-        }
-        existing = "\n".join(item["name"] for item in volumes.values()) + "\n"
-        inspections = [
-            json.dumps([{"Labels": {
-                "com.docker.compose.project": "task-manager",
-                "com.docker.compose.volume": logical,
-            }}])
-            for logical in volumes
-        ]
-        with patch.object(docker_tools, "run", side_effect=[
-            json.dumps({"volumes": volumes}), existing, *inspections,
-            "", "", None,
-        ]) as run, patch("builtins.input", return_value="fclean") as confirm:
-            docker_tools.fclean(env, "default", confirmation="fclean")
+        with bound_data() as data:
+            volumes = compose_volumes(data)
+            existing = "\n".join(item["name"] for item in volumes.values()) + "\n"
+            inspections = [
+                json.dumps([{"Labels": {
+                    "com.docker.compose.project": "task-manager",
+                    "com.docker.compose.volume": logical,
+                }}])
+                for logical in volumes
+            ]
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": volumes}), existing, *inspections,
+                "", "", None,
+            ]) as run, patch("builtins.input", return_value="fclean") as confirm:
+                docker_tools.fclean(env, "default", confirmation="fclean")
 
-        prompt = confirm.call_args.args[0]
-        self.assertIn("database and uploads", prompt)
-        for item in volumes.values():
-            self.assertIn(item["name"], prompt)
-        command = run.call_args.args[0]
-        self.assertEqual(command[-4:], ["down", "--volumes", "--rmi", "local"])
-        self.assertNotIn("all", command)
+            prompt = confirm.call_args.args[0]
+            self.assertIn("database and uploads", prompt)
+            for item in volumes.values():
+                self.assertIn(item["name"], prompt)
+            for subdirectory in core.DATA_DIRS:
+                self.assertIn(str(data / subdirectory), prompt)
+                self.assertTrue((data / subdirectory).is_dir())
+                self.assertEqual(list((data / subdirectory).iterdir()), [])
+            command = run.call_args.args[0]
+            self.assertEqual(command[-4:], ["down", "--volumes", "--rmi", "local"])
+            self.assertNotIn("all", command)
 
     def test_fclean_removes_verified_custom_image_left_by_compose(self):
         env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
         image = core.APP_IMAGES[0]
-        with patch.object(docker_tools, "run", side_effect=[
-            json.dumps({"volumes": {}}), "",
+        with bound_data() as data, patch.object(docker_tools, "run", side_effect=[
+            json.dumps({"volumes": compose_volumes(data)}), "",
             "sha256:backend\n",
             json.dumps([{"Config": {"Labels": {
                 "com.docker.compose.project": "task-manager",
@@ -108,41 +147,109 @@ class DockerSafetyTests(unittest.TestCase):
     def test_fclean_refuses_unlabelled_volume_before_confirmation(self):
         env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
         name = "task-manager_postgres_data"
-        with patch.object(docker_tools, "run", side_effect=[
-            json.dumps({"volumes": {"postgres_data": {"name": name}}}),
-            name + "\n",
-            json.dumps([{"Labels": {}}]),
-        ]), patch("builtins.input") as confirm, self.assertRaisesRegex(ValueError, "Refusing"):
-            docker_tools.fclean(env, "default", confirmation="fclean")
-        confirm.assert_not_called()
+        with bound_data() as data:
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": {"postgres_data": dict(
+                    compose_volumes(data)["postgres_data"], name=name)}}),
+                name + "\n",
+                json.dumps([{"Labels": {}}]),
+            ]), patch("builtins.input") as confirm, \
+                    self.assertRaisesRegex(ValueError, "Refusing"):
+                docker_tools.fclean(env, "default", confirmation="fclean")
+            confirm.assert_not_called()
+            for subdirectory in core.DATA_DIRS:
+                self.assertTrue((data / subdirectory / "payload").is_file())
+
+    def test_fclean_refuses_device_outside_the_project_data_directory(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        with bound_data() as data:
+            volumes = compose_volumes(data, device_override="/var/lib/elsewhere")
+            existing = "\n".join(item["name"] for item in volumes.values()) + "\n"
+            inspections = [
+                json.dumps([{"Labels": {
+                    "com.docker.compose.project": "task-manager",
+                    "com.docker.compose.volume": logical,
+                }}])
+                for logical in volumes
+            ]
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": volumes}), existing, *inspections, "", "",
+            ]), patch("builtins.input") as confirm, \
+                    self.assertRaisesRegex(ValueError, "is not bound to"):
+                docker_tools.fclean(env, "default", confirmation="fclean")
+            confirm.assert_not_called()
+            for subdirectory in core.DATA_DIRS:
+                self.assertTrue((data / subdirectory / "payload").is_file())
+
+    def test_fclean_cancelled_confirmation_keeps_every_host_file(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        with bound_data() as data:
+            volumes = compose_volumes(data)
+            existing = "\n".join(item["name"] for item in volumes.values()) + "\n"
+            inspections = [
+                json.dumps([{"Labels": {
+                    "com.docker.compose.project": "task-manager",
+                    "com.docker.compose.volume": logical,
+                }}])
+                for logical in volumes
+            ]
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": volumes}), existing, *inspections, "", "",
+            ]), patch("builtins.input", return_value=""), \
+                    self.assertRaisesRegex(ValueError, "Cleanup cancelled"):
+                docker_tools.fclean(env, "default", confirmation="fclean")
+            for subdirectory in core.DATA_DIRS:
+                self.assertTrue((data / subdirectory / "payload").is_file())
+                self.assertTrue((data / subdirectory / "nested" / "deep").is_file())
 
     def test_reset_confirms_target_and_keeps_all_commands_pinned(self):
         env = {"DOCKER_HOST": "unix:///Users/dev/.docker/run/docker.sock"}
         volume = "task-manager_postgres_data"
-        results = [
-            json.dumps({"volumes": {"postgres_data": {"name": volume}}}),
-            json.dumps([{"Labels": {
-                "com.docker.compose.project": "task-manager",
-                "com.docker.compose.volume": "postgres_data",
-            }}]),
-            None,
-            None,
-            None,
-        ]
+        with bound_data() as data:
+            results = [
+                json.dumps({"volumes": compose_volumes(data)}),
+                json.dumps([{"Labels": {
+                    "com.docker.compose.project": "task-manager",
+                    "com.docker.compose.volume": "postgres_data",
+                }}]),
+                None,
+                None,
+                None,
+            ]
 
-        def confirm(prompt):
-            for target in ("desktop-linux", env["DOCKER_HOST"], volume):
-                self.assertIn(target, prompt)
-            return "reset-db"
+            def confirm(prompt):
+                for target in ("desktop-linux", env["DOCKER_HOST"], volume,
+                               str(data / "postgres")):
+                    self.assertIn(target, prompt)
+                return "reset-db"
 
-        with patch.object(docker_tools, "run", side_effect=results) as run, \
-                patch("builtins.input", side_effect=confirm):
-            docker_tools.reset_database(env, "desktop-linux")
+            with patch.object(docker_tools, "run", side_effect=results) as run, \
+                    patch("builtins.input", side_effect=confirm):
+                docker_tools.reset_database(env, "desktop-linux")
 
-        self.assertEqual(len(run.call_args_list), 5)
-        for call in run.call_args_list:
-            self.assertIs(call.kwargs["env"], env)
-        self.assertEqual(run.call_args.args[0], ["docker", "volume", "rm", volume])
+            self.assertEqual(len(run.call_args_list), 5)
+            for call in run.call_args_list:
+                self.assertIs(call.kwargs["env"], env)
+            self.assertEqual(run.call_args.args[0], ["docker", "volume", "rm", volume])
+            self.assertEqual(list((data / "postgres").iterdir()), [])
+            self.assertTrue((data / "uploads" / "payload").is_file())
+
+    def test_reset_refuses_symlinked_database_directory(self):
+        env = {"DOCKER_HOST": "unix:///Users/dev/.docker/run/docker.sock"}
+        with bound_data() as data:
+            volumes = compose_volumes(data)
+            (data / "postgres" / "nested" / "deep").unlink()
+            (data / "postgres" / "payload").unlink()
+            (data / "postgres" / "nested").rmdir()
+            (data / "postgres").rmdir()
+            (data / "postgres").symlink_to(data / "uploads")
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": volumes}),
+            ]), patch("builtins.input") as confirm, \
+                    self.assertRaisesRegex(ValueError, "must not be a symlink"):
+                docker_tools.reset_database(env, "desktop-linux")
+            confirm.assert_not_called()
+            self.assertTrue((data / "uploads" / "payload").is_file())
 
 
 if __name__ == "__main__":

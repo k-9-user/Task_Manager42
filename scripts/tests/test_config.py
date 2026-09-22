@@ -123,6 +123,56 @@ class ConfigTests(unittest.TestCase):
         self.assertNotIn("JWT_SECRET", env)
         self.assertNotIn("COMPOSE_PROFILES", env)
 
+    def test_compose_env_pins_the_data_directory_against_host_override(self):
+        with patch.object(config, "read_env", return_value=self.values), \
+                patch.dict(config.os.environ, {"DATA_DIR": "/tmp/somewhere-else"}):
+            env = config.compose_env()
+        self.assertEqual(env["DATA_DIR"], str(core.ROOT / "data"))
+
+    def test_ensure_data_dirs_creates_every_bound_directory_privately(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data = Path(temporary) / "data"
+            config.ensure_data_dirs(data)
+            for name in core.DATA_DIRS:
+                directory = data / name
+                self.assertTrue(directory.is_dir())
+                self.assertEqual(directory.stat().st_mode & 0o077, 0)
+
+    def test_ensure_data_dirs_is_idempotent_and_preserves_content(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data = Path(temporary) / "data"
+            config.ensure_data_dirs(data)
+            (data / core.DATA_DIRS[0] / "payload").write_text("state")
+            config.ensure_data_dirs(data)
+            self.assertEqual((data / core.DATA_DIRS[0] / "payload").read_text(), "state")
+
+    def test_ensure_data_dirs_refuses_symlinks_and_non_directories(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "target").mkdir()
+
+            linked = root / "linked-data"
+            linked.symlink_to(root / "target")
+            with self.assertRaisesRegex(ValueError, "must not be a symlink"):
+                config.ensure_data_dirs(linked)
+
+            child = root / "child-data"
+            child.mkdir()
+            (child / core.DATA_DIRS[0]).symlink_to(root / "target")
+            with self.assertRaisesRegex(ValueError, "must not be a symlink"):
+                config.ensure_data_dirs(child)
+
+            regular = root / "regular-data"
+            regular.mkdir()
+            (regular / core.DATA_DIRS[0]).write_text("not a directory")
+            with self.assertRaisesRegex(ValueError, "not a directory"):
+                config.ensure_data_dirs(regular)
+
+    def test_data_directory_is_not_part_of_the_env_contract(self):
+        self.assertNotIn("DATA_DIR", core.ENV_NAMES)
+        self.assertEqual(set(self.values), set(core.ENV_NAMES))
+        self.assertEqual(core.DATA_DIRS, tuple(core.DATA_VOLUMES.values()))
+
     def test_fresh_setup_creates_private_secret_files_without_printing_values(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -1,7 +1,32 @@
 import json
 import re
+import shutil
 
-from .core import APP_IMAGES, COMPOSE, require, run
+from .core import APP_IMAGES, COMPOSE, DATA, DATA_VOLUMES, require, run
+
+
+def _bound_data_dir(config, logical):
+    """Resolve the host directory Compose says a stateful volume is bound to."""
+
+    details = (config.get("volumes") or {}).get(logical) or {}
+    device = (details.get("driver_opts") or {}).get("device")
+    expected = DATA / DATA_VOLUMES[logical]
+    require(device == str(expected), f"Compose volume {logical} is not bound to {expected}; refusing to delete host data")
+    require(not expected.is_symlink(), f"{expected} must not be a symlink")
+    require(expected.is_dir(), f"{expected} is not a directory")
+    resolved = expected.resolve()
+    require(resolved.parent == DATA.resolve(), f"Refusing to delete a directory outside {DATA}: {resolved}")
+    return resolved
+
+
+def _clear_data_dir(path):
+    """Empty a bound directory while keeping it, so the device stays valid."""
+
+    for entry in path.iterdir():
+        if entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
 
 
 def local_docker_env(env):
@@ -61,15 +86,21 @@ def fclean(env, context, *, confirmation):
         )
         images.append(name)
 
+    data_dirs = [_bound_data_dir(config, logical) for logical in DATA_VOLUMES]
+
     volume_list = "\n".join(f"  - {name}" for name in volumes.values()) or "  - none"
+    directory_list = "\n".join(f"  - {path}" for path in data_dirs)
     prompt = (
         "WARNING: this permanently deletes the project database and uploads.\n"
         f"Docker context: {context!r}\nEndpoint: {env['DOCKER_HOST']!r}\n"
         f"Project volumes:\n{volume_list}\n"
+        f"Host directories to erase:\n{directory_list}\n"
         f"Type {confirmation}: "
     )
     require(input(prompt) == confirmation, "Cleanup cancelled")
     run(COMPOSE + ["--profile", "test", "down", "--volumes", "--rmi", "local"], env=env)
+    for path in data_dirs:
+        _clear_data_dir(path)
     for name in images:
         remaining = run(
             ["docker", "image", "ls", "--quiet", "--no-trunc", name],
@@ -83,6 +114,7 @@ def fclean(env, context, *, confirmation):
 def reset_database(env, context):
     config = json.loads(run(COMPOSE + ["config", "--format", "json"], quiet=True, env=env))
     volume = config["volumes"]["postgres_data"]["name"]
+    data_dir = _bound_data_dir(config, "postgres_data")
     info = json.loads(run(["docker", "volume", "inspect", volume], quiet=True, env=env))[0]
     labels = info.get("Labels") or {}
     require(
@@ -93,11 +125,12 @@ def reset_database(env, context):
     require(
         input(
             f"Docker context: {context!r}\nEndpoint: {env['DOCKER_HOST']!r}\n"
-            f"Delete ONLY volume {volume!r}? Type reset-db: "
+            f"Delete ONLY volume {volume!r} and erase {str(data_dir)!r}? Type reset-db: "
         ) == "reset-db",
         "Reset cancelled",
     )
     run(COMPOSE + ["stop", "nginx", "backend", "migrate", "db"], env=env)
     run(COMPOSE + ["rm", "--force", "db"], env=env)
     run(["docker", "volume", "rm", volume], env=env)
+    _clear_data_dir(data_dir)
     print("Dev database removed; uploads preserved. Run make up to recreate and migrate.")

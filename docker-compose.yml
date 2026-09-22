@@ -4,6 +4,7 @@ x-postgres-credentials: &postgres-credentials
   POSTGRES_DB: ${POSTGRES_DB:-taskmanager}
   POSTGRES_USER: ${POSTGRES_USER:-user}
   POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+  PGDATA: /var/lib/postgresql/data/pgdata
 
 x-backend-image: &backend-image
   image: task-manager-back:latest
@@ -22,6 +23,9 @@ services:
   db:
     image: postgres:17-alpine
     environment: *postgres-credentials
+    restart: on-failure:5
+    stop_signal: SIGINT
+    stop_grace_period: 30s
     secrets:
       - postgres_password
     volumes:
@@ -63,8 +67,20 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  init-data:
+    image: alpine:3.22
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - mkdir -p /uploads && chown -R 10001:10001 /uploads && chmod 700 /uploads
+    restart: "no"
+    volumes:
+      - backend_uploads:/uploads
+
   backend:
     <<: *backend-image
+    restart: on-failure:5
     environment:
       <<: *backend-environment
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
@@ -86,6 +102,8 @@ services:
         condition: service_completed_successfully
       bootstrap-admin:
         condition: service_completed_successfully
+      init-data:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -104,6 +122,7 @@ services:
     image: task-manager-front:latest
     build:
       context: ./frontend
+    restart: on-failure:5
     environment:
       VITE_API_URL: ${VITE_API_URL:-https://localhost}
     expose:
@@ -127,6 +146,7 @@ services:
 
   nginx:
     image: nginxinc/nginx-unprivileged:1.28-alpine
+    restart: on-failure:5
     ports:
       - "127.0.0.1:80:8080"
       - "127.0.0.1:443:8443"
@@ -208,5 +228,15 @@ secrets:
 
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/postgres
   backend_uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/uploads
   frontend_node_modules:

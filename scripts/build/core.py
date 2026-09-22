@@ -8,6 +8,9 @@ CERTS = ROOT / "nginx/certs"
 CERT = CERTS / "localhost.crt"
 KEY = CERTS / "localhost.key"
 SECRETS = ROOT / "secrets"
+DATA = ROOT / "data"
+DATA_VOLUMES = {"postgres_data": "postgres", "backend_uploads": "uploads"}
+DATA_DIRS = tuple(DATA_VOLUMES.values())
 COMPOSE = [
     "docker", "compose", "--project-name", "task-manager", "--file",
     str(ROOT / "docker-compose.yml"), "--env-file", str(ROOT / ".env"),

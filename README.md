@@ -34,7 +34,13 @@ Compose builds two local application images, `task-manager-back:latest` and `tas
 
 **Use localhost only.** The canonical address is **https://localhost**. Only nginx publishes ports, on `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged container listens internally on 8080/8443. HTTP redirects to HTTPS while preserving the request URI. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
 
-Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic.
+Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic. Because the database now persists on the host, this matters beyond first boot: editing `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_USERNAME` or `secrets/bootstrap_admin_password` after the first start blocks every later `make up` until the matching credentials are restored or the database is explicitly reset.
+
+### Persistent data
+
+The database cluster and uploaded attachments live on the host under `data/` at the repository root: `data/postgres` for PostgreSQL and `data/uploads` for attachments. Both are Compose named volumes bound to those directories, which the Make wrapper creates (mode 0700) before every Compose call — Compose requires an absolute, pre-existing bind path and never creates one. `data/` is git-ignored; never commit it. The data survives `make down`, a container crash and a Docker daemon restart, and `make up` picks it straight back up. Only `make reset-db`, `make fclean` and `make re` erase it, each behind a typed confirmation that lists the directories. `DATA_DIR` is fixed to `<repo>/data` by the wrapper and is intentionally not an `.env` key; a host `DATA_DIR` cannot redirect the stack, and a bare `docker compose` command fails rather than binding an unintended path. The frontend dependency volume stays inside Docker: it is rebuilt at image build and does not belong on the host.
+
+`db`, `backend`, `frontend` and `nginx` restart automatically on a non-zero exit, capped at five attempts. The coverage is narrower than it sounds: a restart policy reacts to process exit only, so a hung or `unhealthy` container whose main process is still alive is not restarted; Docker also ignores the policy for anything stopped by hand, including `docker stop` and `docker kill`; and a PostgreSQL immediate shutdown exits 0, which `on-failure` does not act on. PostgreSQL stops with `SIGINT` (fast shutdown) so `make down` checkpoints cleanly; after a real crash, WAL replay at startup is the only automatic repair, and uploads have no equivalent. See `scripts/README.md` for the details.
 
 | Address | Purpose |
 |---|---|
@@ -43,7 +49,9 @@ Existing databases are accepted only when their first account exactly matches th
 | https://localhost/openapi.json | Generated API specification |
 | https://localhost/health | Backend/database health JSON; not a complete status/backup system |
 
-`make smoke` makes read-only HTTPS requests for health, the frontend root and representative OpenAPI paths. It does **not** create users, authenticate, test browser JavaScript, validate every route or prove feature completion. Its TLS client uses the generated certificate explicitly with `--cacert`, rather than disabling verification.
+The frontend is served under a nonce-based Content-Security-Policy: nginx mints a unique nonce per request and Vite stamps it on the tags it generates, via `html.cspNonce` in `frontend/vite.config.js`. `script-src` never allows `'unsafe-inline'`, and the strict nonce-free policy stays on `/api/`, `/health`, `/docs` and `/openapi.json`. If a script is ever blocked, add the nonce to the tag rather than relaxing `script-src` — a blocked inline script renders a blank page while nginx and Vite both log a clean 200. See `scripts/README.md`.
+
+`make smoke` makes read-only HTTPS requests for health, the frontend root and representative OpenAPI paths. It does **not** create users, authenticate, test browser JavaScript, validate every route or prove feature completion. Its TLS client uses the generated certificate explicitly with `--cacert`, rather than disabling verification. It also verifies the frontend CSP nonce pipeline end to end, but curl enforces no policy and runs no script, so only a browser can prove the page renders.
 
 ### Commands and tests
 
@@ -52,21 +60,23 @@ Existing databases are accepted only when their first account exactly matches th
 | `make setup` | Create or migrate local env/secret files and create missing TLS files |
 | `make check` | Validate local prerequisites/configuration/TLS/Compose |
 | `make up` | Check, build and start default development services |
-| `make down` | Stop/remove Compose services while preserving named volumes |
-| `make clean` | Alias of `make down`; preserve volumes and images |
-| `make fclean` | After typed confirmation, remove project containers, local app images and all project volumes |
+| `make down` | Stop/remove Compose services while preserving all data under `data/` |
+| `make clean` | Alias of `make down`; preserve data and images |
+| `make fclean` | After typed confirmation, remove project containers, local app images and all project volumes, and erase `data/` |
 | `make re` | Check configuration, then confirmed `fclean`, rebuild and start an empty stack |
 | `make logs` | Follow service logs; avoid sharing secrets from application output |
 | `make ps` | Show Compose services including the test profile |
 | `make smoke` | Check read-only HTTPS health/frontend/OpenAPI; no account mutations |
 | `make test` | Build backend test image and run pytest against isolated test storage |
 | `make test TESTS='tests/test_health.py'` | Pass selected pytest arguments through the wrapper |
-| `make reset-db` | Explicitly confirmed deletion of development DB only |
+| `make reset-db` | Explicitly confirmed deletion of development DB only, including `data/postgres` |
 
 `make fclean` and `make re` permanently delete the development database,
-uploaded files and frontend dependency volume. They verify Compose project labels
-and require typing the target name before running. They preserve source files,
-`.env`, secret files, TLS certificates and pulled PostgreSQL/Nginx images.
+uploaded files and frontend dependency volume, emptying `data/postgres` and
+`data/uploads` on the host. They verify Compose project labels, verify that each
+host directory is the one Compose resolved and lies inside `data/`, and require
+typing the target name before running. They preserve source files, `.env`,
+secret files, TLS certificates and pulled PostgreSQL/Nginx images.
 
 ### Google OAuth and API keys
 

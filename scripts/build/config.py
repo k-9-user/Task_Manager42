@@ -9,6 +9,8 @@ import sys
 import tempfile
 
 from .core import (
+    DATA,
+    DATA_DIRS,
     ENV_NAMES,
     LEGACY_LOCAL_URLS,
     LEGACY_SECRET_NAMES,
@@ -270,6 +272,19 @@ def setup_configuration(root=ROOT):
     print("Migrated legacy .env secrets into private files.")
 
 
+def ensure_data_dirs(data=DATA):
+    """Create the host directories the stateful Compose volumes bind to."""
+
+    require(not data.is_symlink(), f"{data.name} must not be a symlink")
+    require(not data.exists() or data.is_dir(), f"{data.name} exists but is not a directory")
+    for name in DATA_DIRS:
+        path = data / name
+        require(not path.is_symlink(), f"{data.name}/{name} must not be a symlink")
+        require(not path.exists() or path.is_dir(), f"{data.name}/{name} exists but is not a directory")
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return data
+
+
 def compose_env():
     values = read_env(ROOT / ".env")
     allowed = read_env(ROOT / ".env.example")
@@ -280,4 +295,5 @@ def compose_env():
         if not key.startswith("COMPOSE_") and key not in allowed and key not in SECRET_ENV_NAMES
     }
     env.update(values)
+    env["DATA_DIR"] = str(DATA)
     return env
