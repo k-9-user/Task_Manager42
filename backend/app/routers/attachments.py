@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 import uuid
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any
@@ -56,6 +57,35 @@ ALLOWED_BANNER_MIME_TYPES = frozenset({"image/jpeg", "image/png"})
 DatabaseSession = Annotated[Session, Depends(get_db)]
 AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 ApplicationSettings = Annotated[Settings, Depends(get_settings)]
+
+
+@router.get(
+    "/api/tasks/{task_id}/attachments",
+    summary="List task attachments",
+    description="List attachment metadata for a current member of the task's project.",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required."},
+        status.HTTP_404_NOT_FOUND: {"description": "Task not found or not visible."},
+    },
+)
+def list_task_attachments(
+    task_id: UUID,
+    db: DatabaseSession,
+    current_user: AuthenticatedUser,
+) -> dict[str, Any]:
+    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
+    if project_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    _require_attachment_member(db, project_id, current_user.id, "Task not found")
+
+    task_attachments = db.scalars(
+        select(Attachment)
+        .where(Attachment.task_id == task_id)
+        .order_by(Attachment.created_at.asc(), Attachment.id.asc())
+    ).all()
+    return _success_response(
+        attachments=[_serialize_attachment_metadata(item) for item in task_attachments]
+    )
 
 
 @router.post(
@@ -152,6 +182,51 @@ async def upload_attachment(
 
     db.refresh(attachment)
     return _success_response(attachment=_serialize_attachment(attachment))
+
+
+@router.get(
+    "/api/attachments/{attachment_id}",
+    response_class=FileResponse,
+    summary="Download a task attachment",
+    description="Serve an attachment to a current member of its task's project.",
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Authentication required."},
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Attachment not found, not visible, or unavailable."
+        },
+    },
+)
+def download_attachment(
+    attachment_id: UUID,
+    db: DatabaseSession,
+    current_user: AuthenticatedUser,
+    settings: ApplicationSettings,
+) -> FileResponse:
+    attachment = db.scalar(select(Attachment).where(Attachment.id == attachment_id))
+    if attachment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
+        )
+
+    project_id = db.scalar(select(Task.project_id).where(Task.id == attachment.task_id))
+    if project_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found"
+        )
+    _require_attachment_member(db, project_id, current_user.id, "Attachment not found")
+
+    stored_path = _safe_stored_path(attachment.file_url, _upload_directory(settings))
+    if stored_path is None or not stored_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Attachment file not found"
+        )
+
+    return FileResponse(
+        stored_path,
+        filename=_safe_download_filename(attachment.file_name),
+        media_type=_attachment_content_type(stored_path.name),
+        content_disposition_type="inline",
+    )
 
 
 @router.delete(
@@ -458,6 +533,38 @@ def _safe_stored_path(file_url: str, upload_directory: Path) -> Path | None:
     if candidate.parent != upload_directory:
         return None
     return candidate
+
+
+def _require_attachment_member(
+    db: Session, project_id: UUID, user_id: UUID, not_found_detail: str
+) -> None:
+    membership_id = db.scalar(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == user_id,
+        )
+    )
+    if membership_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=not_found_detail)
+
+
+def _safe_download_filename(file_name: str) -> str:
+    filename = PurePosixPath(file_name.replace("\\", "/")).name
+    filename = "".join(character for character in filename if not has_control_characters(character))
+    return filename if filename not in {"", ".", ".."} else "attachment"
+
+
+def _attachment_content_type(stored_filename: str) -> str:
+    return mimetypes.guess_type(stored_filename)[0] or "application/octet-stream"
+
+
+def _serialize_attachment_metadata(attachment: Attachment) -> dict[str, Any]:
+    return {
+        "id": attachment.id,
+        "filename": _safe_download_filename(attachment.file_name),
+        "content_type": _attachment_content_type(PurePosixPath(attachment.file_url).name),
+        "created_at": attachment.created_at,
+    }
 
 
 def _serialize_attachment(attachment: Attachment) -> dict[str, Any]:
