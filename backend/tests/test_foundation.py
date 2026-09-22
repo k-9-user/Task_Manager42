@@ -46,7 +46,9 @@ def test_real_app_registers_all_feature_routes():
         ("PUT", "/api/notifications/{notification_id}/read"),
         ("PUT", "/api/notifications/read-all"),
         ("GET", "/api/search/tasks"),
+        ("GET", "/api/tasks/{task_id}/attachments"),
         ("POST", "/api/tasks/{task_id}/attachments"),
+        ("GET", "/api/attachments/{attachment_id}"),
         ("DELETE", "/api/attachments/{attachment_id}"),
         ("GET", "/api/export"),
         ("POST", "/api/import"),
@@ -62,6 +64,9 @@ def test_real_app_registers_all_feature_routes():
         for method in getattr(route, "methods", ())
     }
     assert expected <= actual, f"Missing routes: {sorted(expected - actual)}"
+    schema = app.openapi()
+    assert "get" in schema["paths"]["/api/tasks/{task_id}/attachments"]
+    assert "get" in schema["paths"]["/api/attachments/{attachment_id}"]
 
 
 def test_real_app_does_not_serve_upload_storage_directly(client):
