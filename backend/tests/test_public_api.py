@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 from uuid import uuid4
 
@@ -247,6 +248,30 @@ def test_unrelated_project_is_excluded(
     assert project_ids == {str(visible_project.id)}
 
 
+def test_public_projects_are_ordered_by_created_at_then_id_descending(
+    client: TestClient, db: Session, api_user: User,
+):
+    oldest = _create_project(db, api_user, "Oldest project")
+    tied_first = _create_project(db, api_user, "Tied project one")
+    tied_second = _create_project(db, api_user, "Tied project two")
+    tie_time = datetime(2026, 1, 2, 3, 4, 5)
+    oldest.created_at = tie_time - timedelta(days=1)
+    tied_first.created_at = tied_second.created_at = tie_time
+    db.commit()
+    expected = sorted(
+        (oldest, tied_first, tied_second),
+        key=lambda project: (project.created_at, project.id),
+        reverse=True,
+    )
+
+    response = client.get("/api/v1/public/projects", headers=_headers())
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [item["id"] for item in response.json()["data"]["projects"]] == [
+        str(project.id) for project in expected
+    ]
+
+
 def test_accessible_task_is_returned(
     client: TestClient,
     db: Session,
@@ -290,6 +315,31 @@ def test_unrelated_task_is_excluded(
     task_ids = {item["id"] for item in response.json()["data"]["tasks"]}
     assert response.status_code == status.HTTP_200_OK
     assert task_ids == {str(visible_task.id)}
+
+
+def test_public_tasks_are_ordered_by_created_at_then_id_descending(
+    client: TestClient, db: Session, api_user: User,
+):
+    project = _create_project(db, api_user, "Ordered task project")
+    oldest = _create_task(db, project, "Oldest task")
+    tied_first = _create_task(db, project, "Tied task one")
+    tied_second = _create_task(db, project, "Tied task two")
+    tie_time = datetime(2026, 1, 2, 3, 4, 5)
+    oldest.created_at = tie_time - timedelta(days=1)
+    tied_first.created_at = tied_second.created_at = tie_time
+    db.commit()
+    expected = sorted(
+        (oldest, tied_first, tied_second),
+        key=lambda task: (task.created_at, task.id),
+        reverse=True,
+    )
+
+    response = client.get("/api/v1/public/tasks", headers=_headers())
+
+    assert response.status_code == status.HTTP_200_OK
+    assert [item["id"] for item in response.json()["data"]["tasks"]] == [
+        str(task.id) for task in expected
+    ]
 
 
 def test_viewer_can_read_tasks(
