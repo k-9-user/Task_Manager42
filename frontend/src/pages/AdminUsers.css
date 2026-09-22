@@ -1,0 +1,108 @@
+.admin-user-page {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	background: var(--surface-alt);
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	padding: 2rem;
+	box-sizing: border-box;
+	min-height: 100%;
+}
+
+.admin-user-page h1 {
+	margin: 0;
+	color: #2e1065;
+	font-size: 1.5rem;
+}
+
+.admin-user-page table {
+	width: 100%;
+	border-collapse: collapse;
+	background: var(--surface);
+	border: 1px solid var(--surface-border);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.admin-user-page th {
+	background: var(--primary);
+	color: #ffffff;
+	text-align: left;
+	font-size: 0.82rem;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	padding: 0.7rem 1rem;
+}
+
+.admin-user-page td {
+	padding: 0.65rem 1rem;
+	border-top: 1px solid var(--surface-border);
+	font-size: 0.9rem;
+	color: #2c1a4d;
+}
+
+.admin-user-page select {
+	border: 1px solid var(--surface-border);
+	border-radius: 6px;
+	padding: 0.3rem 0.5rem;
+	font-family: inherit;
+	font-size: 0.85rem;
+}
+
+.status-badge {
+	font-size: 0.75rem;
+	padding: 0.15rem 0.6rem;
+	border-radius: 10px;
+	background: #dcfce7;
+	color: #15803d;
+}
+
+.status-badge.status-banned {
+	background: #fee2e2;
+	color: #b91c1c;
+}
+
+.admin-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.admin-actions button {
+	background: var(--surface-alt);
+	border: 1px solid var(--surface-border);
+	color: var(--primary-dark);
+	border-radius: 6px;
+	padding: 0.3rem 0.7rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.admin-actions button:hover {
+	background: var(--primary);
+	color: #ffffff;
+	border-color: var(--primary);
+}
+
+.admin-actions button.danger {
+	color: #b91c1c;
+	border-color: #fecaca;
+}
+
+.admin-actions button.danger:hover {
+	background: #b91c1c;
+	color: #ffffff;
+	border-color: #b91c1c;
+}
+
+@media (max-width: 720px) {
+	.admin-user-page {
+		padding: 1rem;
+	}
+
+	.admin-user-page table {
+		display: block;
+		overflow-x: auto;
+	}
+}

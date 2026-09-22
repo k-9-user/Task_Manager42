@@ -4,9 +4,18 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
 
 # Environment
 .env
+secrets/*
+!secrets/README.md
+
+# Local TLS
+nginx/certs/*
+
+# Local persistent data
+/data/
 
 # Node / frontend
 node_modules/

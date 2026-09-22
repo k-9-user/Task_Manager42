@@ -1,0 +1,176 @@
+{
+	"navbar":
+	{
+		"projects": "Projects",
+		"login": "Log in",
+		"logout": "Log out",
+		"search": "To Search",
+		"profile": "Profile"
+	},
+	"login":
+	{
+		"title": "Task Manager",
+		"subtitle": "Log in to find your projects",
+		"username": "Username",
+		"password": "Password",
+		"submit": "Log in",
+		"noAccount": "No account?",
+		"register": "Sign up",
+		"or": "or",
+		"google": "Continue with Google",
+		"oauthLoading": "Completing Google sign-in...",
+		"oauthCancelled": "Google sign-in was cancelled.",
+		"oauthFailed": "Google sign-in failed. Please try again."
+	},
+	"register":
+	{
+		"confirmpassword": "Confirm pasword",
+		"createcount": "Creat my account",
+		"return": "return",
+		"falsepassword": "The passwords do not match",
+		"username": "Please enter a username",
+		"email": "Please enter an email address",
+		"password": "Please enter a password",
+		"cpassword": "Please confirm your password",
+		"invaemail": "Invalid email address",
+		"invausername": "Username must be 3-50 alphanumeric characters (., _, - allowed)",
+		"invapassword": "Password must be at least 12 characters long"
+	},
+	"loading":
+	{
+		"load": "loading ..."
+	},
+	"error":
+	{
+		"err": "Error"
+	},
+	"admin":
+	{
+		"usermanag": "User management",
+		"role": "role",
+		"action": "action",
+		"user": "User",
+		"admin": "Administrator",
+		"rmuser": "Delete this user ?",
+		"delete": "Delete",
+		"status": "Status",
+		"active": "Active",
+		"banned": "Banned",
+		"ban": "Ban",
+		"restore": "Restore",
+		"empty": "No users found"
+	},
+	"projects":
+	{
+		"title": "Projects",
+		"namePlaceholder": "Project name",
+		"create": "Create",
+		"description": "Description (optional)",
+		"empty": "No projects yet. Create your first project!"
+	},
+	"random":
+	{
+		"myprofile": "My profile",
+		"projet": "Project",
+		"recherche" : "Search",
+		"mrecherche": "Enter a word to search for",
+		"ttstatus": "all statuses",
+		"afaire": "Things to Do",
+		"encours": "In Progress",
+		"termine": "Done",
+		"rehercheencours": "Searching ...",
+		"impossibleserv": "Unable to contact the server: ",
+		"noreult": "No results found",
+		"tricreation": "Creation date",
+		"tritre": "Title",
+		"triecheance": "Due date",
+		"tristatut": "Status",
+		"trinom": "Name",
+		"tridesc": "Descending",
+		"triasc": "Ascending",
+		"nameproject": "The project name is required",
+		"addfichier": "+ Add a file",
+		"sfichier": "Select a file",
+		"envoi": "Sending ...",
+		"ajfichier": "Add the file",
+		"erupload": "Upload error",
+		"ersurv": "An error has occurred",
+		"titretache": "Task title",
+		"creertache": "Create task",
+		"addbanniere": "+ Add a banner",
+		"ajbanniere": "Add the banner",
+		"voircommentaires": "View comments",
+		"masquercommentaires": "Hide comments",
+		"suppcommentaire": "Delete",
+		"ecrirecommentaire": "Write a comment...",
+		"commenter": "Comment"
+	},
+	"members":
+	{
+		"title": "Project members",
+		"add": "Add",
+		"remove": "Remove",
+		"emailPlaceholder": "Member email to add",
+		"role":
+		{
+			"viewer": "Viewer",
+			"editor": "Editor",
+			"owner": "Owner"
+		}
+	},
+	"messages":
+	{
+		"title": "Team messages",
+		"empty": "No messages yet",
+		"placeholder": "Write a message to the team...",
+		"send": "Send"
+	},
+	"footer":
+	{
+		"pc": "Privacy Policy",
+		"cdu": "Terms of Use"
+	},
+	"status":
+	{
+		"title": "Status",
+		"operational": "All systems operational",
+		"degraded": "An issue has been detected",
+		"lastChecked": "Last checked:",
+		"componentsTitle": "Components",
+		"up": "OK",
+		"down": "Down",
+		"database": "Database",
+		"backupTitle": "Backups and disaster recovery",
+		"backupBody": "The database is backed up regularly (timestamped PostgreSQL dump, last 7 backups kept) via 'make backup'. In case of an incident, a backup can be restored manually to resume service."
+	},
+	"legal":
+	{
+		"updated": "Last updated: August 27, 2026",
+		"privacy":
+		{
+			"title": "Privacy Policy",
+			"section1Title": "1. Data we collect",
+			"section1Body": "We collect your username, your email and your password (hashed with Argon2, never stored in plain text) when you create your account.",
+			"section2Title": "2. How we use your data",
+			"section2Body": "We use your data only within Task Manager, whether for authentication or for any activity on the platform.",
+			"section3Title": "3. Data retention",
+			"section3Body": "Your data is kept from the creation of your account until it is deleted.",
+			"section4Title": "4. Your rights (GDPR)",
+			"section4Body": "In accordance with the GDPR, you have the right to access your data, to have it corrected, and to request its deletion along with your account.",
+			"section5Title": "5. Sharing your data",
+			"section5Body": "Your data is never shared outside the project; only you and the project team with administrator access can access it.",
+			"contactTitle": "Contact",
+			"contactBody": "For any question about your data, contact the project team."
+		},
+		"terms":
+		{
+			"title": "Terms of Service",
+			"section1Title": "1. Purpose",
+			"section1Body": "By creating an account, you agree to these terms of service.",
+			"section2Title": "2. User account",
+			"section2Body": "You are responsible for keeping the information used to sign in to your account confidential, as well as for all activity carried out from it. You are also required to provide accurate information when creating your account.",
+			"section3Title": "3. Acceptable use",
+			"section3Body": "You must use the platform in a fully lawful manner, without storing or sharing illegal content. You must also not compromise the security of the platform."
+		}
+	}
+}

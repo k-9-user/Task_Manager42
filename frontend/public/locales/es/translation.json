@@ -1,0 +1,176 @@
+{
+	"navbar":
+	{
+		"projects": "Proyectos",
+		"login": "Iniciar sesión",
+		"logout": "Cerrar sesión",
+		"search": "Bucar",
+		"profile": "Perfil"
+	},
+	"login":
+	{
+		"title": "Task Manager",
+		"subtitle": "Inicia sesión para encontrar tus proyectos",
+		"username": "Nombre de usuario",
+		"password": "Contraseña",
+		"submit": "Iniciar sesión",
+		"noAccount": "¿Sin cuenta?",
+		"register": "Registrarse",
+		"or": "o",
+		"google": "Continuar con Google",
+		"oauthLoading": "Completando el inicio de sesión con Google...",
+		"oauthCancelled": "Se canceló el inicio de sesión con Google.",
+		"oauthFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+	},
+	"register":
+	{
+		"confirmpassword": "Confirmar la contraseña",
+		"createcount": "Crear mi cuenta",
+		"return": "volver",
+		"falsepassword": "Las contraseñas no coinciden",
+		"username": "Introduce un nombre de usuario",
+		"email": "Introduce una dirección de correo electrónico",
+		"password": "Introduce una contraseña",
+		"cpassword": "Confirma tu contraseña",
+		"invaemail": "Dirección de correo electrónico no válida",
+		"invausername": "El nombre de usuario debe tener entre 3 y 50 caracteres alfanuméricos (., _, - permitidos)",
+		"invapassword": "La contraseña debe tener al menos 12 caracteres"
+	},
+	"loading":
+	{
+		"load": "Carga ..."
+	},
+	"error":
+	{
+		"err": "Error"
+	},
+	"admin":
+	{
+		"usermanag": "gestión de usuarios",
+		"role": "función",
+		"action": "acción",
+		"user": "usuario",
+		"admin": "administrador",
+		"rmuser": "¿Quieres eliminar a este usuario?",
+		"delete": "Eliminar",
+		"status": "Estado",
+		"active": "Activo",
+		"banned": "Baneado",
+		"ban": "Banear",
+		"restore": "Reactivar",
+		"empty": "No se encontraron usuarios"
+	},
+	"projects":
+	{
+		"title": "Proyectos",
+		"namePlaceholder": "Nombre del proyecto",
+		"create": "Crear",
+		"description": "Descripción (opcional)",
+		"empty": "Aún no hay proyectos. ¡Crea tu primer proyecto!"
+	},
+	"random":
+	{
+		"myprofile": "Mi perfil",
+		"projet": "proyecto",
+		"recherche": "Búsqueda",
+		"mrecherche": "Escribe una palabra para buscar" ,
+		"ttstatus": "todos los estados",
+		"afaire": "Tareas pendientes",
+		"encours": "En curso",
+		"termine": "Terminado",
+		"rehercheencours": "Búsqueda en curso ...",
+		"impossibleserv": "No se puede establecer contacto con el servidor: ",
+		"noreult": "No se han encontrado resultados",
+		"tricreation": "Fecha de creación",
+		"tritre": "Título",
+		"triecheance": "Vencimiento",
+		"tristatut": "Estado",
+		"trinom": "Nombre",
+		"tridesc": "Descendente",
+		"triasc": "Ascendente",
+		"nameproject": "Es obligatorio indicar el nombre del proyecto",
+		"addfichier": "+ Añadir un archivo",
+		"sfichier": "Seleccionar un archivo",
+		"envoi": "Enviando ...",
+		"ajfichier": "Añadir el archivo",
+		"erupload": "Error al subir el archivo",
+		"ersurv": "Se ha producido un error",
+		"titretache": "Título de la tarea",
+		"creertache": "Crear tarea",
+		"addbanniere": "+ Añadir una portada",
+		"ajbanniere": "Añadir la portada",
+		"voircommentaires": "Ver comentarios",
+		"masquercommentaires": "Ocultar comentarios",
+		"suppcommentaire": "Eliminar",
+		"ecrirecommentaire": "Escribe un comentario...",
+		"commenter": "Comentar"
+	},
+	"members":
+	{
+		"title": "Miembros del proyecto",
+		"add": "Añadir",
+		"remove": "Quitar",
+		"emailPlaceholder": "Email del miembro a añadir",
+		"role":
+		{
+			"viewer": "Lector",
+			"editor": "Editor",
+			"owner": "Propietario"
+		}
+	},
+	"messages":
+	{
+		"title": "Mensajes del equipo",
+		"empty": "Aún no hay mensajes",
+		"placeholder": "Escribe un mensaje al equipo...",
+		"send": "Enviar"
+	},
+	"footer":
+	{
+		"pc": "Política de privacidad",
+		"cdu": "Condiciones de uso"
+	},
+	"status":
+	{
+		"title": "Estado",
+		"operational": "Todos los sistemas operativos",
+		"degraded": "Se ha detectado un problema",
+		"lastChecked": "Última comprobación:",
+		"componentsTitle": "Componentes",
+		"up": "OK",
+		"down": "Inactivo",
+		"database": "Base de datos",
+		"backupTitle": "Copias de seguridad y recuperación ante desastres",
+		"backupBody": "La base de datos se respalda regularmente (volcado de PostgreSQL con marca de tiempo, se conservan las últimas 7 copias) mediante 'make backup'. En caso de incidente, se puede restaurar una copia manualmente para reanudar el servicio."
+	},
+	"legal":
+	{
+		"updated": "Última actualización: 27 de agosto de 2026",
+		"privacy":
+		{
+			"title": "Política de privacidad",
+			"section1Title": "1. Datos que recopilamos",
+			"section1Body": "Recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña (con hash mediante Argon2, nunca almacenada en texto plano) al crear tu cuenta.",
+			"section2Title": "2. Uso de tus datos",
+			"section2Body": "Utilizamos tus datos únicamente dentro de Task Manager, ya sea para la autenticación o para cualquier actividad en la plataforma.",
+			"section3Title": "3. Conservación de tus datos",
+			"section3Body": "Tus datos se conservan desde la creación de tu cuenta hasta su eliminación.",
+			"section4Title": "4. Tus derechos (RGPD)",
+			"section4Body": "De conformidad con el RGPD, tienes derecho a consultar tus datos, a rectificarlos, así como a solicitar su eliminación junto con la de tu cuenta.",
+			"section5Title": "5. Compartir tus datos",
+			"section5Body": "Tus datos nunca se comunican fuera del proyecto; solo tú y el equipo del proyecto con acceso de administrador pueden acceder a ellos.",
+			"contactTitle": "Contacto",
+			"contactBody": "Para cualquier pregunta sobre tus datos, contacta con el equipo del proyecto."
+		},
+		"terms":
+		{
+			"title": "Condiciones de uso",
+			"section1Title": "1. Objeto",
+			"section1Body": "Al crear una cuenta, aceptas las presentes condiciones de uso.",
+			"section2Title": "2. Cuenta de usuario",
+			"section2Body": "Eres responsable de la confidencialidad de la información que permite acceder a tu cuenta, así como de todas las actividades realizadas desde ella. También debes proporcionar información exacta al crear tu cuenta.",
+			"section3Title": "3. Uso de la plataforma",
+			"section3Body": "Debes utilizar la plataforma de manera totalmente legal, sin almacenar ni compartir contenido ilegal. Tampoco debes comprometer la seguridad de la plataforma."
+		}
+	}
+}

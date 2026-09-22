@@ -1,0 +1,73 @@
+import { useEffect, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from "react-i18next";
+import { apiFetch } from "../services/api";
+import LanguageSwitcher from "./LanguageSwitcher";
+
+const LINK_BASE = "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-sidebar-text transition-colors hover:bg-white/10 hover:text-white";
+const LINK_ACTIVE = "bg-brand-primary text-white";
+
+function Sidebar()
+{
+	const { isAuthen, logout } = useAuth();
+	const { t } = useTranslation();
+	const [isAdmin, setIsAdmin] = useState(false);
+	const navigate = useNavigate();
+
+	function handleLogout()
+	{
+		logout();
+		navigate("/login");
+	}
+
+	useEffect(() =>
+	{
+		if (!isAuthen)
+		{
+			setIsAdmin(false);
+			return ;
+		}
+		apiFetch("/api/users/me")
+			.then((data) => setIsAdmin(data.user.role === "admin"))
+			.catch(() => setIsAdmin(false));
+	}, [isAuthen]);
+
+	return (
+		<aside className="flex w-60 shrink-0 flex-col gap-8 bg-gradient-to-b from-brand-sidebar to-brand-sidebar-alt px-4 py-6 font-sans text-brand-sidebar-text sm:sticky sm:top-0 sm:min-h-screen max-sm:w-full max-sm:flex-row max-sm:flex-wrap max-sm:items-center max-sm:gap-4">
+			<div className="px-2 text-lg font-bold tracking-wide text-white">Task Manager</div>
+			{isAuthen && (
+				<nav className="flex flex-1 flex-col gap-1 max-sm:flex-row max-sm:flex-wrap">
+					<NavLink to="/projects" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
+						<span>📁</span> {t("navbar.projects")}
+					</NavLink>
+					<NavLink to="/Search" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
+						<span>🔍</span> {t("navbar.search")}
+					</NavLink>
+					<NavLink to="/Profile" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
+						<span>👤</span> {t("navbar.profile")}
+					</NavLink>
+					{isAdmin && (
+						<NavLink to="/admin/users" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
+							<span>🛡️</span> {t("admin.usermanag")}
+						</NavLink>
+					)}
+				</nav>
+			)}
+			<div className="flex flex-col gap-3 border-t border-white/10 pt-4 max-sm:flex-row max-sm:items-center max-sm:border-t-0 max-sm:pt-0">
+				<LanguageSwitcher />
+				{isAuthen ? (
+					<button className={`${LINK_BASE} cursor-pointer border border-white/20 bg-transparent font-sans`} onClick={handleLogout}>
+						<span>🚪</span> {t("navbar.logout")}
+					</button>
+				) : (
+					<NavLink to="/login" className={LINK_BASE}>
+						<span>🔑</span> {t("navbar.login")}
+					</NavLink>
+				)}
+			</div>
+		</aside>
+	);
+}
+
+export default Sidebar;
