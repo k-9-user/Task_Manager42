@@ -5,8 +5,10 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.common import StrictRequest
 
-class CommentCreate(BaseModel):
+
+class CommentCreate(StrictRequest):
     content: str = Field(..., min_length=1, max_length=5000)
 
 

@@ -50,6 +50,46 @@ def test_password_hashing_and_equalized_verification() -> None:
     )
 
 
+def test_password_with_injection_metacharacters_remains_opaque(
+    client: TestClient,
+    db_session,
+    caplog,
+) -> None:
+    password = "' OR 1=1 --; $(touch /tmp/injected) <script>"
+    registration = client.post(
+        "/api/auth/register",
+        json={
+            "email": "opaque-password@example.com",
+            "username": "opaque_password",
+            "password": password,
+        },
+    )
+
+    assert registration.status_code == 201
+    assert password not in registration.text
+    stored = db_session.scalar(
+        select(User).where(User.email == "opaque-password@example.com")
+    )
+    assert stored is not None
+    assert stored.password_hash != password
+    assert verify_password_and_update(password, stored.password_hash)[0]
+
+    valid_login = client.post(
+        "/api/auth/login",
+        json={"email": "opaque-password@example.com", "password": password},
+    )
+    bypass_attempt = client.post(
+        "/api/auth/login",
+        json={
+            "email": "opaque-password@example.com",
+            "password": "' OR 1=1 --",
+        },
+    )
+    assert valid_login.status_code == 200
+    assert bypass_attempt.status_code == 401
+    assert password not in caplog.text
+
+
 def test_access_tokens_round_trip_and_reject_invalid_values() -> None:
     user_id = uuid4()
     token = create_access_token(user_id)

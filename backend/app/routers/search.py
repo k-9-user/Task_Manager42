@@ -37,7 +37,10 @@ def search_tasks(
     current_user: AuthenticatedUser,
     q: Annotated[
         str | None,
-        Query(description="Case-insensitive text searched in task title and description."),
+        Query(
+            max_length=255,
+            description="Case-insensitive text searched in task title and description.",
+        ),
     ] = None,
     task_status: Annotated[
         TaskStatus | None,
@@ -60,11 +63,11 @@ def search_tasks(
 
     normalized_query = q.strip() if q is not None else ""
     if normalized_query:
-        search_pattern = f"%{normalized_query}%"
+        search_pattern = f"%{_escape_like_pattern(normalized_query)}%"
         filters.append(
             or_(
-                Task.title.ilike(search_pattern),
-                Task.description.ilike(search_pattern),
+                Task.title.ilike(search_pattern, escape="\\"),
+                Task.description.ilike(search_pattern, escape="\\"),
             )
         )
 
@@ -103,6 +106,10 @@ def _project_access_filter(user_id: UUID):
         ProjectMember.user_id == user_id
     )
     return Project.id.in_(member_project_ids)
+
+
+def _escape_like_pattern(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _serialize_task(task: Task) -> dict[str, Any]:

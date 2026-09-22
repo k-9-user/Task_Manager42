@@ -3,10 +3,32 @@
 import unittest
 from unittest.mock import patch
 
-from scripts.build import commands
+from scripts.build import commands, core
 
 
 class CommandTests(unittest.TestCase):
+    def test_run_passes_shell_metacharacters_as_literal_arguments(self):
+        hostile_args = ["tool", "$(touch /tmp/injected)", ";", "`id`"]
+        completed = unittest.mock.Mock(returncode=0, stdout="")
+
+        with patch.object(core.subprocess, "run", return_value=completed) as run:
+            core.run(hostile_args)
+
+        self.assertEqual(run.call_args.args[0], hostile_args)
+        self.assertIs(run.call_args.kwargs["shell"], False)
+
+    def test_nginx_applies_the_expected_csp_to_normal_and_rate_limited_responses(self):
+        expected = (
+            "add_header Content-Security-Policy \"default-src 'self'; "
+            "script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' https: data:; font-src 'self' data:; "
+            "connect-src 'self'; object-src 'none'; base-uri 'none'; "
+            "frame-ancestors 'none'; form-action 'self'\" always;"
+        )
+        config = (core.ROOT / "nginx/default.conf").read_text(encoding="utf-8")
+
+        self.assertEqual(config.count(expected), 2)
+
     def test_invalid_config_fails_before_commands(self):
         with patch.object(commands.config, "read_env", return_value={}), \
                 patch.object(commands.config, "validate_env", side_effect=ValueError("invalid")), \

@@ -56,6 +56,7 @@ def require(condition, message):
 def run(args, *, quiet=False, env=None):
     result = subprocess.run(
         args,
+        shell=False,
         cwd=ROOT,
         env=env,
         text=True,

@@ -66,6 +66,15 @@ def test_create_project_description_too_long_rejected(client):
     assert response.status_code == 422
 
 
+def test_create_project_rejects_unknown_fields(client):
+    response = client.post(
+        "/api/projects",
+        json={"name": "Strict project", "description": None, "owner_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # GET /api/projects
 # ---------------------------------------------------------------------------

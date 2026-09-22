@@ -11,7 +11,6 @@ import uuid
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,7 +21,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
-from app.schemas.common import SimpleSuccessResponse
+from app.schemas.common import SimpleSuccessResponse, StrictRequest
 from app.utils.locks import lock_admin_invariants
 
 router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])
@@ -111,7 +110,7 @@ def export_my_data(
 # ---------------------------------------------------------------------------
 
 
-class GDPRDeleteRequest(BaseModel):
+class GDPRDeleteRequest(StrictRequest):
     confirm: bool
 
 

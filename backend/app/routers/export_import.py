@@ -17,6 +17,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.schemas.task import TaskImportRecord
 
 
 router = APIRouter(tags=["Export / Import"])
@@ -152,7 +154,8 @@ async def import_data(
     records = _parse_import_records(raw_content, import_format)
 
     try:
-        project_ids = sorted({_parse_uuid(record.get("project_id"), "project_id") for record in records})
+        validated_records = _validate_task_import_records(records)
+        project_ids = sorted({record.project_id for record in validated_records})
         project_cache = {
             project_id: lock_project_for_write(
                 db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
@@ -161,7 +164,7 @@ async def import_data(
         }
         validated_tasks = [
             _build_imported_task(db, record, current_user.id, project_cache)
-            for record in records
+            for record in validated_records
         ]
         db.add_all(validated_tasks)
         db.commit()
@@ -246,16 +249,19 @@ def _serialize_csv(
         for task in tasks_by_project.get(project.id, []):
             writer.writerow(
                 {
-                    "project_id": _serialize_value(project.id),
-                    "project_name": project.name,
-                    "task_id": _serialize_value(task.id),
-                    "title": task.title,
-                    "description": task.description or "",
-                    "status": _serialize_value(task.status),
-                    "assignee_id": _serialize_value(task.assignee_id) or "",
-                    "due_date": _serialize_value(task.due_date) or "",
-                    "created_at": _serialize_value(task.created_at),
-                    "updated_at": _serialize_value(task.updated_at),
+                    key: _safe_csv_cell(value)
+                    for key, value in {
+                        "project_id": _serialize_value(project.id),
+                        "project_name": project.name,
+                        "task_id": _serialize_value(task.id),
+                        "title": task.title,
+                        "description": task.description or "",
+                        "status": _serialize_value(task.status),
+                        "assignee_id": _serialize_value(task.assignee_id) or "",
+                        "due_date": _serialize_value(task.due_date) or "",
+                        "created_at": _serialize_value(task.created_at),
+                        "updated_at": _serialize_value(task.updated_at),
+                    }.items()
                 }
             )
     return output.getvalue()
@@ -270,6 +276,15 @@ def _serialize_value(value: Any) -> Any:
         return str(value)
     if isinstance(value, (date, datetime)):
         return value.isoformat()
+    return value
+
+
+def _safe_csv_cell(value: Any) -> Any:
+    if not isinstance(value, str) or not value:
+        return value
+    trimmed = value.lstrip()
+    if value[0] in "\t\r\n" or (trimmed and trimmed[0] in "=+-@"):
+        return f"'{value}"
     return value
 
 
@@ -376,46 +391,62 @@ def _parse_csv_records(text: str) -> list[dict[str, Any]]:
     return records
 
 
+def _validate_task_import_records(
+    records: list[dict[str, Any]],
+) -> list[TaskImportRecord]:
+    try:
+        return [
+            TaskImportRecord.model_validate(_normalize_csv_empty_values(record))
+            for record in records
+        ]
+    except ValidationError as error:
+        raise _invalid_import("Invalid task import data") from error
+
+
+def _normalize_csv_empty_values(record: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(record)
+    for field_name in (
+        "description",
+        "assignee_id",
+        "due_date",
+        "id",
+        "task_id",
+        "project_name",
+        "created_at",
+        "updated_at",
+    ):
+        if normalized.get(field_name) == "":
+            normalized[field_name] = None
+    if normalized.get("status") == "":
+        normalized["status"] = TaskStatus.TODO
+    return normalized
+
+
 def _build_imported_task(
     db: Session,
-    record: dict[str, Any],
+    record: TaskImportRecord,
     user_id: UUID,
     project_cache: dict[UUID, Project],
 ) -> Task:
-    project_id = _parse_uuid(record.get("project_id"), "project_id")
+    project_id = record.project_id
     if project_id not in project_cache:
         project_cache[project_id] = _get_writable_project(db, project_id, user_id)
 
-    title = record.get("title")
-    if not isinstance(title, str) or not title.strip():
-        raise _invalid_import("Each task requires a non-empty title")
-
-    description = record.get("description")
-    if description == "":
-        description = None
-    if description is not None and not isinstance(description, str):
-        raise _invalid_import("Task description must be a string or null")
-
-    raw_status = record.get("status") or TaskStatus.TODO.value
-    try:
-        task_status = TaskStatus(raw_status)
-    except (TypeError, ValueError) as error:
-        raise _invalid_import("Invalid task status") from error
-
-    assignee_id = _parse_optional_uuid(record.get("assignee_id"), "assignee_id")
-    if assignee_id is not None and db.scalar(
-        select(User.id).where(User.id == assignee_id)
+    if record.assignee_id is not None and db.scalar(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == record.assignee_id,
+        )
     ) is None:
-        raise _invalid_import("Unknown task assignee")
+        raise _invalid_import("Task assignee must be a project member")
 
-    due_date = _parse_optional_date(record.get("due_date"))
     return Task(
         project_id=project_id,
-        title=title.strip(),
-        description=description,
-        status=task_status,
-        assignee_id=assignee_id,
-        due_date=due_date,
+        title=record.title,
+        description=record.description,
+        status=record.status,
+        assignee_id=record.assignee_id,
+        due_date=record.due_date,
     )
 
 
@@ -423,30 +454,6 @@ def _get_writable_project(db: Session, project_id: UUID, user_id: UUID) -> Proje
     return lock_project_for_write(
         db, project_id, user_id, ProjectRole.OWNER, ProjectRole.EDITOR,
     )
-
-
-def _parse_uuid(value: Any, field_name: str) -> UUID:
-    try:
-        return UUID(str(value))
-    except (AttributeError, TypeError, ValueError) as error:
-        raise _invalid_import(f"Invalid {field_name}") from error
-
-
-def _parse_optional_uuid(value: Any, field_name: str) -> UUID | None:
-    if value in (None, ""):
-        return None
-    return _parse_uuid(value, field_name)
-
-
-def _parse_optional_date(value: Any) -> date | None:
-    if value in (None, ""):
-        return None
-    if not isinstance(value, str):
-        raise _invalid_import("Invalid due_date")
-    try:
-        return date.fromisoformat(value)
-    except ValueError as error:
-        raise _invalid_import("Invalid due_date") from error
 
 
 def _invalid_import(detail: str) -> HTTPException:

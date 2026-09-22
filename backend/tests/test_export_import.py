@@ -260,6 +260,49 @@ def test_csv_export_uses_standard_csv_escaping(
     assert row["description"] == "First line\nSecond line"
 
 
+@pytest.mark.parametrize(
+    "dangerous_value",
+    [
+        "=1+1",
+        "+SUM(A1:A2)",
+        "-2+3",
+        "@command",
+        "\t=command",
+        "\r=command",
+        "\n=command",
+        "  =command",
+    ],
+)
+def test_csv_export_neutralizes_formula_leading_string_cells(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    dangerous_value: str,
+):
+    project = _create_project(db, current_user, "Formula export project")
+    _create_task(db, project, dangerous_value)
+
+    response = client.get("/api/export", params={"format": "csv"})
+    row = list(csv.DictReader(io.StringIO(response.text)))[0]
+
+    assert row["title"] == f"'{dangerous_value}"
+
+
+def test_json_export_does_not_modify_formula_leading_values(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "JSON formula project")
+    _create_task(db, project, "=1+1", description="  @command")
+
+    response = client.get("/api/export", params={"format": "json"})
+    task = response.json()["projects"][0]["tasks"][0]
+
+    assert task["title"] == "=1+1"
+    assert task["description"] == "  @command"
+
+
 def test_owner_can_import_valid_json(
     client: TestClient,
     db: Session,
@@ -502,6 +545,81 @@ def test_invalid_uuid_and_date_are_rejected(
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
     assert db.scalars(select(Task)).all() == []
+
+
+@pytest.mark.parametrize(
+    "record",
+    [
+        {"title": "x" * 256},
+        {"title": "Valid", "description": "x" * 5001},
+        {"title": "Valid", "unexpected": "must be rejected"},
+    ],
+)
+def test_import_rejects_out_of_contract_task_fields(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    record: dict[str, str],
+):
+    project = _create_project(db, current_user, "Constrained import project")
+    payload_record = {"project_id": str(project.id), **record}
+
+    response = _import_json(client, {"tasks": [payload_record]})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
+def test_import_rejects_assignee_outside_target_project(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "Member-only assignee project")
+    outsider = _create_user(db, "import-assignee-outsider")
+
+    response = _import_json(
+        client,
+        {
+            "tasks": [
+                {
+                    "project_id": str(project.id),
+                    "title": "Invalid assignee task",
+                    "assignee_id": str(outsider.id),
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Task)).all() == []
+
+
+def test_import_accepts_known_export_metadata(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+):
+    project = _create_project(db, current_user, "Export metadata project")
+    task_id = uuid4()
+    payload = {
+        "tasks": [
+            {
+                "id": str(task_id),
+                "task_id": str(task_id),
+                "project_id": str(project.id),
+                "project_name": project.name,
+                "title": "Metadata import task",
+                "created_at": "2026-09-22T10:00:00",
+                "updated_at": "2026-09-22T10:01:00",
+            }
+        ]
+    }
+
+    response = _import_json(client, payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["data"]["imported_count"] == 1
 
 
 def test_unsupported_import_file_type_is_rejected(client: TestClient):

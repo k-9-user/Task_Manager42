@@ -10,9 +10,10 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.task import TaskStatus
+from app.schemas.common import StrictRequest
 from app.schemas.project import ProjectMemberResponse, ProjectResponse
 
 
@@ -21,7 +22,7 @@ from app.schemas.project import ProjectMemberResponse, ProjectResponse
 # ---------------------------------------------------------------------------
 
 
-class TaskCreate(BaseModel):
+class TaskCreate(StrictRequest):
     """Body attendu pour POST /api/projects/{id}/tasks.
 
     `project_id` n'apparaît pas ici : il vient de l'URL (`{id}`), pas du body
@@ -39,7 +40,7 @@ class TaskCreate(BaseModel):
     due_date: Optional[date] = None
 
 
-class TaskUpdate(BaseModel):
+class TaskUpdate(StrictRequest):
     """Body attendu pour PUT /api/tasks/{id}. Tous les champs sont optionnels :
     seuls ceux fournis par le client seront mis à jour côté routeur."""
 
@@ -47,6 +48,30 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     assignee_id: Optional[uuid.UUID] = None
     due_date: Optional[date] = None
+
+
+class TaskImportRecord(StrictRequest):
+    """Writable task fields plus metadata emitted by supported exports."""
+
+    project_id: uuid.UUID
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    status: TaskStatus = TaskStatus.TODO
+    assignee_id: uuid.UUID | None = None
+    due_date: date | None = None
+    id: uuid.UUID | None = None
+    task_id: uuid.UUID | None = None
+    project_name: str | None = Field(default=None, max_length=255)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @field_validator("title")
+    @classmethod
+    def normalize_title(cls, title: str) -> str:
+        title = title.strip()
+        if not title:
+            raise ValueError("title must not be empty")
+        return title
 
 
 # ---------------------------------------------------------------------------

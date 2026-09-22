@@ -1,7 +1,8 @@
 """Assembly checks and a real JWT flow, without dependency overrides."""
 
 import json
-from uuid import UUID
+from pathlib import Path
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import select
@@ -63,6 +64,17 @@ def test_real_app_registers_all_feature_routes():
     assert expected <= actual, f"Missing routes: {sorted(expected - actual)}"
 
 
+def test_real_app_does_not_serve_upload_storage_directly(client):
+    upload_file = Path(get_settings().upload_dir) / f"private-{uuid4().hex}.txt"
+    upload_file.write_text("private attachment", encoding="utf-8")
+    try:
+        response = client.get(f"/uploads/{upload_file.name}")
+    finally:
+        upload_file.unlink(missing_ok=True)
+
+    assert response.status_code == 404
+
+
 def test_real_jwt_project_task_flow_enforces_membership(client, db_session):
     assert app.dependency_overrides == {}
     assert client.get("/api/projects").status_code == 401
@@ -108,6 +120,98 @@ def test_real_jwt_project_task_flow_enforces_membership(client, db_session):
     persisted = db_session.scalar(select(Task).where(Task.id == UUID(task["id"])))
     assert persisted.status.value == "done"
     assert app.dependency_overrides == {}
+
+
+def test_postgres_treats_hostile_content_as_data_and_keeps_tenant_boundaries(
+    client,
+    user_factory,
+    auth_headers,
+    db_session,
+):
+    owner = user_factory()
+    outsider = user_factory()
+    owner_headers = auth_headers(owner)
+    outsider_headers = auth_headers(outsider)
+    hostile_text = "%_\\' OR 1=1; DROP TABLE tasks; -- <script>alert(1)</script> $(id)"
+
+    project_response = client.post(
+        "/api/projects",
+        headers=owner_headers,
+        json={"name": hostile_text, "description": hostile_text},
+    )
+    assert project_response.status_code == 201
+    project = project_response.json()["data"]["project"]
+    assert project["name"] == hostile_text
+
+    hostile_task_response = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        headers=owner_headers,
+        json={"title": hostile_text, "description": hostile_text},
+    )
+    assert hostile_task_response.status_code == 201
+    hostile_task = hostile_task_response.json()["data"]["task"]
+    client.post(
+        f"/api/projects/{project['id']}/tasks",
+        headers=owner_headers,
+        json={"title": "Ordinary visible task"},
+    )
+
+    private_project = client.post(
+        "/api/projects",
+        headers=outsider_headers,
+        json={"name": "Private hostile project"},
+    ).json()["data"]["project"]
+    client.post(
+        f"/api/projects/{private_project['id']}/tasks",
+        headers=outsider_headers,
+        json={"title": hostile_text},
+    )
+
+    search_response = client.get(
+        "/api/search/tasks",
+        headers=owner_headers,
+        params={"q": "%"},
+    )
+    assert search_response.status_code == 200
+    assert [task["id"] for task in search_response.json()["data"]["tasks"]] == [
+        hostile_task["id"]
+    ]
+
+    imported_title = "'); DROP TABLE tasks; --"
+    import_response = client.post(
+        "/api/import",
+        headers=owner_headers,
+        files={
+            "file": (
+                "hostile.json",
+                json.dumps(
+                    {
+                        "tasks": [
+                            {
+                                "project_id": project["id"],
+                                "title": imported_title,
+                            }
+                        ]
+                    }
+                ),
+                "application/json",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+
+    comment_response = client.post(
+        f"/api/tasks/{hostile_task['id']}/comments",
+        headers=owner_headers,
+        json={"content": hostile_text},
+    )
+    assert comment_response.status_code == 201
+    assert comment_response.json()["data"]["comment"]["content"] == hostile_text
+
+    db_session.expire_all()
+    imported_task = db_session.scalar(select(Task).where(Task.title == imported_title))
+    assert imported_task is not None
+    assert db_session.scalar(select(Task).where(Task.title == hostile_text)) is not None
 
 
 def test_real_jwt_gdpr_cannot_delete_last_admin(client, user_factory, auth_headers, db_session):

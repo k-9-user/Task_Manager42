@@ -18,6 +18,7 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.project_member import ProjectRole
+from app.schemas.common import StrictRequest
 
 
 # ---------------------------------------------------------------------------
@@ -25,7 +26,7 @@ from app.models.project_member import ProjectRole
 # ---------------------------------------------------------------------------
 
 
-class ProjectCreate(BaseModel):
+class ProjectCreate(StrictRequest):
     """Body attendu pour POST /api/projects.
 
     NB : le contrat commun liste `{name, description}` sans `?` sur
@@ -38,7 +39,7 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = Field(default=None, max_length=5000)
 
 
-class ProjectUpdate(BaseModel):
+class ProjectUpdate(StrictRequest):
     """Body attendu pour PUT /api/projects/{id}.
 
     Tous les champs sont optionnels : un client ne renvoie que ce qu'il veut
@@ -88,7 +89,7 @@ class ProjectData(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ProjectMemberCreate(BaseModel):
+class ProjectMemberCreate(StrictRequest):
     """Body attendu pour POST /api/projects/{id}/members."""
 
     user_id: uuid.UUID

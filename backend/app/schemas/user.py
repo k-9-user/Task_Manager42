@@ -13,6 +13,7 @@ from pydantic import (
 )
 
 from app.models.user import UserRole, UserStatus
+from app.schemas.common import StrictRequest
 from app.utils.validators import (
     AVATAR_MAX_LENGTH,
     DISPLAY_NAME_MAX_LENGTH,
@@ -26,10 +27,6 @@ from app.utils.validators import (
     validate_status_reason,
     validate_username,
 )
-
-
-class StrictRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
 
 class UserRegister(StrictRequest):

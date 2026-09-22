@@ -99,7 +99,7 @@ Stack : **FastAPI (Python) + React (JS) + PostgreSQL + Docker**
 ### Regles de coherence actuelles
 
 - Les sept tables sont maintenant dans la migration initiale, notifications comprises. Enums PostgreSQL : `user_role`, `user_status`, `projectrole`, `taskstatus`, `notificationtype`.
-- La premiere inscription dans une base vide devient administrateur; les suivantes deviennent `user`. Un compte banni est refuse par JWT et par cle API. Les operations admin et GDPR doivent conserver au moins un administrateur actif.
+- Un service one-shot `bootstrap-admin`, execute apres les migrations et avant le backend, cree l'administrateur configure uniquement dans une base vide. Dans une base non vide, le premier compte doit correspondre exactement aux identifiants et au mot de passe de bootstrap, rester `admin` actif, sinon le demarrage est refuse avec instruction de restauration ou reset explicite. Les inscriptions locales et OAuth creent toujours un `user`; aucune promotion publique implicite n'est permise. Un compte banni est refuse par JWT et par cle API. Les operations admin et GDPR doivent conserver au moins un administrateur actif.
 - `project_members` est la source canonique des permissions pour B et C. Un admin global sans appartenance n'a pas d'acces implicite aux projets. `owner` gere projet/membres/taches, `editor` gere les taches et fichiers, `viewer` lit seulement.
 - Le createur est membre `owner`. Plusieurs membres peuvent etre `owner`; le retrait du dernier owner est refuse. Si le membre retire correspond a `projects.owner_id`, cette reference est transferee a un autre owner dans la meme operation. Il ne s'agit pas d'une nouvelle route de transfert.
 - La suppression GDPR transfere un projet partage a un membre restant (priorite a un owner, puis ordre deterministe des UUID), ou supprime un projet sans autre membre. L'ordre UUID ne represente pas l'anciennete. Les assignations du compte supprime sont remises a null.
@@ -197,28 +197,27 @@ Exceptions : `/health` est un objet direct; demarrage et callback OAuth sont des
 # Database
 POSTGRES_DB=taskmanager
 POSTGRES_USER=user
-POSTGRES_PASSWORD=replace_with_generated_database_password
 
 # Backend
-DATABASE_URL=postgresql://user:replace_with_generated_database_password@db:5432/taskmanager
-JWT_SECRET=replace_with_a_random_32_plus_character_jwt_secret
 JWT_EXPIRATION=3600
 OAUTH_GOOGLE_CLIENT_ID=
-OAUTH_GOOGLE_CLIENT_SECRET=
-OAUTH_GOOGLE_REDIRECT_URI=https://localhost:8443/api/auth/oauth/google/callback
-OAUTH_SESSION_SECRET=replace_with_a_random_32_plus_character_oauth_secret
-CORS_ORIGINS=https://localhost:8443
+OAUTH_GOOGLE_REDIRECT_URI=https://localhost/api/auth/oauth/google/callback
+CORS_ORIGINS=https://localhost
 UPLOAD_DIR=/app/uploads
 MAX_UPLOAD_SIZE_MB=10
 FORWARDED_ALLOW_IPS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+BOOTSTRAP_ADMIN_EMAIL=admin@example.com
+BOOTSTRAP_ADMIN_USERNAME=admin
 
 # Frontend
-VITE_API_URL=https://localhost:8443
+VITE_API_URL=https://localhost
 ```
 
 **👉 Responsable : Personne A, jour 1.**
 
-`.env.example` a la racine est la reference complete (identifiants PostgreSQL et proxy compris). Ne pas conserver les secrets exemples. Usage **localhost uniquement**, adresse navigateur preservee `https://localhost:8443`. Les secrets restent dans `.env` ignore par Git. La confiance du certificat local est une decision explicite de l'utilisateur; aucun script ne doit modifier automatiquement le magasin de certificats de l'hote. Voir le README anglais pour setup/check/up/down/logs/ps/smoke/test et reset-db explicite.
+Les secrets reels sont des fichiers ignores par Git sous `secrets/` : `postgres_password`, `database_url`, `jwt_secret`, `oauth_session_secret`, `oauth_google_client_secret` et `bootstrap_admin_password`. Compose ne monte chaque secret que dans les services autorises. Le mot de passe PostgreSQL et `database_url` doivent correspondre exactement; les secrets de signature, de base et de bootstrap doivent etre independants. Le secret Google peut etre vide uniquement si le client ID est vide.
+
+`.env.example` et `secrets/README.md` forment la reference complete. `make setup` cree une nouvelle configuration ou migre atomiquement les secrets d'un ancien `.env`; il migre aussi les trois anciennes URL locales exactes en `:8443` vers le port HTTPS par defaut, mais refuse une configuration d'URL mixte ou personnalisee. Il preserve les autres valeurs au nouveau format et refuse les fichiers manquants ou conflictuels sans regenerer silencieusement. Usage **localhost uniquement**, adresse navigateur `https://localhost`; nginx seul publie `127.0.0.1:80` et `127.0.0.1:443`, et redirige HTTP vers HTTPS. La confiance du certificat local est une decision explicite de l'utilisateur; aucun script ne doit modifier automatiquement le magasin de certificats de l'hote. Voir le README anglais pour setup/check/up/down/logs/ps/smoke/test et reset-db explicite.
 
 ---
 

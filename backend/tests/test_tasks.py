@@ -56,6 +56,17 @@ def test_create_task_description_too_long_rejected(client):
     assert response.status_code == 422
 
 
+def test_create_task_rejects_unknown_fields(client):
+    project = _create_project_via_api(client)
+
+    response = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Strict task", "project_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 422
+
+
 def test_create_task_as_editor(client, make_user, db_session, login_as):
     project = _create_project_via_api(client)
     editor = make_user()

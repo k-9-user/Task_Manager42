@@ -221,6 +221,38 @@ def test_whitespace_q_is_treated_as_no_filter(
 
 
 @pytest.mark.parametrize(
+    ("query", "matching_title"),
+    [
+        ("%", "Literal % marker"),
+        ("_", "Literal _ marker"),
+        ("\\", "Literal \\ marker"),
+        ("' OR 1=1 --", "Literal ' OR 1=1 -- marker"),
+    ],
+)
+def test_q_treats_sql_wildcards_and_fragments_as_literal_text(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    query: str,
+    matching_title: str,
+):
+    project = _create_project(db, current_user, "Literal search project")
+    matching_task = _create_task(db, project, matching_title)
+    _create_task(db, project, "Ordinary task")
+
+    response = client.get("/api/search/tasks", params={"q": query})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert _task_ids(response) == {str(matching_task.id)}
+
+
+def test_q_longer_than_255_characters_is_rejected(client: TestClient):
+    response = client.get("/api/search/tasks", params={"q": "q" * 256})
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.parametrize(
     "task_status",
     [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE],
 )

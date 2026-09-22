@@ -16,6 +16,7 @@ from app.models.attachment import Attachment
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User
+from app.utils.validators import has_control_characters
 
 
 router = APIRouter(tags=["Attachments"])
@@ -99,6 +100,7 @@ async def upload_attachment(
         )
 
     original_filename = file.filename or "unnamed"
+    _validate_original_filename(original_filename)
     stored_filename = _generate_stored_filename(
         original_filename,
         file.content_type,
@@ -256,7 +258,9 @@ async def upload_task_banner(
             detail="Project membership is read-only",
         )
 
-    stored_filename = _generate_stored_filename(file.filename or "banner", file.content_type)
+    original_filename = file.filename or "banner"
+    _validate_original_filename(original_filename)
+    stored_filename = _generate_stored_filename(original_filename, file.content_type)
     upload_directory = _upload_directory(settings)
     upload_directory.mkdir(parents=True, exist_ok=True)
     stored_path = upload_directory / stored_filename
@@ -358,6 +362,14 @@ def _validate_banner_content_type(content_type: str | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Unsupported banner image type",
+        )
+
+
+def _validate_original_filename(filename: str) -> None:
+    if len(filename) > 255 or has_control_characters(filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid attachment filename",
         )
 
 

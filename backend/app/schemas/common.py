@@ -18,10 +18,16 @@ qui NE MATCHE PAS le contrat.
 
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 T = TypeVar("T")
+
+
+class StrictRequest(BaseModel):
+    """Reject fields that are not part of the documented request body."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class SuccessEnvelope(BaseModel, Generic[T]):

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -429,6 +429,33 @@ def test_original_filename_is_retained_as_metadata(
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["data"]["attachment"]["file_name"] == "meeting-notes.csv"
+
+
+def test_oversized_attachment_metadata_filename_is_rejected(
+    client: TestClient,
+    db: Session,
+    current_user: User,
+    test_settings: SimpleNamespace,
+):
+    project = _create_project(db, current_user, "Invalid filename project")
+    task = _create_task(db, project, "Invalid filename task")
+
+    response = _upload(client, task, filename=f"{'a' * 252}.pdf")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert db.scalars(select(Attachment)).all() == []
+    upload_directory = Path(test_settings.upload_dir)
+    assert not upload_directory.exists() or list(upload_directory.iterdir()) == []
+
+
+@pytest.mark.parametrize("filename", ["bad\x01name.pdf", "bad\x7fname.pdf"])
+def test_control_characters_in_attachment_metadata_filename_are_rejected(
+    filename: str,
+):
+    with pytest.raises(HTTPException) as error:
+        attachments._validate_original_filename(filename)
+
+    assert error.value.status_code == status.HTTP_400_BAD_REQUEST
 
 
 def test_internal_stored_filenames_are_unique_and_safe(

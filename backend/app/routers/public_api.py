@@ -3,7 +3,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.schemas.common import StrictRequest
 from app.utils.rate_limiter import ApiKeyRateLimiter
 
 
@@ -45,13 +46,11 @@ WRITE_RESPONSES = {
 }
 
 
-class PublicTaskCreate(BaseModel):
+class PublicTaskCreate(StrictRequest):
     """Minimal request body for the public task creation contract."""
 
-    model_config = ConfigDict(extra="forbid")
-
     project_id: UUID
-    title: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=255)
 
     @field_validator("title")
     @classmethod
@@ -61,10 +60,8 @@ class PublicTaskCreate(BaseModel):
         return title
 
 
-class PublicTaskUpdate(BaseModel):
+class PublicTaskUpdate(StrictRequest):
     """Fields that the public API is allowed to update on a task."""
-
-    model_config = ConfigDict(extra="forbid")
 
     status: TaskStatus | None = None
 

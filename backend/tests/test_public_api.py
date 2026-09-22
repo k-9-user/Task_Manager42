@@ -402,6 +402,22 @@ def test_empty_title_is_rejected(
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+def test_title_over_255_characters_is_rejected(
+    client: TestClient,
+    db: Session,
+    api_user: User,
+):
+    project = _create_project(db, api_user, "Bounded title project")
+
+    response = client.post(
+        "/api/v1/public/tasks",
+        headers=_headers(),
+        json={"project_id": str(project.id), "title": "x" * 256},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
 @pytest.mark.parametrize("access", ["owner", "editor"])
 def test_owner_or_editor_can_update_valid_status(
     client: TestClient,
