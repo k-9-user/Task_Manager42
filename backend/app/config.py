@@ -49,6 +49,9 @@ class Settings(DatabaseSettings):
     )
     upload_dir: str = "/app/uploads"
     max_upload_size_mb: int = Field(default=10, gt=0)
+    smtp_host: str = ""
+    smtp_port: int = Field(default=1025, gt=0, le=65535)
+    mail_from: str = "no-reply@taskmanager.local"
 
     @field_validator("cors_origins", mode="before")
     @classmethod

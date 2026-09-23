@@ -222,7 +222,8 @@ def test_postgres_treats_hostile_content_as_data_and_keeps_tenant_boundaries(
 def test_real_jwt_gdpr_cannot_delete_last_admin(client, user_factory, auth_headers, db_session):
     admin = user_factory(role=UserRole.ADMIN)
     response = client.request(
-        "DELETE", "/api/gdpr/account", headers=auth_headers(admin), json={"confirm": True},
+        "DELETE", "/api/gdpr/account", headers=auth_headers(admin),
+        json={"confirm": True, "confirm_username": admin.username},
     )
     assert response.status_code == 409
     assert response.json()["error"] == "At least one active administrator is required"
@@ -276,7 +277,7 @@ def test_owner_id_alone_grants_no_c_access(client, user_factory, auth_headers, d
     assert db_session.query(Task).filter_by(project_id=project.id).count() == 1
 
 
-@pytest.mark.parametrize("parent", ["task", "project", "uploader"])
+@pytest.mark.parametrize("parent", ["task", "project"])
 def test_attachment_restricts_parent_deletion_and_rolls_back(
     client, user_factory, auth_headers, db_session, tmp_path, parent, monkeypatch,
 ):
@@ -302,7 +303,6 @@ def test_attachment_restricts_parent_deletion_and_rolls_back(
     paths = {
         "task": f"/api/tasks/{task.id}",
         "project": f"/api/projects/{project.id}",
-        "uploader": f"/api/users/{uploader.id}",
     }
 
     response = client.delete(paths[parent], headers=auth_headers(owner))
@@ -310,14 +310,43 @@ def test_attachment_restricts_parent_deletion_and_rolls_back(
     assert response.status_code == 409, response.text
     assert response.json() == {
         "success": False,
-        "error": (
-            "User has related resources" if parent == "uploader"
-            else "Resource has related data or a referenced resource no longer exists"
-        ),
+        "error": "Resource has related data or a referenced resource no longer exists",
     }
     db_session.expire_all()
     for model, identity in zip((Project, ProjectMember, Task, User, Attachment), ids):
         assert db_session.get(model, identity) is not None
     assert stored_path.read_bytes() == b"must survive restricted deletion"
-    # A fresh request/session must still be usable after the rejected deletion.
     assert client.get(f"/api/projects/{ids[0]}", headers=auth_headers(owner)).status_code == 200
+
+
+def test_deleting_uploader_keeps_attachment_anonymized(
+    client, user_factory, auth_headers, db_session, tmp_path, monkeypatch,
+):
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
+    owner = user_factory(role=UserRole.ADMIN)
+    uploader = user_factory()
+    project = Project(name="Shared files", owner_id=owner.id)
+    db_session.add(project)
+    db_session.flush()
+    task = Task(project_id=project.id, title="Shared task")
+    db_session.add_all([
+        ProjectMember(project_id=project.id, user_id=owner.id, role=ProjectRole.OWNER),
+        task,
+    ])
+    db_session.flush()
+    stored_path = tmp_path / "kept.txt"
+    stored_path.write_bytes(b"project file outlives its uploader")
+    attachment = Attachment(
+        task_id=task.id, uploaded_by=uploader.id,
+        file_url="/uploads/kept.txt", file_name="kept.txt",
+    )
+    db_session.add(attachment)
+    db_session.commit()
+
+    response = client.delete(f"/api/users/{uploader.id}", headers=auth_headers(owner))
+
+    assert response.status_code == 200, response.text
+    db_session.expire_all()
+    assert db_session.get(User, uploader.id) is None
+    assert db_session.get(Attachment, attachment.id).uploaded_by is None
+    assert stored_path.read_bytes() == b"project file outlives its uploader"

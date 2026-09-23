@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Column, Enum, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -20,8 +20,7 @@ class ProjectMember(Base):
     """
     Table `project_members`.
     Table de liaison project <-> user avec un rôle par membre.
-    Utilisée pour vérifier les permissions (ex: un viewer ne peut pas
-    modifier une tâche, cf semaine 3).
+    Utilisée pour vérifier les permissions.
     """
 
     __tablename__ = "project_members"
@@ -38,6 +37,7 @@ class ProjectMember(Base):
         nullable=False,
         default=ProjectRole.VIEWER,
     )
+    joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relations
     project = relationship("Project", back_populates="members")
