@@ -114,7 +114,14 @@
 		"preview": "Preview",
 		"openPreview": "Open preview",
 		"download": "Download",
-		"delete": "Delete"
+		"delete": "Delete",
+		"hint": "Allowed: {{types}} · max {{max}} MB",
+		"progress": "Upload progress",
+		"errors":
+		{
+			"type": "File type not allowed",
+			"size": "File too large (max {{max}} MB)"
+		}
 	},
 	"members":
 	{

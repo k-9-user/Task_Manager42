@@ -114,7 +114,14 @@
 		"preview": "Prévisualiser",
 		"openPreview": "Ouvrir l'aperçu",
 		"download": "Télécharger",
-		"delete": "Supprimer"
+		"delete": "Supprimer",
+		"hint": "Formats acceptés : {{types}} · {{max}} Mo max",
+		"progress": "Progression de l'envoi",
+		"errors":
+		{
+			"type": "Type de fichier non autorisé",
+			"size": "Fichier trop volumineux ({{max}} Mo max)"
+		}
 	},
 	"members":
 	{

@@ -137,6 +137,7 @@ services:
     restart: on-failure:5
     environment:
       VITE_API_URL: ${VITE_API_URL:-https://localhost}
+      VITE_MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
     expose:
       - "5173"
     volumes:

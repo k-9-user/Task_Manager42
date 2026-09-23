@@ -1,5 +1,5 @@
 import { apiFetch } from "./api";
-import i18n from "../i18n";
+import { uploadWithProgress } from "./upload";
 
 export function getProjectTasks(projectID) {
 	return apiFetch(`/api/projects/${projectID}/tasks`);
@@ -33,29 +33,11 @@ export function searchtask (query, status="", sort="created_at", direction="desc
 	return apiFetch(`/api/search/tasks?${params.toString()}`);
 }
 
-const API_URL = import.meta.env.VITE_API_URL;
 
-export async function uploadAttachement(taskID, file)
+export async function uploadAttachement(taskID, file, onProgress)
 {
-	const token = localStorage.getItem("token");
-	const formData = new FormData();
-
-	formData.append("file", file);
-
-	const reponse = await fetch(`${API_URL}/api/tasks/${taskID}/attachments`,
-		{
-			method: "POST",
-			headers:
-			{
-				...(token && { Authorization: `Bearer ${token}`}),
-			},
-			body: formData,
-		}
-	);
-	const result = await reponse.json();
-	if (!result.success)
-		throw new Error(result.error || i18n.t("random.erupload"));
-	return result.data.attachment;
+	const data = await uploadWithProgress(`/api/tasks/${taskID}/attachments`, file, onProgress);
+	return data.attachment;
 }
 
 export function getTaskAttachments(taskID)
@@ -72,27 +54,9 @@ export function deleteAttachment(attachmentId)
 		);
 }
 
-export async function uploadTaskBanner(taskID, file)
+export function uploadTaskBanner(taskID, file, onProgress)
 {
-	const token = localStorage.getItem("token");
-	const formData = new FormData();
-
-	formData.append("file", file);
-
-	const reponse = await fetch(`${API_URL}/api/tasks/${taskID}/banner`,
-		{
-			method: "POST",
-			headers:
-			{
-				...(token && { Authorization: `Bearer ${token}`}),
-			},
-			body: formData,
-		}
-	);
-	const result = await reponse.json();
-	if (!result.success)
-		throw new Error(result.error || i18n.t("random.erupload"));
-	return result.data;
+	return uploadWithProgress(`/api/tasks/${taskID}/banner`, file, onProgress);
 }
 
 export function deleteTaskBanner(taskID)
