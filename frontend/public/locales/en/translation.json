@@ -163,7 +163,7 @@
 			"section3Title": "3. Data retention",
 			"section3Body": "Your data is kept from the creation of your account until it is deleted.",
 			"section4Title": "4. Your rights (GDPR)",
-			"section4Body": "In accordance with the GDPR, you have the right to access your data, to have it corrected, and to request its deletion along with your account.",
+			"section4Body": "Under the GDPR you can access and download all your data (Art. 15 and 20), correct your username and display name (Art. 16), and delete your account (Art. 17). All three are available on your Profile page, in the \"My data\" section. Restriction and objection (Art. 18 and 21) are not offered in the app because we do no marketing and no profiling, and no automated decision is made about you (Art. 22). Each export or deletion is confirmed by email.",
 			"section5Title": "5. Sharing your data",
 			"section5Body": "Your data is never shared outside the project; only you and the project team with administrator access can access it.",
 			"contactTitle": "Contact",
@@ -179,5 +179,67 @@
 			"section3Title": "3. Acceptable use",
 			"section3Body": "You must use the platform in a fully lawful manner, without storing or sharing illegal content. You must also not compromise the security of the platform."
 		}
+	},
+	"gdpr":
+	{
+		"title": "My data (GDPR)",
+		"intro": "You control your personal data. Here is what you can ask for, and what happens with each request.",
+		"rightsTitle": "Your rights",
+		"rights":
+		{
+			"access":
+			{
+				"name": "Access and portability (Art. 15 and 20):",
+				"body": "download all your data as a readable JSON file. Available below."
+			},
+			"rectification":
+			{
+				"name": "Rectification (Art. 16):",
+				"body": "edit your username and display name above. To change your email, contact an administrator."
+			},
+			"erasure":
+			{
+				"name": "Erasure (Art. 17):",
+				"body": "delete your account and your personal data. Available below."
+			},
+			"restriction":
+			{
+				"name": "Restriction and objection (Art. 18 and 21):",
+				"body": "not offered in the app. We do no marketing and no profiling, and only process what the service needs to work. You can still write to an administrator."
+			},
+			"automated":
+			{
+				"name": "Automated decisions (Art. 22):",
+				"body": "none. No decision about you is made by an algorithm."
+			}
+		},
+		"emailNote": "A confirmation email is sent to your address after each export or deletion.",
+		"exportTitle": "Download my data",
+		"exportBody": "Your profile, projects, memberships, assigned tasks, comments, messages, uploaded file names, notifications and API key dates. Passwords and keys are never included.",
+		"exportButton": "Download my data",
+		"exporting": "Preparing...",
+		"exportDone": "Your data was downloaded. A confirmation email is on its way.",
+		"deleteTitle": "Delete my account",
+		"deleteIntro": "What deletion does:",
+		"deleteEffects":
+		{
+			"projects": "Projects you own are handed to their oldest remaining member, or deleted if you are alone in them.",
+			"content": "Your memberships, comments, messages, notifications and API keys are deleted.",
+			"tasks": "Tasks assigned to you stay in their project, unassigned.",
+			"files": "Files you uploaded stay in their project, without your name.",
+			"admin": "The last active administrator cannot delete their account."
+		},
+		"irreversible": "This cannot be undone.",
+		"deleteButton": "Delete my account",
+		"confirmLabel": "Type your username ({{username}}) to confirm",
+		"confirmButton": "Delete permanently",
+		"cancel": "Cancel",
+		"deleting": "Deleting...",
+		"editTitle": "Edit my profile",
+		"displayName": "Display name",
+		"save": "Save",
+		"saving": "Saving...",
+		"saved": "Profile updated.",
+		"usernameInvalid": "Username: 3 to 50 characters, letters, digits, dot, dash or underscore."
 	}
 }

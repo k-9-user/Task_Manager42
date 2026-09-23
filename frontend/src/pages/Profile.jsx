@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../services/api";
+import { updateMyProfile } from "../services/gdprService";
+import { isvalidusername } from "../utils/validation";
 import { useTranslation } from "react-i18next";
+import GdprPanel from "../components/GdprPanel";
 import './Profile.css';
 
 
@@ -8,6 +11,11 @@ function Profile() {
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
+	const [username, setUsername] = useState("");
+	const [displayName, setDisplayName] = useState("");
+	const [saving, setSaving] = useState(false);
+	const [saveError, setSaveError] = useState("");
+	const [saved, setSaved] = useState(false);
 	const { t } = useTranslation();
 
 	useEffect(() => {
@@ -16,6 +24,8 @@ function Profile() {
 		{
           const data = await apiFetch("/api/users/me");
           setUser(data.user);
+          setUsername(data.user.username);
+          setDisplayName(data.user.display_name ?? "");
 	    }
 		catch (err) {
 	      setError(err.message);
@@ -29,6 +39,36 @@ function Profile() {
 	fetchProfile();
 	}, []);
 
+	async function handleSave(e)
+	{
+		e.preventDefault();
+		setSaved(false);
+		setSaveError("");
+		if (!isvalidusername(username))
+		{
+			setSaveError(t("gdpr.usernameInvalid"));
+			return ;
+		}
+		setSaving(true);
+		try
+		{
+			const updated = await updateMyProfile({
+				username,
+				display_name: displayName.trim() || null,
+			});
+			setUser(updated);
+			setSaved(true);
+		}
+		catch (err)
+		{
+			setSaveError(err.message);
+		}
+		finally
+		{
+			setSaving(false);
+		}
+	}
+
 	if(loading)
 		return <p>{t("loading.load")}</p>;
 	if (error)
@@ -40,6 +80,28 @@ function Profile() {
 			<p>{t("login.username")} : {user.username} </p>
 			<p>Email : {user.email}</p>
 			<img src={user.avatar_url} alt="avatar" />
+			<form className="profile-edit" onSubmit={handleSave}>
+				<h2>{t("gdpr.editTitle")}</h2>
+				<label htmlFor="profile-username">{t("login.username")}</label>
+				<input
+					id="profile-username"
+					value={username}
+					onChange={(e) => setUsername(e.target.value)}
+					required
+				/>
+				<label htmlFor="profile-display-name">{t("gdpr.displayName")}</label>
+				<input
+					id="profile-display-name"
+					value={displayName}
+					onChange={(e) => setDisplayName(e.target.value)}
+				/>
+				<button type="submit" disabled={saving}>
+					{saving ? t("gdpr.saving") : t("gdpr.save")}
+				</button>
+				{saved && <p className="profile-saved" role="status">{t("gdpr.saved")}</p>}
+				{saveError && <p className="error" role="alert">{saveError}</p>}
+			</form>
+			<GdprPanel user={user} />
 		</div>
 	);
 }

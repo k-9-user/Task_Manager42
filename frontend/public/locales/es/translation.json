@@ -163,7 +163,7 @@
 			"section3Title": "3. Conservación de tus datos",
 			"section3Body": "Tus datos se conservan desde la creación de tu cuenta hasta su eliminación.",
 			"section4Title": "4. Tus derechos (RGPD)",
-			"section4Body": "De conformidad con el RGPD, tienes derecho a consultar tus datos, a rectificarlos, así como a solicitar su eliminación junto con la de tu cuenta.",
+			"section4Body": "Conforme al RGPD, puede acceder a todos sus datos y descargarlos (art. 15 y 20), corregir su nombre de usuario y su nombre visible (art. 16) y eliminar su cuenta (art. 17). Los tres están disponibles en su página de Perfil, sección «Mis datos». La limitación y la oposición (art. 18 y 21) no se ofrecen en la aplicación porque no hacemos marketing ni elaboramos perfiles, y no se toma ninguna decisión automatizada sobre usted (art. 22). Cada exportación o eliminación se confirma por email.",
 			"section5Title": "5. Compartir tus datos",
 			"section5Body": "Tus datos nunca se comunican fuera del proyecto; solo tú y el equipo del proyecto con acceso de administrador pueden acceder a ellos.",
 			"contactTitle": "Contacto",
@@ -179,5 +179,67 @@
 			"section3Title": "3. Uso de la plataforma",
 			"section3Body": "Debes utilizar la plataforma de manera totalmente legal, sin almacenar ni compartir contenido ilegal. Tampoco debes comprometer la seguridad de la plataforma."
 		}
+	},
+	"gdpr":
+	{
+		"title": "Mis datos (RGPD)",
+		"intro": "Usted controla sus datos personales. Esto es lo que puede solicitar y lo que ocurre con cada solicitud.",
+		"rightsTitle": "Sus derechos",
+		"rights":
+		{
+			"access":
+			{
+				"name": "Acceso y portabilidad (art. 15 y 20):",
+				"body": "descargue todos sus datos en un archivo JSON legible. Disponible más abajo."
+			},
+			"rectification":
+			{
+				"name": "Rectificación (art. 16):",
+				"body": "modifique su nombre de usuario y su nombre visible más arriba. Para cambiar su email, contacte con un administrador."
+			},
+			"erasure":
+			{
+				"name": "Supresión (art. 17):",
+				"body": "elimine su cuenta y sus datos personales. Disponible más abajo."
+			},
+			"restriction":
+			{
+				"name": "Limitación y oposición (art. 18 y 21):",
+				"body": "no se ofrecen en la aplicación. No hacemos marketing ni elaboramos perfiles, y solo tratamos lo necesario para el servicio. Aun así puede escribir a un administrador."
+			},
+			"automated":
+			{
+				"name": "Decisiones automatizadas (art. 22):",
+				"body": "ninguna. Ningún algoritmo toma decisiones sobre usted."
+			}
+		},
+		"emailNote": "Se envía un email de confirmación a su dirección después de cada exportación o eliminación.",
+		"exportTitle": "Descargar mis datos",
+		"exportBody": "Su perfil, proyectos, membresías, tareas asignadas, comentarios, mensajes, nombres de archivos subidos, notificaciones y fechas de claves API. Las contraseñas y las claves nunca se incluyen.",
+		"exportButton": "Descargar mis datos",
+		"exporting": "Preparando...",
+		"exportDone": "Sus datos se han descargado. Recibirá un email de confirmación.",
+		"deleteTitle": "Eliminar mi cuenta",
+		"deleteIntro": "Qué hace la eliminación:",
+		"deleteEffects":
+		{
+			"projects": "Los proyectos que posee pasan al miembro restante más antiguo, o se eliminan si está solo en ellos.",
+			"content": "Se eliminan sus membresías, comentarios, mensajes, notificaciones y claves API.",
+			"tasks": "Las tareas asignadas a usted permanecen en su proyecto, sin asignar.",
+			"files": "Los archivos que subió permanecen en su proyecto, sin su nombre.",
+			"admin": "El último administrador activo no puede eliminar su cuenta."
+		},
+		"irreversible": "Esta acción no se puede deshacer.",
+		"deleteButton": "Eliminar mi cuenta",
+		"confirmLabel": "Escriba su nombre de usuario ({{username}}) para confirmar",
+		"confirmButton": "Eliminar definitivamente",
+		"cancel": "Cancelar",
+		"deleting": "Eliminando...",
+		"editTitle": "Editar mi perfil",
+		"displayName": "Nombre visible",
+		"save": "Guardar",
+		"saving": "Guardando...",
+		"saved": "Perfil actualizado.",
+		"usernameInvalid": "Nombre de usuario: de 3 a 50 caracteres, letras, dígitos, punto, guion o guion bajo."
 	}
 }
