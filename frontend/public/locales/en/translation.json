@@ -158,8 +158,19 @@
 		"up": "OK",
 		"down": "Down",
 		"database": "Database",
+		"backups": "Backups",
+		"lastBackup": "Last backup:",
+		"never": "none yet",
+		"backupCount": "{{count}} kept",
+		"backupState":
+		{
+			"ok": "OK",
+			"stale": "Late",
+			"failing": "Failing",
+			"missing": "No backup"
+		},
 		"backupTitle": "Backups and disaster recovery",
-		"backupBody": "The database is backed up regularly (timestamped PostgreSQL dump, last 7 backups kept) via 'make backup'. In case of an incident, a backup can be restored manually to resume service."
+		"backupBody": "Your projects, tasks and attached files are backed up automatically at regular intervals, and the most recent copies are kept. If an incident occurs, the service can be restored from the latest backup within minutes."
 	},
 	"legal":
 	{

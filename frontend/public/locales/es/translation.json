@@ -158,8 +158,19 @@
 		"up": "OK",
 		"down": "Inactivo",
 		"database": "Base de datos",
+		"backups": "Copias de seguridad",
+		"lastBackup": "Última copia:",
+		"never": "ninguna todavía",
+		"backupCount": "{{count}} conservadas",
+		"backupState":
+		{
+			"ok": "OK",
+			"stale": "Con retraso",
+			"failing": "Fallando",
+			"missing": "Sin copia"
+		},
 		"backupTitle": "Copias de seguridad y recuperación ante desastres",
-		"backupBody": "La base de datos se respalda regularmente (volcado de PostgreSQL con marca de tiempo, se conservan las últimas 7 copias) mediante 'make backup'. En caso de incidente, se puede restaurar una copia manualmente para reanudar el servicio."
+		"backupBody": "Tus proyectos, tareas y archivos adjuntos se respaldan automáticamente a intervalos regulares, y se conservan las copias más recientes. Si ocurre un incidente, el servicio puede restablecerse a partir de la última copia en pocos minutos."
 	},
 	"legal":
 	{

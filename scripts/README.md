@@ -13,6 +13,8 @@ make test
 make test TESTS='tests/test_foundation.py -k health'
 make logs
 make ps
+make backup
+make restore
 make down
 make clean
 make fclean
@@ -33,7 +35,9 @@ variants; this repository ships one localhost runtime for each application role.
 `setup` creates non-secret `.env` configuration and ignored file-backed Docker
 secrets under `secrets/`. A legacy `.env` is validated and migrated without
 rotating its database/signing values. Exact former `:8443` local URLs migrate
-atomically to the default HTTPS port; mixed/custom URLs are refused. Other
+atomically to the default HTTPS port; mixed/custom URLs are refused. Keys added
+after the first release (`BACKUP_INTERVAL_MINUTES`, `BACKUP_RETENTION`) are
+filled in from `.env.example` with their defaults. Other
 new-format configuration is preserved and missing/conflicting files are refused.
 Values in `.env` remain plain `KEY=value`; secret files contain one value without
 a newline. Host environment
@@ -50,11 +54,11 @@ permissions. To renew an expired pair, remove both local files and rerun setup.
 
 `check` validates tools, daemon, exact env/secret manifests, private directory
 and file permissions, placeholders, secret independence, DB consistency,
-positive integer JWT expiration and upload limit,
+positive integer JWT expiration, upload limit, backup interval and retention,
 the persistent `/app/uploads` path, local URLs, paired Google credentials,
 IP/CIDR proxy allowlist, TLS readability/expiration/SAN/key pair,
 and Compose configuration without printing secret-bearing output. It runs
-before `up`, `test`, `smoke`, and `reset-db`. Direct `docker compose up` bypasses
+before `up`, `test`, `smoke`, `reset-db`, `backup` and `restore`. Direct `docker compose up` bypasses
 these checks; it now also fails outright, because the stateful volumes require
 `DATA_DIR` and the Compose file declares it with `${DATA_DIR:?...}`. Use Make.
 `down`, `logs`, and `ps` remain usable with expired TLS.
@@ -126,7 +130,7 @@ entrypoint starts as root and chowns `PGDATA` itself.
 
 ## Crash Behavior
 
-`db`, `backend`, `frontend` and `nginx` use `restart: on-failure:5`. That covers
+`db`, `backend`, `frontend`, `nginx` and `backup` use `restart: on-failure:5`. That covers
 a non-zero exit, capped at five attempts so a crash loop stops instead of
 spinning. `migrate`, `bootstrap-admin` and `init-data` stay `restart: "no"`.
 Four limits are deliberate and worth knowing, each observed rather than assumed:
@@ -153,9 +157,9 @@ Four limits are deliberate and worth knowing, each observed rather than assumed:
 a PostgreSQL *smart* shutdown that waits for clients and is routinely killed at
 the grace period, forcing WAL recovery on the next start; `SIGINT` is a *fast*
 shutdown that checkpoints first. After a genuine crash, WAL replay at startup is
-the only automatic repair in this stack — nothing repairs uploads, and a partial
-restore of one directory without the other can leave `attachments` rows pointing
-at missing files.
+the only automatic repair in this stack. Anything worse goes through a backup:
+database and uploads are backed up and restored together, so `attachments` rows
+never point at missing files (see Backups and Restore below).
 
 `make up` stays safely repeatable on existing data: `alembic upgrade head` is a
 no-op at head, and `bootstrap-admin` verifies rather than rewrites the first
@@ -182,13 +186,83 @@ export/import and attachments); real JWT flows belong to the test suite.
 These asset checks do not replace browser execution tests.
 
 Run host-only configuration safety tests without containers or third-party
-dependencies using `python3 -m unittest scripts.test_dev`.
+dependencies using `python3 -m unittest scripts.test`.
 
-`scripts/dev.py` is only the command entry point. Implementation lives under
-`scripts/localdev/`: shared process helpers, configuration/secret lifecycle,
-Docker safety, and command orchestration are separated by concern. Host tests
-mirror those boundaries under `scripts/tests/`; `scripts/test_dev.py` remains
-the compatibility aggregator.
+## Layout
+
+```
+scripts/
+├── make.py              entry point called by the Makefile
+├── test.py              runs every test under scripts/tests/
+├── commands/            one module per Make target
+│   ├── __init__.py      target table and main(): checks first, then one handler
+│   ├── setup.py         setup: .env, secret files and TLS pair lifecycle
+│   ├── check.py         check
+│   ├── stack.py         up, down, clean, logs, ps
+│   ├── smoke.py         smoke
+│   ├── backend_tests.py test
+│   ├── cleanup.py       fclean, re
+│   ├── reset_db.py      reset-db
+│   └── backup.py        backup, restore
+├── lib/                 shared building blocks, no Make target logic
+│   ├── paths.py         repository, TLS, secret and data paths
+│   ├── process.py       require, run (never through a shell), tools
+│   ├── env.py           .env keys, parser and atomic writer
+│   ├── secret_files.py  secret names, reader, writer, generator
+│   ├── config.py        validation of .env values with the secret files
+│   ├── compose.py       Compose command, environment and local Docker endpoint
+│   ├── data.py          data directories, guarded erasure, backup listing
+│   └── tls.py           local TLS pair creation and verification
+└── tests/               mirrors commands/ and lib/; shared data in fixtures.py
+```
+
+A new target is one module in `commands/` plus one row in `TARGETS`
+(`commands/__init__.py`), saying whether `check` must pass first. Tests are
+discovered automatically: add `tests/<commands|lib>/test_<module>.py`.
+
+## Backups and Restore
+
+`backup/backup.sh` owns the backup format and runs in `postgres:17-alpine`, so
+`pg_dump`/`psql` always match the server major version. Host Python only
+orchestrates it through Compose.
+
+- **Format.** `data/backups/<POSTGRES_DB>-<YYYYMMDDTHHMMSSZ>/` holds
+  `database.sql.gz` (`pg_dump --clean --if-exists --no-owner --no-privileges`) and
+  `uploads.tar.gz`. The script writes into `.<name>.partial/`, checks gzip integrity
+  and the `pg_dump` completion footer, then renames the directory. Names use
+  fixed-width UTC stamps, so lexical order is chronological. Leftover `.partial`
+  directories are removed when the scheduler starts.
+- **Schedule.** The `backup` service runs `schedule`: every 60 s it backs up if no
+  complete backup is younger than `BACKUP_INTERVAL_MINUTES`, then prunes to the
+  newest `BACKUP_RETENTION`. Keying on the newest backup, not a timer, means
+  restarts never pile up duplicates and a stopped stack catches up on `make up`.
+  A failed run is logged and recorded; the loop keeps going. `make backup` runs
+  `once` in a throwaway container of the same service.
+- **Status.** After each run the script writes `status.json` (last success, count,
+  interval, last failure) to the Docker-managed `backup_status` volume. The backend
+  mounts only that volume, read-only, for `GET /api/status`; it never sees the
+  archives, which contain password hashes. A Docker-managed volume, unlike a bind
+  into `data/`, stays readable by the unprivileged backend uid on Linux hosts too.
+- **Privileges.** The long-running `backup` service mounts uploads read-only.
+  Only the one-shot `restore` service (Compose profile `restore`, never started by
+  `up`) can write them, and it mounts `data/backups` read-only.
+- **Restore.** `make restore [BACKUP=<name>]` accepts only a name from the listing
+  of complete backups (no path can leave `data/backups`), asks for the typed
+  confirmation `restore`, stops `nginx`, `backend` and `backup`, then runs the
+  `restore` service. The script decompresses and checks both archives first, then
+  runs `DROP DATABASE … WITH (FORCE)` + `CREATE DATABASE` and loads the dump with
+  `psql --single-transaction -v ON_ERROR_STOP=1`. A fresh database, rather than
+  replaying `--clean` over the live one, also drops objects a newer migration
+  created after the backup. Uploads are replaced and chowned to the backend uid.
+  The wrapper finally runs the same `up --build --detach --wait` as `make up`:
+  migrations upgrade an older backup and `bootstrap-admin` re-verifies the first
+  account. `restore` starts `db` itself, so it also recovers after `reset-db` or
+  `fclean`.
+- **Survival.** `data/backups` is a plain bind mount, deliberately outside
+  `DATA_VOLUMES`: `reset-db`, `fclean` and `re` never erase it. It is still on the
+  same disk; copy it elsewhere for an off-site copy. On a Linux host with a rootful
+  daemon the files are owned by root (mode 0600), because the container writes
+  them.
 
 ## Resetting an Old Dev Database
 
@@ -203,7 +277,7 @@ make up
 ```
 
 The reset checks the volume's Compose project and database labels, stops dev
-writers, removes only the `db` container and its `postgres_data` volume, then
+writers and the backup service, removes only the `db` container and its `postgres_data` volume, then
 empties `data/postgres`. Uploads and frontend dependencies are left intact. If
 no database volume exists, there is nothing to reset: use `make up`. Changing
 file-backed database credentials does not update an existing PostgreSQL cluster;
@@ -212,7 +286,7 @@ restore the matching credentials or explicitly reset the disposable dev database
 Erasing the host directory is required, not incidental: `docker volume rm` on a
 bind-backed volume removes only the volume object and leaves the cluster on
 disk, so without it the next `make up` would silently re-adopt the old data.
-Before deleting anything, `docker._bound_data_dir()` requires that the path came
+Before deleting anything, `lib/data.py` `bound_data_dir()` requires that the path came
 from the Compose-resolved `device`, that it matches `<repo>/data/<name>`, that
 its parent is exactly `<repo>/data`, and that it is a real directory rather than
 a symlink. The directory itself is kept so the bind device stays valid. Both
@@ -224,5 +298,5 @@ destructive: after checking project volume labels and the bound paths, and
 requiring the exact target name, they remove the development database, uploaded
 files, frontend dependency volume and locally built application images, and
 empty `data/postgres` and `data/uploads`. They preserve `.env`, secret files,
-TLS files, source and pulled images. Use `make reset-db` when only the database
+TLS files, source, pulled images and `data/backups`. Use `make reset-db` when only the database
 should be removed.

@@ -1,9 +1,11 @@
 import sys
+from pathlib import Path
 
-if __package__:
-    from scripts.build.commands import main
-else:
-    from build.commands import main
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.commands import main
 
 
 if __name__ == "__main__":
