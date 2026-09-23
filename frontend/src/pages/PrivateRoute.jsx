@@ -8,7 +8,7 @@ function PrivateRoute ({ children })
 	const { t } = useTranslation();
 
 	if (loading)
-		return (<p>{t("lodading.load")}</p>);
+		return (<p>{t("loading.load")}</p>);
 	if (!isAuthen)
 		return (<Navigate to="/login"/>);
 	return (children);

@@ -15,11 +15,10 @@ class _RateLimitWindow:
 
 
 class ApiKeyRateLimiter:
-    """A fixed-window, per-API-key limiter for the current project/demo.
+    """A fixed-window, per-API-key limiter.
 
     State is kept in memory, resets when the backend restarts, and is not shared
-    across backend processes. A multi-instance production deployment would need
-    shared state such as Redis.
+    across backend processes.
     """
 
     def __init__(
@@ -41,6 +40,7 @@ class ApiKeyRateLimiter:
 
     def check(self, api_key: str) -> None:
         """Record an allowed request or raise HTTP 429 when its limit is reached."""
+
         if not api_key:
             raise ValueError("api_key must not be empty")
 

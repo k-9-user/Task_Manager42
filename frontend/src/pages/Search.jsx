@@ -64,8 +64,8 @@ function Search ()
 							<input id="search" type="text" value={query} onChange={(e) => setquery(e.target.value)}/>
 						</div>
 						<select value={searchType} onChange={(e) => { setSearchType(e.target.value); setSort("created_at"); }}>
-							<option value="tasks">Tâches</option>
-							<option value="projects">Projets</option>
+							<option value="tasks">{t("random.taches")}</option>
+							<option value="projects">{t("random.projets")}</option>
 						</select>
 						{searchType === "tasks" && (
 							<select value={status} onChange={(e) => setstatus(e.target.value)}>

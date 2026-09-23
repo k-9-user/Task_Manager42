@@ -58,7 +58,7 @@ def export_my_data(
     current_user=Depends(get_current_user),
 ):
     """Exporte toutes les données personnelles de l'utilisateur connecté en
-    un fichier JSON lisible (droits d'accès et de portabilité RGPD).
+    un fichier JSON téléchargeable (droit à la portabilité RGPD).
     """
 
     user_id = current_user.id
@@ -244,24 +244,9 @@ def delete_my_account(
 ):
     """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD).
 
-    Décision prise pour combler un point non précisé par le contrat (cf
-    SUIVI-PERSONNE-B.md), validée en équipe le 2026-08-18 :
-    - pour un projet qu'il possède (`Project.owner_id`), s'il reste d'autres
-      membres : la propriété est TRANSFÉRÉE (pas de suppression) — priorité à
-      un autre membre ayant déjà le rôle `owner` s'il y en a un, sinon le
-      membre restant le plus ancien (`ProjectMember.id` le plus petit, hors
-      lui-même, `ProjectMember.joined_at` puis `id`). Ce membre est promu
-      `owner` si besoin.
-    - si le projet n'a plus aucun autre membre, il est supprimé en cascade
-      (members + tasks, cf `cascade="all, delete-orphan"` sur `Project`) ;
-    - ses appartenances (`project_members`) dans des projets d'AUTRES owners
-      sont simplement retirées, ces projets restent intacts ;
-    - les tâches qui lui étaient assignées ailleurs gardent leur `assignee_id`
-      remis à `NULL` (pas supprimées : ce ne sont pas SES données) ;
-    - les pièces jointes qu'il a envoyées restent dans leur projet avec
-      `uploaded_by` remis à `NULL` (FK `ON DELETE SET NULL`) ;
-    - commentaires, messages, notifications et clés API sont supprimés en
-      cascade par la base.
+    Les projets sans autre membre sont supprimés; sinon leur propriété est
+    transférée. Les appartenances sont retirées et les tâches assignées sont
+    conservées avec ``assignee_id`` remis à ``NULL``.
     """
 
     if not payload.confirm:
@@ -332,8 +317,6 @@ def delete_my_account(
         successor.role = ProjectRole.OWNER
         project.owner_id = successor.user_id
 
-    # Flush transfers/deleted projects before bulk membership removal (autoflush
-    # is disabled), so the ORM cannot later delete already-removed memberships.
     db.flush()
     db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).delete()
 

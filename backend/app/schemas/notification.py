@@ -1,8 +1,3 @@
-"""
-Schémas Pydantic pour l'API Notifications — module bonus, cf
-00-contrat-commun.md section 2.
-"""
-
 import uuid
 from datetime import datetime
 from typing import Optional

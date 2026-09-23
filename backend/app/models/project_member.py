@@ -25,7 +25,6 @@ class ProjectMember(Base):
 
     __tablename__ = "project_members"
     __table_args__ = (
-        # Un même utilisateur ne peut apparaître qu'une fois par projet.
         UniqueConstraint("project_id", "user_id", name="uq_project_member"),
     )
 
@@ -39,7 +38,6 @@ class ProjectMember(Base):
     )
     joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    # Relations
     project = relationship("Project", back_populates="members")
     user = relationship("User")
 

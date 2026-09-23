@@ -91,7 +91,7 @@ function AdminUsers ()
 				<thead>
 					<tr>
 						<th>{t("login.username")}</th>
-						<th>Email</th>
+						<th>{t("admin.email")}</th>
 						<th>{t("admin.role")}</th>
 						<th>{t("admin.status")}</th>
 						<th>{t("admin.action")}</th>

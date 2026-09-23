@@ -1,7 +1,3 @@
-"""Schémas Pydantic pour la messagerie de projet (mur de messages entre
-membres d'un même projet, distinct des commentaires qui sont attachés à une
-tâche précise)."""
-
 import uuid
 from datetime import datetime
 
