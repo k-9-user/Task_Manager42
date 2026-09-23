@@ -72,7 +72,7 @@
 	{
 		"myprofile": "My profile",
 		"projet": "Project",
-		"recherche" : "Search",
+		"recherche": "Search",
 		"mrecherche": "Enter a word to search for",
 		"ttstatus": "all statuses",
 		"afaire": "Things to Do",
@@ -157,13 +157,43 @@
 		{
 			"title": "Privacy Policy",
 			"section1Title": "1. Data we collect",
-			"section1Body": "We collect your username, your email and your password (hashed with Argon2, never stored in plain text) when you create your account.",
+			"section1Body": "When you sign up we collect your username, your email and your password (hashed with Argon2, never stored in plain text); with Google sign-in we store your Google account identifier instead of a password. We also keep what you create in the service: projects, tasks, comments, messages, uploaded files and notifications.",
 			"section2Title": "2. How we use your data",
 			"section2Body": "We use your data only within Task Manager, whether for authentication or for any activity on the platform.",
 			"section3Title": "3. Data retention",
 			"section3Body": "Your data is kept from the creation of your account until it is deleted.",
 			"section4Title": "4. Your rights (GDPR)",
-			"section4Body": "Under the GDPR you can access and download all your data (Art. 15 and 20), correct your username and display name (Art. 16), and delete your account (Art. 17). All three are available on your Profile page, in the \"My data\" section. Restriction and objection (Art. 18 and 21) are not offered in the app because we do no marketing and no profiling, and no automated decision is made about you (Art. 22). Each export or deletion is confirmed by email.",
+			"section4Intro": "Under the GDPR you have the following rights:",
+			"rights":
+			{
+				"access":
+				{
+					"name": "Access and portability (Art. 15 and 20):",
+					"body": "download all your data as a readable JSON file from your Profile page."
+				},
+				"rectification":
+				{
+					"name": "Rectification (Art. 16):",
+					"body": "edit your username and display name on your Profile page. To change your email, contact an administrator."
+				},
+				"erasure":
+				{
+					"name": "Erasure (Art. 17):",
+					"body": "delete your account and your personal data from your Profile page."
+				},
+				"restriction":
+				{
+					"name": "Restriction and objection (Art. 18 and 21):",
+					"body": "not offered in the app. We do no marketing and no profiling, and only process what the service needs to work. You can still write to an administrator."
+				},
+				"automated":
+				{
+					"name": "Automated decisions (Art. 22):",
+					"body": "none. No decision about you is made by an algorithm."
+				}
+			},
+			"section4Footer": "Each export or deletion is confirmed by an email sent to your address.",
+			"profileLink": "Go to my Profile page",
 			"section5Title": "5. Sharing your data",
 			"section5Body": "Your data is never shared outside the project; only you and the project team with administrator access can access it.",
 			"contactTitle": "Contact",
@@ -183,47 +213,18 @@
 	"gdpr":
 	{
 		"title": "My data (GDPR)",
-		"intro": "You control your personal data. Here is what you can ask for, and what happens with each request.",
-		"rightsTitle": "Your rights",
-		"rights":
-		{
-			"access":
-			{
-				"name": "Access and portability (Art. 15 and 20):",
-				"body": "download all your data as a readable JSON file. Available below."
-			},
-			"rectification":
-			{
-				"name": "Rectification (Art. 16):",
-				"body": "edit your username and display name above. To change your email, contact an administrator."
-			},
-			"erasure":
-			{
-				"name": "Erasure (Art. 17):",
-				"body": "delete your account and your personal data. Available below."
-			},
-			"restriction":
-			{
-				"name": "Restriction and objection (Art. 18 and 21):",
-				"body": "not offered in the app. We do no marketing and no profiling, and only process what the service needs to work. You can still write to an administrator."
-			},
-			"automated":
-			{
-				"name": "Automated decisions (Art. 22):",
-				"body": "none. No decision about you is made by an algorithm."
-			}
-		},
-		"emailNote": "A confirmation email is sent to your address after each export or deletion.",
+		"rightsLink": "Read your GDPR rights",
+		"mailNote": "A confirmation email is sent to your address.",
 		"exportTitle": "Download my data",
-		"exportBody": "Your profile, projects, memberships, assigned tasks, comments, messages, uploaded file names, notifications and API key dates. Passwords and keys are never included.",
+		"exportBody": "A readable JSON file with your profile, projects, tasks, comments, messages, uploaded files and notifications.",
 		"exportButton": "Download my data",
 		"exporting": "Preparing...",
-		"exportDone": "Your data was downloaded. A confirmation email is on its way.",
+		"exportDone": "Your data was downloaded.",
 		"deleteTitle": "Delete my account",
 		"deleteIntro": "What deletion does:",
 		"deleteEffects":
 		{
-			"projects": "Projects you own are handed to their oldest remaining member, or deleted if you are alone in them.",
+			"projects": "Your projects go to their oldest remaining member, or are deleted if you are alone.",
 			"content": "Your memberships, comments, messages, notifications and API keys are deleted.",
 			"tasks": "Tasks assigned to you stay in their project, unassigned.",
 			"files": "Files you uploaded stay in their project, without your name.",

@@ -73,7 +73,7 @@
 		"myprofile": "Mon profile",
 		"projet": "Projet",
 		"recherche": "Recherche",
-		"mrecherche": "Entrez un mot pour rechercher" ,
+		"mrecherche": "Entrez un mot pour rechercher",
 		"ttstatus": "tout les status",
 		"afaire": "A faire",
 		"encours": "En cours",
@@ -157,13 +157,43 @@
 		{
 			"title": "Politique de confidentialité",
 			"section1Title": "1. Données collectées",
-			"section1Body": "Nous collectons votre nom d'utilisateur, votre email et votre mot de passe (haché avec Argon2, jamais stocké en clair) lors de la création de votre compte.",
+			"section1Body": "À l'inscription, nous collectons votre nom d'utilisateur, votre email et votre mot de passe (haché avec Argon2, jamais stocké en clair) ; avec la connexion Google, nous gardons l'identifiant de votre compte Google à la place du mot de passe. Nous conservons aussi ce que vous créez dans le service : projets, tâches, commentaires, messages, fichiers envoyés et notifications.",
 			"section2Title": "2. Utilisation de vos données",
 			"section2Body": "Nous utilisons vos données uniquement dans le cadre de Task Manager, que ce soit pour l'authentification ou pour toute activité sur la plateforme.",
 			"section3Title": "3. Conservation de vos données",
 			"section3Body": "Vos données sont conservées depuis la création de votre compte jusqu'à sa suppression.",
 			"section4Title": "4. Vos droits (RGPD)",
-			"section4Body": "Conformément au RGPD, vous pouvez accéder à toutes vos données et les télécharger (art. 15 et 20), corriger votre nom d'utilisateur et votre nom affiché (art. 16), et supprimer votre compte (art. 17). Ces trois droits sont disponibles sur votre page Profil, section « Mes données ». La limitation et l'opposition (art. 18 et 21) ne sont pas proposées dans l'application car nous ne faisons ni marketing ni profilage, et aucune décision automatisée n'est prise à votre sujet (art. 22). Chaque export ou suppression est confirmé par email.",
+			"section4Intro": "Conformément au RGPD, vous disposez des droits suivants :",
+			"rights":
+			{
+				"access":
+				{
+					"name": "Accès et portabilité (art. 15 et 20) :",
+					"body": "téléchargez toutes vos données dans un fichier JSON lisible depuis votre page Profil."
+				},
+				"rectification":
+				{
+					"name": "Rectification (art. 16) :",
+					"body": "modifiez votre nom d'utilisateur et votre nom affiché sur votre page Profil. Pour changer votre email, contactez un administrateur."
+				},
+				"erasure":
+				{
+					"name": "Effacement (art. 17) :",
+					"body": "supprimez votre compte et vos données personnelles depuis votre page Profil."
+				},
+				"restriction":
+				{
+					"name": "Limitation et opposition (art. 18 et 21) :",
+					"body": "non proposées dans l'application. Nous ne faisons ni marketing ni profilage, et ne traitons que ce qui est nécessaire au service. Vous pouvez tout de même écrire à un administrateur."
+				},
+				"automated":
+				{
+					"name": "Décisions automatisées (art. 22) :",
+					"body": "aucune. Aucune décision vous concernant n'est prise par un algorithme."
+				}
+			},
+			"section4Footer": "Chaque export ou suppression est confirmé par un email envoyé à votre adresse.",
+			"profileLink": "Aller à ma page Profil",
 			"section5Title": "5. Partage de vos données",
 			"section5Body": "Vos données ne sont jamais communiquées à l'extérieur du projet ; seuls vous-même et l'équipe du projet disposant d'un accès administrateur peuvent y accéder.",
 			"contactTitle": "Contact",
@@ -183,50 +213,21 @@
 	"gdpr":
 	{
 		"title": "Mes données (RGPD)",
-		"intro": "Vous gardez le contrôle de vos données personnelles. Voici ce que vous pouvez demander, et ce qui se passe pour chaque demande.",
-		"rightsTitle": "Vos droits",
-		"rights":
-		{
-			"access":
-			{
-				"name": "Accès et portabilité (art. 15 et 20) :",
-				"body": "téléchargez toutes vos données dans un fichier JSON lisible. Disponible ci-dessous."
-			},
-			"rectification":
-			{
-				"name": "Rectification (art. 16) :",
-				"body": "modifiez votre nom d'utilisateur et votre nom affiché ci-dessus. Pour changer votre email, contactez un administrateur."
-			},
-			"erasure":
-			{
-				"name": "Effacement (art. 17) :",
-				"body": "supprimez votre compte et vos données personnelles. Disponible ci-dessous."
-			},
-			"restriction":
-			{
-				"name": "Limitation et opposition (art. 18 et 21) :",
-				"body": "non proposées dans l'application. Nous ne faisons ni marketing ni profilage, et ne traitons que ce qui est nécessaire au service. Vous pouvez tout de même écrire à un administrateur."
-			},
-			"automated":
-			{
-				"name": "Décisions automatisées (art. 22) :",
-				"body": "aucune. Aucune décision vous concernant n'est prise par un algorithme."
-			}
-		},
-		"emailNote": "Un email de confirmation est envoyé à votre adresse après chaque export ou suppression.",
+		"rightsLink": "Consulter vos droits RGPD",
+		"mailNote": "Un email de confirmation est envoyé à votre adresse.",
 		"exportTitle": "Télécharger mes données",
-		"exportBody": "Votre profil, vos projets, vos appartenances, les tâches qui vous sont assignées, vos commentaires, messages, noms de fichiers envoyés, notifications et dates de clés API. Les mots de passe et les clés ne sont jamais inclus.",
+		"exportBody": "Un fichier JSON lisible avec votre profil, vos projets, tâches, commentaires, messages, fichiers envoyés et notifications.",
 		"exportButton": "Télécharger mes données",
 		"exporting": "Préparation...",
-		"exportDone": "Vos données ont été téléchargées. Un email de confirmation arrive.",
+		"exportDone": "Vos données ont été téléchargées.",
 		"deleteTitle": "Supprimer mon compte",
 		"deleteIntro": "Ce que fait la suppression :",
 		"deleteEffects":
 		{
-			"projects": "Les projets que vous possédez sont confiés au plus ancien membre restant, ou supprimés si vous y êtes seul.",
+			"projects": "Vos projets passent au plus ancien membre restant, ou sont supprimés si vous êtes seul.",
 			"content": "Vos appartenances, commentaires, messages, notifications et clés API sont supprimés.",
-			"tasks": "Les tâches qui vous sont assignées restent dans leur projet, sans assignation.",
-			"files": "Les fichiers que vous avez envoyés restent dans leur projet, sans votre nom.",
+			"tasks": "Vos tâches assignées restent dans leur projet, sans assignation.",
+			"files": "Vos fichiers envoyés restent dans leur projet, sans votre nom.",
 			"admin": "Le dernier administrateur actif ne peut pas supprimer son compte."
 		},
 		"irreversible": "Cette action est irréversible.",

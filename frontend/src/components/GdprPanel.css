@@ -33,6 +33,10 @@
 	gap: 0.35rem;
 }
 
+.gdpr-panel li {
+	overflow-wrap: anywhere;
+}
+
 .gdpr-note {
 	font-style: italic;
 }
@@ -44,6 +48,13 @@
 	gap: 0.5rem;
 	border-top: 1px solid var(--color-brand-surface-border);
 	padding-top: 0.75rem;
+}
+
+.gdpr-block > p,
+.gdpr-block > ul,
+.gdpr-block > form {
+	align-self: stretch;
+	margin: 0;
 }
 
 .gdpr-panel button {

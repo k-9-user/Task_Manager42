@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { deleteMyAccount, exportMyData } from "../services/gdprService";
 import "./GdprPanel.css";
 
-const RIGHTS = ["access", "rectification", "erasure", "restriction", "automated"];
 const DELETE_EFFECTS = ["projects", "content", "tasks", "files", "admin"];
 
 function GdprPanel({ user })
@@ -68,22 +67,12 @@ function GdprPanel({ user })
 	return (
 		<section className="gdpr-panel" aria-labelledby="gdpr-title">
 			<h2 id="gdpr-title">{t("gdpr.title")}</h2>
-			<p>{t("gdpr.intro")}</p>
-
-			<h3>{t("gdpr.rightsTitle")}</h3>
-			<ul className="gdpr-rights">
-				{RIGHTS.map((right) => (
-					<li key={right}>
-						<strong>{t(`gdpr.rights.${right}.name`)}</strong>{" "}
-						{t(`gdpr.rights.${right}.body`)}
-					</li>
-				))}
-			</ul>
-			<p className="gdpr-note">{t("gdpr.emailNote")}</p>
+			<p><Link to="/PrivacyPolicy">{t("gdpr.rightsLink")}</Link></p>
 
 			<div className="gdpr-block">
 				<h3>{t("gdpr.exportTitle")}</h3>
 				<p>{t("gdpr.exportBody")}</p>
+				<p className="gdpr-note">{t("gdpr.mailNote")}</p>
 				<button type="button" onClick={handleExport} disabled={exporting}>
 					{exporting ? t("gdpr.exporting") : t("gdpr.exportButton")}
 				</button>
@@ -99,6 +88,7 @@ function GdprPanel({ user })
 					))}
 				</ul>
 				<p><strong>{t("gdpr.irreversible")}</strong></p>
+				<p className="gdpr-note">{t("gdpr.mailNote")}</p>
 				{!confirming ? (
 					<button type="button" className="gdpr-danger-button" onClick={() => setConfirming(true)}>
 						{t("gdpr.deleteButton")}

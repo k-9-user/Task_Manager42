@@ -73,7 +73,7 @@
 		"myprofile": "Mi perfil",
 		"projet": "proyecto",
 		"recherche": "Búsqueda",
-		"mrecherche": "Escribe una palabra para buscar" ,
+		"mrecherche": "Escribe una palabra para buscar",
 		"ttstatus": "todos los estados",
 		"afaire": "Tareas pendientes",
 		"encours": "En curso",
@@ -157,13 +157,43 @@
 		{
 			"title": "Política de privacidad",
 			"section1Title": "1. Datos que recopilamos",
-			"section1Body": "Recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña (con hash mediante Argon2, nunca almacenada en texto plano) al crear tu cuenta.",
+			"section1Body": "Al registrarte recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña (con hash mediante Argon2, nunca almacenada en texto plano); con el inicio de sesión de Google guardamos el identificador de tu cuenta de Google en lugar de una contraseña. También conservamos lo que creas en el servicio: proyectos, tareas, comentarios, mensajes, archivos subidos y notificaciones.",
 			"section2Title": "2. Uso de tus datos",
 			"section2Body": "Utilizamos tus datos únicamente dentro de Task Manager, ya sea para la autenticación o para cualquier actividad en la plataforma.",
 			"section3Title": "3. Conservación de tus datos",
 			"section3Body": "Tus datos se conservan desde la creación de tu cuenta hasta su eliminación.",
 			"section4Title": "4. Tus derechos (RGPD)",
-			"section4Body": "Conforme al RGPD, puede acceder a todos sus datos y descargarlos (art. 15 y 20), corregir su nombre de usuario y su nombre visible (art. 16) y eliminar su cuenta (art. 17). Los tres están disponibles en su página de Perfil, sección «Mis datos». La limitación y la oposición (art. 18 y 21) no se ofrecen en la aplicación porque no hacemos marketing ni elaboramos perfiles, y no se toma ninguna decisión automatizada sobre usted (art. 22). Cada exportación o eliminación se confirma por email.",
+			"section4Intro": "Conforme al RGPD, tienes los siguientes derechos:",
+			"rights":
+			{
+				"access":
+				{
+					"name": "Acceso y portabilidad (art. 15 y 20):",
+					"body": "descarga todos tus datos en un archivo JSON legible desde tu página de Perfil."
+				},
+				"rectification":
+				{
+					"name": "Rectificación (art. 16):",
+					"body": "modifica tu nombre de usuario y tu nombre visible en tu página de Perfil. Para cambiar tu correo, contacta con un administrador."
+				},
+				"erasure":
+				{
+					"name": "Supresión (art. 17):",
+					"body": "elimina tu cuenta y tus datos personales desde tu página de Perfil."
+				},
+				"restriction":
+				{
+					"name": "Limitación y oposición (art. 18 y 21):",
+					"body": "no se ofrecen en la aplicación. No hacemos marketing ni elaboramos perfiles, y solo tratamos lo necesario para el servicio. Aun así puedes escribir a un administrador."
+				},
+				"automated":
+				{
+					"name": "Decisiones automatizadas (art. 22):",
+					"body": "ninguna. Ningún algoritmo toma decisiones sobre ti."
+				}
+			},
+			"section4Footer": "Cada exportación o eliminación se confirma con un correo enviado a tu dirección.",
+			"profileLink": "Ir a mi página de Perfil",
 			"section5Title": "5. Compartir tus datos",
 			"section5Body": "Tus datos nunca se comunican fuera del proyecto; solo tú y el equipo del proyecto con acceso de administrador pueden acceder a ellos.",
 			"contactTitle": "Contacto",
@@ -183,55 +213,26 @@
 	"gdpr":
 	{
 		"title": "Mis datos (RGPD)",
-		"intro": "Usted controla sus datos personales. Esto es lo que puede solicitar y lo que ocurre con cada solicitud.",
-		"rightsTitle": "Sus derechos",
-		"rights":
-		{
-			"access":
-			{
-				"name": "Acceso y portabilidad (art. 15 y 20):",
-				"body": "descargue todos sus datos en un archivo JSON legible. Disponible más abajo."
-			},
-			"rectification":
-			{
-				"name": "Rectificación (art. 16):",
-				"body": "modifique su nombre de usuario y su nombre visible más arriba. Para cambiar su email, contacte con un administrador."
-			},
-			"erasure":
-			{
-				"name": "Supresión (art. 17):",
-				"body": "elimine su cuenta y sus datos personales. Disponible más abajo."
-			},
-			"restriction":
-			{
-				"name": "Limitación y oposición (art. 18 y 21):",
-				"body": "no se ofrecen en la aplicación. No hacemos marketing ni elaboramos perfiles, y solo tratamos lo necesario para el servicio. Aun así puede escribir a un administrador."
-			},
-			"automated":
-			{
-				"name": "Decisiones automatizadas (art. 22):",
-				"body": "ninguna. Ningún algoritmo toma decisiones sobre usted."
-			}
-		},
-		"emailNote": "Se envía un email de confirmación a su dirección después de cada exportación o eliminación.",
+		"rightsLink": "Consultar tus derechos RGPD",
+		"mailNote": "Se envía un correo de confirmación a tu dirección.",
 		"exportTitle": "Descargar mis datos",
-		"exportBody": "Su perfil, proyectos, membresías, tareas asignadas, comentarios, mensajes, nombres de archivos subidos, notificaciones y fechas de claves API. Las contraseñas y las claves nunca se incluyen.",
+		"exportBody": "Un archivo JSON legible con tu perfil, proyectos, tareas, comentarios, mensajes, archivos subidos y notificaciones.",
 		"exportButton": "Descargar mis datos",
 		"exporting": "Preparando...",
-		"exportDone": "Sus datos se han descargado. Recibirá un email de confirmación.",
+		"exportDone": "Tus datos se han descargado.",
 		"deleteTitle": "Eliminar mi cuenta",
 		"deleteIntro": "Qué hace la eliminación:",
 		"deleteEffects":
 		{
-			"projects": "Los proyectos que posee pasan al miembro restante más antiguo, o se eliminan si está solo en ellos.",
-			"content": "Se eliminan sus membresías, comentarios, mensajes, notificaciones y claves API.",
-			"tasks": "Las tareas asignadas a usted permanecen en su proyecto, sin asignar.",
-			"files": "Los archivos que subió permanecen en su proyecto, sin su nombre.",
+			"projects": "Tus proyectos pasan al miembro restante más antiguo, o se eliminan si estás solo.",
+			"content": "Se eliminan tus membresías, comentarios, mensajes, notificaciones y claves API.",
+			"tasks": "Tus tareas asignadas quedan en su proyecto, sin asignar.",
+			"files": "Tus archivos subidos quedan en su proyecto, sin tu nombre.",
 			"admin": "El último administrador activo no puede eliminar su cuenta."
 		},
 		"irreversible": "Esta acción no se puede deshacer.",
 		"deleteButton": "Eliminar mi cuenta",
-		"confirmLabel": "Escriba su nombre de usuario ({{username}}) para confirmar",
+		"confirmLabel": "Escribe tu nombre de usuario ({{username}}) para confirmar",
 		"confirmButton": "Eliminar definitivamente",
 		"cancel": "Cancelar",
 		"deleting": "Eliminando...",

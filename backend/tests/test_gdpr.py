@@ -5,6 +5,7 @@ Nécessite les fichiers de A (voir avertissement en tête de conftest.py) et
 une vraie base Postgres de test.
 """
 
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -36,6 +37,9 @@ def _delete_account(client, **overrides):
     return client.request("DELETE", "/api/gdpr/account", json=payload)
 
 
+UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+
 def test_export_contains_profile_and_owned_project(client):
     client.post("/api/projects", json={"name": "Mon projet", "description": None})
 
@@ -45,9 +49,28 @@ def test_export_contains_profile_and_owned_project(client):
     assert response.headers["content-disposition"] == "attachment; filename=gdpr_export.json"
 
     body = response.json()
-    assert body["profile"]["id"] == str(client.current_user.id)
+    assert body["profile"]["username"] == client.current_user.username
+    assert body["profile"]["sign_in"] == "password"
     assert "password_hash" not in body["profile"]
-    assert [p["name"] for p in body["owned_projects"]] == ["Mon projet"]
+    assert body["projects"] == [
+        {
+            "name": "Mon projet",
+            "your_role": "owner",
+            "owner": True,
+            "joined_at": body["projects"][0]["joined_at"],
+        }
+    ]
+    assert body["projects"][0]["joined_at"].endswith(" UTC")
+
+
+def test_export_omits_empty_sections_and_internal_ids(client):
+    response = client.get("/api/gdpr/export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"about", "profile"}
+    assert "display_name" not in body["profile"]
+    assert UUID_PATTERN.search(response.text) is None
 
 
 def test_export_covers_user_content_without_secrets(client, db_session, sent_mails):
@@ -70,13 +93,16 @@ def test_export_covers_user_content_without_secrets(client, db_session, sent_mai
 
     assert response.status_code == 200
     body = response.json()
-    for section in (
-        "comments", "project_messages", "attachments_uploaded", "notifications", "api_keys",
-    ):
-        assert section in body
-    assert [c["content"] for c in body["comments"]] == ["my comment"]
-    assert [a["file_name"] for a in body["attachments_uploaded"]] == ["x.txt"]
-    assert [t["title"] for t in body["assigned_tasks"]] == ["Exported task"]
+    assert [(c["task"], c["project"], c["text"]) for c in body["comments"]] == [
+        ("Exported task", "Export", "my comment")
+    ]
+    assert [(f["file_name"], f["task"]) for f in body["uploaded_files"]] == [
+        ("x.txt", "Exported task")
+    ]
+    assert [(t["title"], t["project"]) for t in body["assigned_tasks"]] == [
+        ("Exported task", "Export")
+    ]
+    assert UUID_PATTERN.search(response.text) is None
     assert "password_hash" not in response.text
     assert "key_hash" not in response.text
     assert "oauth_id" not in response.text
