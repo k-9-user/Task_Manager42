@@ -37,10 +37,6 @@ def _document_password_limits(schema: dict[str, Any]) -> None:
     schema["maxLength"] = settings.password_max_length
 
 
-def _document_password_maximum(schema: dict[str, Any]) -> None:
-    schema["maxLength"] = get_settings().password_max_length
-
-
 class UserRegister(StrictRequest):
     email: EmailStr
     username: str = Field(
@@ -69,21 +65,11 @@ class UserRegister(StrictRequest):
 
 class UserLogin(StrictRequest):
     identifier: str = Field(min_length=1, max_length=254)
-    password: SecretStr = Field(
-        min_length=1,
-        json_schema_extra=_document_password_maximum,
-    )
+    password: SecretStr = Field(min_length=1)
 
     _identifier_validator = field_validator("identifier", mode="before")(
         validate_username
     )
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, value: SecretStr) -> SecretStr:
-        if len(value.get_secret_value()) > get_settings().password_max_length:
-            raise ValueError("password is too long")
-        return value
 
 
 class UserUpdate(StrictRequest):

@@ -166,9 +166,8 @@ def test_password_max_length_follows_the_configuration(
     try:
         with pytest.raises(ValidationError):
             UserRegister.model_validate({**VALID_REGISTRATION, "password": "a" * 21})
-        with pytest.raises(ValidationError):
-            UserLogin.model_validate({"identifier": "first_user", "password": "a" * 21})
         assert UserRegister.model_validate({**VALID_REGISTRATION, "password": "a" * 20})
+        assert UserLogin.model_validate({"identifier": "first_user", "password": "a" * 21})
     finally:
         get_settings.cache_clear()
 
@@ -179,7 +178,8 @@ def test_openapi_documents_the_configured_password_limits(
     register = UserRegister.model_json_schema()["properties"]["password"]
     login = UserLogin.model_json_schema()["properties"]["password"]
     assert (register["minLength"], register["maxLength"]) == (6, 128)
-    assert (login["minLength"], login["maxLength"]) == (1, 128)
+    assert login["minLength"] == 1
+    assert "maxLength" not in login
 
     monkeypatch.setenv("PASSWORD_MIN_LENGTH", "10")
     get_settings.cache_clear()
