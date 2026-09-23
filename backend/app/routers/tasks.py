@@ -1,16 +1,3 @@
-"""
-Router FastAPI pour les tâches — cf 00-contrat-commun.md section 2
-"Projects & Tasks — Owner : B".
-
-Mêmes dépendances non livrées que routers/projects.py (cf en-tête de ce
-fichier) : `app.database.get_db`, `app.auth.dependencies.get_current_user`.
-
-Les routes sont réparties sur deux préfixes différents dans le contrat
-(`/api/projects/{id}/tasks` et `/api/tasks/{id}`), donc ce router ne
-déclare pas de `prefix` global comme `routers/projects.py` : chaque route
-écrit son chemin complet.
-"""
-
 import html
 import uuid
 from typing import Optional
@@ -32,20 +19,11 @@ from app.schemas.task import TaskCreate, TaskData, TaskListResponse, TaskRespons
 
 router = APIRouter(tags=["tasks"])
 
-# Contrat : `GET /api/projects/{id}/tasks` ne précise qu'un `?page=`, pas de
-# `?limit=` (contrairement à `GET /api/search/tasks` qui a les deux). On fixe
-# donc une taille de page constante ici — à discuter si l'équipe veut plutôt
-# un `?limit=` réglable, comme sur les autres routes paginées.
 PAGE_SIZE = 20
 
 
 def _assert_valid_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUID) -> None:
-    """Refuse d'assigner une tâche à quelqu'un qui n'est pas membre du projet.
-
-    Décision prise pour combler un point non précisé par le contrat (cf
-    SUIVI-PERSONNE-B.md) : assigner une tâche à un non-membre n'aurait pas de
-    sens (il ne pourrait même pas voir le projet). À valider en équipe.
-    """
+    """Refuse d'assigner une tâche à quelqu'un qui n'est pas membre du projet."""
 
     is_member = (
         db.query(ProjectMember)
@@ -68,12 +46,7 @@ def _notify(
     task_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> None:
-    """Module bonus — cf 02-fiche-personne-B.md : "juste un insert en DB à
-    chaque action existante, pas de nouvelle logique complexe". Pas de commit
-    ici : la notification part dans la même transaction que l'action qui la
-    déclenche (create_task/update_task committent déjà juste après).
-
-    Ne crée rien si le destinataire est inactif depuis 6 mois (cf
+    """Ne crée rien si le destinataire est inactif depuis 6 mois (cf
     `_user_is_notifiable`)."""
 
     if not _user_is_notifiable(db, user_id):
@@ -145,9 +118,7 @@ def create_task(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Seuls owner et editor peuvent créer une tâche — un viewer est en
-    lecture seule (cf 02-fiche-personne-B.md, "un viewer ne peut pas modifier
-    une tâche")."""
+    """Seuls owner et editor peuvent créer une tâche — un viewer est en lecture seule"""
 
     lock_project_for_write(
         db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,

@@ -1,11 +1,3 @@
-"""
-Schémas Pydantic pour l'API Tasks — cf 00-contrat-commun.md section 2
-"Projects & Tasks — Owner : B".
-
-Même logique que schemas/project.py : *Create/*Update = ce qu'un client peut
-envoyer, *Response = ce que l'API renvoie.
-"""
-
 import uuid
 from datetime import date, datetime
 from typing import Optional
@@ -28,10 +20,6 @@ class TaskCreate(StrictRequest):
     `project_id` n'apparaît pas ici : il vient de l'URL (`{id}`), pas du body
     — sinon un client pourrait créer une tâche dans un projet où il n'a même
     pas accès en écrivant un autre `project_id` dans le JSON.
-
-    Même remarque que pour `ProjectCreate` : le contrat liste `description`
-    sans `?`, mais la colonne est nullable en DB → traitée comme optionnelle
-    ici, à confirmer avec l'équipe.
     """
 
     title: str = Field(..., min_length=1, max_length=255)
@@ -100,10 +88,7 @@ class TaskListResponse(BaseModel):
     """Réponse de GET /api/projects/{id}/tasks → `{tasks: [...], total: N}`.
 
     `total` = nombre total de tâches correspondant au filtre (avant pagination),
-    pas `len(tasks)` — nécessaire pour que le frontend de D affiche une
-    pagination correcte. Les query params `?status=&page=` eux-mêmes ne sont
-    pas un schéma ici : ils seront déclarés directement dans la signature de
-    la route via `Query(...)`, pas dans un BaseModel.
+    pas `len(tasks)`.
     """
 
     tasks: list[TaskResponse]
@@ -120,13 +105,7 @@ class TaskData(BaseModel):
 
 
 class ProjectDetailResponse(BaseModel):
-    """Réponse complète de GET /api/projects/{id}.
-
-    Défini ici (et pas dans schemas/project.py) parce qu'il dépend de
-    `TaskResponse` : task.py peut importer project.py sans problème, l'inverse
-    aurait créé un import circulaire (voir le commentaire laissé dans
-    schemas/project.py).
-    """
+    """Réponse complète de GET /api/projects/{id} → `{project, members, tasks}`."""
 
     project: ProjectResponse
     members: list[ProjectMemberResponse]

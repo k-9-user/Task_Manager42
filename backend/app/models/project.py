@@ -23,7 +23,6 @@ class Project(Base):
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relations
     owner = relationship("User", foreign_keys=[owner_id])
 
     members = relationship(

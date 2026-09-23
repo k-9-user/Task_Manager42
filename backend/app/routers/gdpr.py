@@ -1,11 +1,3 @@
-"""
-Router FastAPI pour le module GDPR — cf 00-contrat-commun.md section 2
-"Projects & Tasks — Owner : B".
-
-Mêmes dépendances non livrées que routers/projects.py : `app.database.get_db`,
-`app.auth.dependencies.get_current_user`.
-"""
-
 import json
 import uuid
 from datetime import date, datetime
@@ -48,11 +40,6 @@ def export_my_data(
 ):
     """Exporte toutes les données personnelles de l'utilisateur connecté en
     un fichier JSON téléchargeable (droit à la portabilité RGPD).
-
-    Décision prise pour combler un point non précisé par le contrat : le contenu de l'export couvre le profil (sans
-    `password_hash`, jamais exporté), les projets possédés, les projets où
-    l'utilisateur est simple membre, et les tâches qui lui sont assignées.
-    À valider en équipe.
     """
 
     owned_projects = db.query(Project).filter(Project.owner_id == current_user.id).all()
@@ -120,24 +107,7 @@ def delete_my_account(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD).
-
-    Décision prise pour combler un point non précisé par le contrat (cf
-    SUIVI-PERSONNE-B.md), validée en équipe le 2026-08-18 :
-    - pour un projet qu'il possède (`Project.owner_id`), s'il reste d'autres
-      membres : la propriété est TRANSFÉRÉE (pas de suppression) — priorité à
-      un autre membre ayant déjà le rôle `owner` s'il y en a un, sinon le
-      membre restant le plus ancien (`ProjectMember.id` le plus petit, hors
-      lui-même). Ce membre est promu `owner` si besoin. **Convention
-      "le plus ancien" par défaut à valider si l'équipe préfère un autre
-      critère (le plus récent, un vote, etc.).**
-    - si le projet n'a plus aucun autre membre, il est supprimé en cascade
-      (members + tasks, cf `cascade="all, delete-orphan"` sur `Project`) ;
-    - ses appartenances (`project_members`) dans des projets d'AUTRES owners
-      sont simplement retirées, ces projets restent intacts ;
-    - les tâches qui lui étaient assignées ailleurs gardent leur `assignee_id`
-      remis à `NULL` (pas supprimées : ce ne sont pas SES données).
-    """
+    """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD)."""
 
     if not payload.confirm:
         raise HTTPException(
@@ -202,8 +172,6 @@ def delete_my_account(
         successor.role = ProjectRole.OWNER
         project.owner_id = successor.user_id
 
-    # Flush transfers/deleted projects before bulk membership removal (autoflush
-    # is disabled), so the ORM cannot later delete already-removed memberships.
     db.flush()
     db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).delete()
 

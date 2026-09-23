@@ -1,11 +1,3 @@
-"""
-Router FastAPI pour les notifications — module bonus, cf 00-contrat-commun.md
-section 2 "Projects & Tasks — Owner : B".
-
-Mêmes dépendances non livrées que routers/projects.py : `app.database.get_db`,
-`app.auth.dependencies.get_current_user`.
-"""
-
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

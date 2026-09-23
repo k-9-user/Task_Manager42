@@ -1,5 +1,3 @@
-"""Create or verify the configured first administrator before API startup."""
-
 import logging
 import sys
 

@@ -1,14 +1,3 @@
-"""
-Router FastAPI pour les projets — cf 00-contrat-commun.md section 2
-"Projects & Tasks — Owner : B".
-
-⚠️ Ce fichier importe deux choses pas encore livrées par Personne A :
-  - `app.database.get_db`            (session SQLAlchemy par requête)
-  - `app.auth.dependencies.get_current_user` (user authentifié depuis le JWT)
-Tant que A n'a pas livré ces fichiers, l'import de ce module échouera —
-c'est attendu (cf SUIVI-PERSONNE-B.md et 02-fiche-personne-B.md).
-"""
-
 import html
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -63,13 +52,7 @@ def _serialize_member(member: ProjectMember) -> ProjectMemberResponse:
 def _get_membership_or_404(
     db: Session, project_id: uuid.UUID, user_id: uuid.UUID
 ) -> ProjectMember:
-    """Renvoie l'appartenance (avec son rôle) de `user_id` au projet `project_id`.
-
-    On lève un 404 (pas un 403) si l'utilisateur n'est pas membre : ça évite
-    de confirmer à quelqu'un l'existence d'un projet auquel il n'a pas accès
-    (un 403 révélerait "ce projet existe mais tu n'as pas le droit", un 404
-    ne révèle rien).
-    """
+    """Renvoie l'appartenance (avec son rôle) de `user_id` au projet `project_id`."""
 
     membership = (
         db.query(ProjectMember)
@@ -87,11 +70,7 @@ def _get_membership_or_404(
 
 
 def _require_role(membership: ProjectMember, *allowed: ProjectRole) -> None:
-    """Lève 403 si le rôle du membre n'est pas dans `allowed`.
-
-    Convention adoptée (à valider en groupe, cf SUIVI-PERSONNE-B.md point 2) :
-    owner = tout, editor = gère les tâches, viewer = lecture seule.
-    """
+    """Lève 403 si le rôle du membre n'est pas dans `allowed`."""
 
     if membership.role not in allowed:
         raise HTTPException(
@@ -99,24 +78,11 @@ def _require_role(membership: ProjectMember, *allowed: ProjectRole) -> None:
         )
 
 
-# Module bonus notifications : on n'en crée pas pour un compte inactif depuis
-# trop longtemps (évite d'accumuler des notifs qui ne seront jamais lues).
 NOTIFICATION_INACTIVITY_THRESHOLD = timedelta(days=182)  # ~6 mois
 
 
 def _user_is_notifiable(db: Session, user_id: uuid.UUID) -> bool:
-    """Faux si le compte est inactif depuis plus de 6 mois.
-
-    ⚠️ Approximation : le contrat commun n'a pas de champ `last_active_at` /
-    `last_login_at` sur `users`, donc on utilise `User.updated_at` comme
-    proxy — imprécis (ne bouge que si le profil est modifié, pas à chaque
-    connexion/action), mais c'est la seule donnée dispo sans changer le
-    schéma DB. À valider en équipe si un vrai champ de dernière activité
-    serait préférable (impliquerait de le rajouter au contrat, côté A).
-
-    `User.updated_at` est *timezone-aware* (`DateTime(timezone=True)` chez
-    A) — on compare donc avec un "now" timezone-aware aussi, sinon
-    `TypeError: can't subtract offset-naive and offset-aware datetimes`."""
+    """Faux si le compte est inactif depuis plus de 6 mois."""
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
@@ -136,9 +102,6 @@ def list_projects(
 ):
     """Liste les projets dont l'utilisateur connecté est membre (peu importe
     son rôle owner/editor/viewer) — pas tous les projets de la base.
-
-    Hypothèse à confirmer avec l'équipe (le contrat ne le précise pas
-    explicitement) : cf SUIVI-PERSONNE-B.md point 3.
     """
 
     projects = (
@@ -165,16 +128,11 @@ def create_project(
 ):
     """Crée un projet et ajoute automatiquement son créateur comme membre
     avec le rôle `owner`.
-
-    Ce membership automatique n'est pas une route à part : c'est un détail
-    d'implémentation nécessaire, sinon le créateur d'un projet ne pourrait
-    jamais repasser la vérification `_get_membership_or_404` sur son propre
-    projet.
     """
 
     project = Project(name=payload.name, description=payload.description, owner_id=current_user.id)
     db.add(project)
-    db.flush()  # attribue project.id sans encore commit, pour créer le membership
+    db.flush()
 
     owner_membership = ProjectMember(
         project_id=project.id, user_id=current_user.id, role=ProjectRole.OWNER
@@ -215,7 +173,7 @@ def get_project(
         data=ProjectDetailResponse(
             project=ProjectResponse.model_validate(project),
             members=[_serialize_member(m) for m in project.members],
-            tasks=[t for t in project.tasks],  # validé par le response_model
+            tasks=[t for t in project.tasks],
         )
     )
 
@@ -237,8 +195,6 @@ def update_project(
         not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
     )
 
-    # `exclude_unset=True` : on ne touche qu'aux champs réellement envoyés
-    # par le client, pas ceux laissés à leur valeur par défaut (None).
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(project, field, value)
@@ -265,9 +221,6 @@ def delete_project(
         not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
     )
 
-    # cascade="all, delete-orphan" sur Project.members et Project.tasks
-    # (cf models/project.py) : SQLAlchemy supprime aussi les membres et
-    # tâches associés.
     db.delete(project)
     db.commit()
 
@@ -302,17 +255,12 @@ def add_member(
     try:
         db.flush()
     except IntegrityError:
-        # soit `user_id` n'existe pas (FK), soit il est déjà membre
-        # (contrainte unique project_id+user_id) — cf models/project_member.py
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Utilisateur introuvable ou déjà membre de ce projet",
         )
 
-    # Module bonus notifications (cf 02-fiche-personne-B.md) : juste un
-    # insert en DB, pas de nouvelle logique complexe. Sauf si le destinataire
-    # est inactif depuis 6 mois (cf _user_is_notifiable).
     if _user_is_notifiable(db, payload.user_id):
         db.add(
             Notification(

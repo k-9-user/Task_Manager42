@@ -1,11 +1,3 @@
-"""Router FastAPI pour la messagerie de projet.
-
-Un mur de messages partagé par tous les membres d'un projet (owner, editor,
-viewer), pour communiquer sans passer par une tâche précise — contrairement
-aux commentaires (`routers/comments.py`), attachés à une tâche. Tout membre
-peut écrire ; seul l'auteur ou le owner du projet (modération) peut supprimer.
-"""
-
 import uuid
 from typing import Annotated
 
