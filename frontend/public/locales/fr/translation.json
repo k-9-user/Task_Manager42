@@ -170,7 +170,7 @@
 			"missing": "Aucune sauvegarde"
 		},
 		"backupTitle": "Sauvegardes et reprise après sinistre",
-		"backupBody": "La base de données et les fichiers envoyés sont sauvegardés automatiquement à intervalle fixe (toutes les heures par défaut), et les sauvegardes les plus récentes sont conservées. Après un incident, une seule commande, make restore, remet en place la dernière sauvegarde et relance le service."
+		"backupBody": "Vos projets, tâches et fichiers joints sont sauvegardés automatiquement à intervalles réguliers, et les copies les plus récentes sont conservées. En cas d'incident, le service peut être rétabli à partir de la dernière sauvegarde en quelques minutes."
 	},
 	"legal":
 	{

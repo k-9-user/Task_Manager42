@@ -170,7 +170,7 @@
 			"missing": "Sin copia"
 		},
 		"backupTitle": "Copias de seguridad y recuperación ante desastres",
-		"backupBody": "La base de datos y los archivos subidos se respaldan automáticamente a intervalos fijos (cada hora por defecto) y se conservan las copias más recientes. Tras un incidente, un solo comando, make restore, recupera la última copia y reinicia el servicio."
+		"backupBody": "Tus proyectos, tareas y archivos adjuntos se respaldan automáticamente a intervalos regulares, y se conservan las copias más recientes. Si ocurre un incidente, el servicio puede restablecerse a partir de la última copia en pocos minutos."
 	},
 	"legal":
 	{

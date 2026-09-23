@@ -170,7 +170,7 @@
 			"missing": "No backup"
 		},
 		"backupTitle": "Backups and disaster recovery",
-		"backupBody": "The database and uploaded files are backed up automatically on a fixed schedule (hourly by default), and the most recent backups are kept. After an incident, a single command, make restore, brings back the latest backup and restarts the service."
+		"backupBody": "Your projects, tasks and attached files are backed up automatically at regular intervals, and the most recent copies are kept. If an incident occurs, the service can be restored from the latest backup within minutes."
 	},
 	"legal":
 	{

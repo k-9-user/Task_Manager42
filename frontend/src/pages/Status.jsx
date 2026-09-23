@@ -59,7 +59,7 @@ function Status()
 			) : (
 				<div className={`flex items-center gap-3 rounded-xl border p-5 ${operational ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
 					<span className={`h-3 w-3 shrink-0 rounded-full ${operational ? "bg-green-500" : "bg-red-500"}`} />
-					<div>
+					<div className="text-left">
 						<p className={`m-0 font-semibold ${operational ? "text-green-700" : "text-red-700"}`}>
 							{operational ? t("status.operational") : t("status.degraded")}
 						</p>
@@ -73,7 +73,7 @@ function Status()
 			)}
 
 			<div className="rounded-xl border border-brand-surface-border bg-brand-surface p-5">
-				<h2 className="mb-2 mt-0 text-base text-[#2e1065]">{t("status.componentsTitle")}</h2>
+				<h2 className="mb-2 mt-0 text-[1.2rem] text-brand-primary-darker">{t("status.componentsTitle")}</h2>
 				<ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm text-[#4c1d95]">
 					<li className="flex items-center justify-between rounded-lg bg-brand-surface-alt px-3 py-2">
 						<span>API</span>
@@ -88,7 +88,7 @@ function Status()
 						</span>
 					</li>
 					<li className="flex items-center justify-between gap-3 rounded-lg bg-brand-surface-alt px-3 py-2">
-						<div>
+						<div className="text-left">
 							<span>{t("status.backups")}</span>
 							<p className="m-0 text-xs text-gray-500">
 								{t("status.lastBackup")} {lastBackup}
@@ -103,7 +103,7 @@ function Status()
 			</div>
 
 			<div className="rounded-xl border border-brand-surface-border bg-brand-surface p-5 text-sm text-[#4c1d95]">
-				<h2 className="mb-2 mt-0 text-base text-[#2e1065]">{t("status.backupTitle")}</h2>
+				<h2 className="mb-2 mt-0 text-[1.2rem] text-brand-primary-darker">{t("status.backupTitle")}</h2>
 				<p className="m-0">{t("status.backupBody")}</p>
 			</div>
 		</div>
