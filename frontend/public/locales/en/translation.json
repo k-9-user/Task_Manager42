@@ -5,7 +5,8 @@
 		"login": "Log in",
 		"logout": "Log out",
 		"search": "To Search",
-		"profile": "Profile"
+		"profile": "Profile",
+		"achievements": "Achievements"
 	},
 	"login":
 	{
@@ -185,13 +186,13 @@
 		"privacy":
 		{
 			"title": "Privacy Policy",
-			"updated": "Last updated: September 23, 2026",
+			"updated": "Last updated: September 24, 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Data we collect",
-					"body": "When you create an account, we collect your username, email address and password. If you sign in with Google, we receive your Google account ID, email address and profile picture instead of a password. We also store what you create in Task Manager: projects, tasks, comments, messages, files and API keys."
+					"body": "When you create an account, we collect your username, email address and password. If you sign in with Google, we receive your Google account ID, email address and profile picture instead of a password. We also store what you create in Task Manager: projects, tasks, comments, messages, files and API keys, plus your progress (XP, achievements and badges)."
 				},
 				"use":
 				{
@@ -267,5 +268,98 @@
 		"saving": "Saving...",
 		"saved": "Profile updated.",
 		"usernameInvalid": "Username: 3 to 50 characters, letters, digits, dot, dash or underscore."
+	},
+	"gamification":
+	{
+		"title": "Achievements",
+		"subtitle": "Unlock achievements to earn XP, level up and collect badges.",
+		"levelShort": "Lv {{level}}",
+		"levelLong": "Level {{level}}",
+		"totalXp": "{{xp}} XP in total",
+		"xpProgress": "{{current}} / {{needed}} XP",
+		"toNextLevel": "to level {{level}}",
+		"maxLevel": "Maximum level reached",
+		"levelProgress": "Level progress",
+		"noBadge": "No badge yet",
+		"nextBadge": "Next badge: {{badge}} at level {{level}}",
+		"allBadges": "All badges earned",
+		"seeAll": "See all achievements",
+		"badgesTitle": "Badges",
+		"badgeLevel": "Level {{level}} · {{xp}} XP",
+		"earnedOn": "Earned on {{date}}",
+		"unlockedOn": "Unlocked on {{date}}",
+		"locked": "Locked",
+		"count": "Counted: {{count}}",
+		"dailyLimit": "Daily limit reached: new actions count again within 24 hours.",
+		"rewardXp": "+{{xp}} XP",
+		"badges":
+		{
+			"planner": "Planner",
+			"organizer": "Organizer",
+			"achiever": "Achiever",
+			"strategist": "Strategist",
+			"grandmaster": "Grandmaster"
+		},
+		"tracks":
+		{
+			"projects":
+			{
+				"name": "Founder",
+				"goal_one": "Create {{count}} project",
+				"goal_other": "Create {{count}} projects"
+			},
+			"tasks_created":
+			{
+				"name": "Builder",
+				"goal_one": "Create {{count}} task",
+				"goal_other": "Create {{count}} tasks"
+			},
+			"tasks_completed":
+			{
+				"name": "Finisher",
+				"goal_one": "Complete {{count}} task",
+				"goal_other": "Complete {{count}} different tasks"
+			},
+			"comments":
+			{
+				"name": "Commentator",
+				"goal_one": "Post {{count}} comment",
+				"goal_other": "Post {{count}} comments"
+			},
+			"files":
+			{
+				"name": "Archivist",
+				"goal_one": "Upload {{count}} file",
+				"goal_other": "Upload {{count}} files"
+			},
+			"messages":
+			{
+				"name": "Messenger",
+				"goal_one": "Send {{count}} project message",
+				"goal_other": "Send {{count}} project messages"
+			},
+			"collaborators":
+			{
+				"name": "Team player",
+				"goal_one": "Add {{count}} person to your projects",
+				"goal_other": "Add {{count}} different people to your projects"
+			}
+		},
+		"rulesTitle": "How it works",
+		"rules":
+		{
+			"xp": "You earn XP by unlocking achievements. Each achievement unlocks once per account.",
+			"levels": "Your level depends on your total XP and goes up to level 100.",
+			"badges": "Badges are earned at levels 5, 10, 25, 50 and 100. Your highest badge becomes your title, shown next to your name.",
+			"counts": "Progress counts what you do in the app. Each project, task, comment, file, message or teammate counts once, forever.",
+			"limit": "To keep it fair, at most {{cap}} actions per category count in any 24 hours."
+		},
+		"toast":
+		{
+			"achievement": "Achievement unlocked: {{name}}",
+			"badge": "New badge: {{badge}} (level {{level}})",
+			"level": "Level {{level}} reached",
+			"close": "Close notification"
+		}
 	}
 }

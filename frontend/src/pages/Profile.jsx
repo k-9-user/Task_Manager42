@@ -4,6 +4,8 @@ import { updateMyProfile } from "../services/gdprService";
 import { isvalidusername } from "../utils/validation";
 import { useTranslation } from "react-i18next";
 import GdprPanel from "../components/GdprPanel";
+import ProgressCard from "../components/ProgressCard";
+import { getMyProgress } from "../services/gamificationService";
 import './Profile.css';
 
 
@@ -16,6 +18,7 @@ function Profile() {
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState("");
 	const [saved, setSaved] = useState(false);
+	const [progress, setProgress] = useState(null);
 	const { t } = useTranslation();
 
 	useEffect(() => {
@@ -37,6 +40,9 @@ function Profile() {
 	  }
 
 	fetchProfile();
+	getMyProgress()
+		.then(setProgress)
+		.catch(() => {});
 	}, []);
 
 	async function handleSave(e)
@@ -86,6 +92,7 @@ function Profile() {
 					</div>
 				</div>
 			</header>
+			{progress && <ProgressCard data={progress} />}
 			<form className="profile-edit" onSubmit={handleSave}>
 				<h2>{t("gdpr.editTitle")}</h2>
 				<label htmlFor="profile-username">{t("login.username")}</label>

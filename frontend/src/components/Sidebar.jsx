@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "../services/api";
 import LanguageSwitcher from "./LanguageSwitcher";
+import GamificationWidget from "./GamificationWidget";
 
 const LINK_BASE = "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-sidebar-text transition-colors hover:bg-white/10 hover:text-white";
 const LINK_ACTIVE = "bg-brand-primary text-white";
@@ -47,6 +48,9 @@ function Sidebar()
 					<NavLink to="/Profile" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
 						<span>👤</span> {t("navbar.profile")}
 					</NavLink>
+					<NavLink to="/achievements" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
+						<span>🏆</span> {t("navbar.achievements")}
+					</NavLink>
 					{isAdmin && (
 						<NavLink to="/admin/users" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
 							<span>🛡️</span> {t("admin.usermanag")}
@@ -54,6 +58,7 @@ function Sidebar()
 					)}
 				</nav>
 			)}
+			{isAuthen && <GamificationWidget />}
 			<div className="flex flex-col gap-3 border-t border-white/10 pt-4 max-sm:flex-row max-sm:items-center max-sm:border-t-0 max-sm:pt-0">
 				<LanguageSwitcher />
 				{isAuthen ? (

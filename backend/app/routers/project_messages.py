@@ -18,6 +18,7 @@ from app.schemas.project_message import (
     ProjectMessageListResponse,
     ProjectMessageResponse,
 )
+from app.services.gamification import Track, record_activity
 
 router = APIRouter(tags=["project-messages"])
 
@@ -77,6 +78,8 @@ def create_project_message(
         project_id=project_id, author_id=current_user.id, content=payload.content
     )
     db.add(message)
+    db.flush()
+    record_activity(db, current_user.id, Track.MESSAGES, message.id)
     db.commit()
     db.refresh(message)
 

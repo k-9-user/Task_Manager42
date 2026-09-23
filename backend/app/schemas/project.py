@@ -77,6 +77,8 @@ class ProjectMemberResponse(BaseModel):
     role: ProjectRole
     username: str
     email: EmailStr
+    level: int
+    badge: Optional[str] = None
 
 
 class ProjectMemberData(BaseModel):

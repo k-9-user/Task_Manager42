@@ -18,6 +18,7 @@ from app.models.project_message import ProjectMessage
 from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
+from app.services.gamification import build_summary
 from app.utils.locks import lock_admin_invariants
 from app.utils.mailer import send_mail
 
@@ -44,6 +45,33 @@ def _compact(row: dict) -> dict:
     """Retire les champs vides pour garder un export lisible."""
 
     return {key: value for key, value in row.items() if value not in (None, "", [])}
+
+
+def _gamification_export(summary: dict) -> dict | None:
+    activity = {track["key"]: track["count"] for track in summary["tracks"] if track["count"]}
+    if not activity:
+        return None
+    return _compact({
+        "xp": summary["progress"]["xp"],
+        "level": summary["progress"]["level"],
+        "title": summary["progress"]["badge"],
+        "activity": activity,
+        "badges": [
+            {"badge": badge["key"], "earned_at": _fmt_dt(badge["awarded_at"])}
+            for badge in summary["badges"]
+            if badge["awarded_at"] is not None
+        ],
+        "achievements": [
+            {
+                "achievement": achievement["key"],
+                "xp": achievement["xp"],
+                "unlocked_at": _fmt_dt(achievement["unlocked_at"]),
+            }
+            for track in summary["tracks"]
+            for achievement in track["achievements"]
+            if achievement["unlocked_at"] is not None
+        ],
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +234,7 @@ def export_my_data(
             for n in notifications
         ],
         "api_keys": [{"created_at": _fmt_dt(k.created_at)} for k in api_keys],
+        "gamification": _gamification_export(build_summary(db, user_id)),
     }
     export_data = {key: value for key, value in export_data.items() if value}
 

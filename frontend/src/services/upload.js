@@ -1,4 +1,5 @@
 import i18n from "../i18n";
+import { notifyActivity } from "./api";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -68,7 +69,10 @@ export function uploadWithProgress(endpoint, file, onProgress)
 				result = null;
 			}
 			if (result?.success)
+			{
+				notifyActivity();
 				return resolve(result.data);
+			}
 			if (xhr.status === 413)
 				return reject(new Error(i18n.t("attachments.errors.size", { max: MAX_UPLOAD_SIZE_MB })));
 			reject(new Error(result?.error || i18n.t("random.erupload")));

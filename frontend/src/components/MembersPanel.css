@@ -30,6 +30,14 @@
 	padding: 0.4rem 0.6rem;
 }
 
+.member-name {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
 .members-list li button {
 	background: transparent;
 	border: 1px solid var(--surface-border);

@@ -1,0 +1,22 @@
+.user-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.1rem 0.5rem;
+	border: 1px solid var(--surface-border);
+	border-radius: 999px;
+	background: var(--surface-alt);
+	color: var(--primary-dark);
+	font-size: 0.72rem;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.user-badge-earned {
+	background: var(--primary-soft);
+}
+
+.user-badge-level {
+	color: #6b5a8a;
+	font-weight: 500;
+}

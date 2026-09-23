@@ -19,6 +19,7 @@ from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User
 from app.routers.projects import _get_membership_or_404
+from app.services.gamification import Track, record_activity
 from app.utils.validators import has_control_characters
 
 
@@ -174,6 +175,8 @@ async def upload_attachment(
             uploaded_by=current_user.id,
         )
         db.add(attachment)
+        db.flush()
+        record_activity(db, current_user.id, Track.FILES, attachment.id)
         db.commit()
     except BaseException:
         db.rollback()

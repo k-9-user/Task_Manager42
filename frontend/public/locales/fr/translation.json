@@ -5,7 +5,8 @@
 		"login": "Se connecter",
 		"logout": "Déconnexion",
 		"search": "Rechercher",
-		"profile": "Profile"
+		"profile": "Profile",
+		"achievements": "Succès"
 	},
 	"login":
 	{
@@ -185,13 +186,13 @@
 		"privacy":
 		{
 			"title": "Politique de confidentialité",
-			"updated": "Dernière mise à jour : 23 septembre 2026",
+			"updated": "Dernière mise à jour : 24 septembre 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Données collectées",
-					"body": "Lors de la création de votre compte, nous collectons votre nom d'utilisateur, votre adresse email et votre mot de passe. Si vous vous connectez avec Google, nous recevons l'identifiant de votre compte Google, votre adresse email et votre photo de profil, sans mot de passe. Nous conservons aussi ce que vous créez dans Task Manager : projets, tâches, commentaires, messages, fichiers et clés API."
+					"body": "Lors de la création de votre compte, nous collectons votre nom d'utilisateur, votre adresse email et votre mot de passe. Si vous vous connectez avec Google, nous recevons l'identifiant de votre compte Google, votre adresse email et votre photo de profil, sans mot de passe. Nous conservons aussi ce que vous créez dans Task Manager : projets, tâches, commentaires, messages, fichiers et clés API, ainsi que votre progression (XP, succès et badges)."
 				},
 				"use":
 				{
@@ -267,5 +268,98 @@
 		"saving": "Enregistrement...",
 		"saved": "Profil mis à jour.",
 		"usernameInvalid": "Nom d'utilisateur : 3 à 50 caractères, lettres, chiffres, point, tiret ou underscore."
+	},
+	"gamification":
+	{
+		"title": "Succès",
+		"subtitle": "Débloquez des succès pour gagner de l'XP, monter de niveau et collectionner des badges.",
+		"levelShort": "Niv. {{level}}",
+		"levelLong": "Niveau {{level}}",
+		"totalXp": "{{xp}} XP au total",
+		"xpProgress": "{{current}} / {{needed}} XP",
+		"toNextLevel": "jusqu'au niveau {{level}}",
+		"maxLevel": "Niveau maximum atteint",
+		"levelProgress": "Progression du niveau",
+		"noBadge": "Pas encore de badge",
+		"nextBadge": "Prochain badge : {{badge}} au niveau {{level}}",
+		"allBadges": "Tous les badges sont obtenus",
+		"seeAll": "Voir tous les succès",
+		"badgesTitle": "Badges",
+		"badgeLevel": "Niveau {{level}} · {{xp}} XP",
+		"earnedOn": "Obtenu le {{date}}",
+		"unlockedOn": "Débloqué le {{date}}",
+		"locked": "Verrouillé",
+		"count": "Comptés : {{count}}",
+		"dailyLimit": "Limite du jour atteinte : les nouvelles actions compteront à nouveau d'ici 24 heures.",
+		"rewardXp": "+{{xp}} XP",
+		"badges":
+		{
+			"planner": "Planificateur",
+			"organizer": "Organisateur",
+			"achiever": "Battant",
+			"strategist": "Stratège",
+			"grandmaster": "Grand maître"
+		},
+		"tracks":
+		{
+			"projects":
+			{
+				"name": "Fondateur",
+				"goal_one": "Créer {{count}} projet",
+				"goal_other": "Créer {{count}} projets"
+			},
+			"tasks_created":
+			{
+				"name": "Bâtisseur",
+				"goal_one": "Créer {{count}} tâche",
+				"goal_other": "Créer {{count}} tâches"
+			},
+			"tasks_completed":
+			{
+				"name": "Finisseur",
+				"goal_one": "Terminer {{count}} tâche",
+				"goal_other": "Terminer {{count}} tâches différentes"
+			},
+			"comments":
+			{
+				"name": "Commentateur",
+				"goal_one": "Publier {{count}} commentaire",
+				"goal_other": "Publier {{count}} commentaires"
+			},
+			"files":
+			{
+				"name": "Archiviste",
+				"goal_one": "Envoyer {{count}} fichier",
+				"goal_other": "Envoyer {{count}} fichiers"
+			},
+			"messages":
+			{
+				"name": "Messager",
+				"goal_one": "Envoyer {{count}} message de projet",
+				"goal_other": "Envoyer {{count}} messages de projet"
+			},
+			"collaborators":
+			{
+				"name": "Esprit d'équipe",
+				"goal_one": "Ajouter {{count}} personne à vos projets",
+				"goal_other": "Ajouter {{count}} personnes différentes à vos projets"
+			}
+		},
+		"rulesTitle": "Comment ça marche",
+		"rules":
+		{
+			"xp": "Vous gagnez de l'XP en débloquant des succès. Chaque succès se débloque une seule fois par compte.",
+			"levels": "Votre niveau dépend de votre XP totale et va jusqu'au niveau 100.",
+			"badges": "Les badges s'obtiennent aux niveaux 5, 10, 25, 50 et 100. Votre meilleur badge devient votre titre, affiché à côté de votre nom.",
+			"counts": "La progression compte ce que vous faites dans l'application. Chaque projet, tâche, commentaire, fichier, message ou coéquipier compte une seule fois, pour toujours.",
+			"limit": "Pour rester équitable, au plus {{cap}} actions par catégorie comptent sur 24 heures."
+		},
+		"toast":
+		{
+			"achievement": "Succès débloqué : {{name}}",
+			"badge": "Nouveau badge : {{badge}} (niveau {{level}})",
+			"level": "Niveau {{level}} atteint",
+			"close": "Fermer la notification"
+		}
 	}
 }
