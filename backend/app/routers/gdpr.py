@@ -107,7 +107,12 @@ def delete_my_account(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD)."""
+    """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD).
+
+    Les projets sans autre membre sont supprimés; sinon leur propriété est
+    transférée. Les appartenances sont retirées et les tâches assignées sont
+    conservées avec ``assignee_id`` remis à ``NULL``.
+    """
 
     if not payload.confirm:
         raise HTTPException(
