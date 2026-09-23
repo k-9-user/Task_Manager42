@@ -85,8 +85,38 @@
 	accent-color: var(--accent);
 }
 
+.upload-block {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
+}
+
+.upload-block .upload-progress {
+	align-self: stretch;
+}
+
 .upload-hint {
-	display: block;
+	display: flex;
+	flex-direction: column;
 	font-size: 0.75rem;
 	opacity: 0.7;
+}
+
+.task-atachments li {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	overflow-wrap: anywhere;
+}
+
+.attachment-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.task-card .attachment-actions button {
+	padding: 0.15rem 0.45rem;
+	font-size: 0.72rem;
 }

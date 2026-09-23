@@ -112,10 +112,10 @@
 	"attachments":
 	{
 		"preview": "Prévisualiser",
-		"openPreview": "Ouvrir l'aperçu",
 		"download": "Télécharger",
 		"delete": "Supprimer",
-		"hint": "Formats acceptés : {{types}} · {{max}} Mo max",
+		"hintTypes": "Formats acceptés : {{types}}",
+		"hintSize": "Taille max : {{max}} Mo",
 		"progress": "Progression de l'envoi",
 		"errors":
 		{

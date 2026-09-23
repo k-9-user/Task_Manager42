@@ -69,7 +69,7 @@ function AttachmentUpload({ taskId, uploadsuccess})
 		}
 	}
 	return (
-		<div className="attachement-upload">
+		<div className="attachement-upload upload-block">
 			<input ref={fileInputRef} type="file" accept={acceptAttr(ATTACHMENT_TYPES)} onChange={handleFileChange} hidden />
 			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
 				{t("random.addfichier")}
@@ -86,9 +86,10 @@ function AttachmentUpload({ taskId, uploadsuccess})
 					<span>{progress}%</span>
 				</div>
 			)}
-			<small className="upload-hint">
-				{t("attachments.hint", { types: typesLabel(ATTACHMENT_TYPES), max: MAX_UPLOAD_SIZE_MB })}
-			</small>
+			<div className="upload-hint">
+				<small>{t("attachments.hintTypes", { types: typesLabel(ATTACHMENT_TYPES) })}</small>
+				<small>{t("attachments.hintSize", { max: MAX_UPLOAD_SIZE_MB })}</small>
+			</div>
 			{error && <p className="error">{error}</p>}
 		</div>
 	);

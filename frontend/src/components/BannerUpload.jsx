@@ -69,7 +69,7 @@ function BannerUpload({ taskId, uploadsuccess })
 		}
 	}
 	return (
-		<div className="banner-upload">
+		<div className="banner-upload upload-block">
 			<input ref={fileInputRef} type="file" accept={acceptAttr(BANNER_TYPES)} onChange={handleFileChange} hidden />
 			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
 				{t("random.addbanniere")}
@@ -86,9 +86,10 @@ function BannerUpload({ taskId, uploadsuccess })
 					<span>{progress}%</span>
 				</div>
 			)}
-			<small className="upload-hint">
-				{t("attachments.hint", { types: typesLabel(BANNER_TYPES), max: MAX_UPLOAD_SIZE_MB })}
-			</small>
+			<div className="upload-hint">
+				<small>{t("attachments.hintTypes", { types: typesLabel(BANNER_TYPES) })}</small>
+				<small>{t("attachments.hintSize", { max: MAX_UPLOAD_SIZE_MB })}</small>
+			</div>
 			{error && <p className="error">{error}</p>}
 		</div>
 	);

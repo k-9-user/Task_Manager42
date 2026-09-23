@@ -112,10 +112,10 @@
 	"attachments":
 	{
 		"preview": "Preview",
-		"openPreview": "Open preview",
 		"download": "Download",
 		"delete": "Delete",
-		"hint": "Allowed: {{types}} · max {{max}} MB",
+		"hintTypes": "Allowed formats: {{types}}",
+		"hintSize": "Max size: {{max}} MB",
 		"progress": "Upload progress",
 		"errors":
 		{
