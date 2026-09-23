@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -13,8 +12,6 @@ from app.models.user_badge import UserBadge
 from app.services.gamification.catalog import (
     ACHIEVEMENTS,
     BADGES,
-    DAILY_CAP,
-    DAILY_WINDOW,
     MAX_LEVEL,
     Track,
     badge_for,
@@ -29,17 +26,14 @@ class Rank:
     badge: str | None
 
 
-def track_counts(
-    db: Session, user_id: UUID, since: datetime | None = None
-) -> dict[str, int]:
-    query = (
-        select(UserActivity.track, func.count())
-        .where(UserActivity.user_id == user_id)
-        .group_by(UserActivity.track)
+def track_counts(db: Session, user_id: UUID) -> dict[str, int]:
+    return dict(
+        db.execute(
+            select(UserActivity.track, func.count())
+            .where(UserActivity.user_id == user_id)
+            .group_by(UserActivity.track)
+        ).all()
     )
-    if since is not None:
-        query = query.where(UserActivity.created_at >= since)
-    return dict(db.execute(query).all())
 
 
 def total_xp(db: Session, user_id: UUID) -> int:
@@ -78,7 +72,6 @@ def build_summary(db: Session, user_id: UUID) -> dict[str, Any]:
         for row in db.scalars(select(UserBadge).where(UserBadge.user_id == user_id))
     }
     counts = track_counts(db, user_id)
-    recent = track_counts(db, user_id, since=datetime.now(timezone.utc) - DAILY_WINDOW)
     xp = sum(row.xp for row in unlocked.values())
     level = level_for(xp)
 
@@ -90,7 +83,6 @@ def build_summary(db: Session, user_id: UUID) -> dict[str, Any]:
             "next_level_xp": xp_for_level(level + 1) if level < MAX_LEVEL else None,
             "badge": badge_for(level),
         },
-        "daily_cap": DAILY_CAP,
         "badges": [
             {
                 "key": badge.key,
@@ -104,7 +96,6 @@ def build_summary(db: Session, user_id: UUID) -> dict[str, Any]:
             {
                 "key": track.value,
                 "count": counts.get(track.value, 0),
-                "recent": recent.get(track.value, 0),
                 "achievements": [
                     {
                         "key": achievement.key,

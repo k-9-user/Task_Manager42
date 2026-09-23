@@ -104,14 +104,6 @@
 	font-size: 0.8rem;
 }
 
-.track-limit {
-	padding: 0.4rem 0.6rem;
-	border-radius: 0.5rem;
-	background: #fff7ed;
-	color: #9a3412;
-	font-size: 0.8rem;
-}
-
 .tier-list {
 	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
 }

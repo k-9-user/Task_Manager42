@@ -290,7 +290,6 @@
 		"unlockedOn": "Desbloqueado el {{date}}",
 		"locked": "Bloqueado",
 		"count": "Contados: {{count}}",
-		"dailyLimit": "Límite diario alcanzado: las nuevas acciones volverán a contar dentro de 24 horas.",
 		"rewardXp": "+{{xp}} XP",
 		"badges":
 		{
@@ -351,8 +350,7 @@
 			"xp": "Ganas XP desbloqueando logros. Cada logro se desbloquea una sola vez por cuenta.",
 			"levels": "Tu nivel depende de tu XP total y llega hasta el nivel 100.",
 			"badges": "Las insignias se obtienen en los niveles 5, 10, 25, 50 y 100. Tu mejor insignia se convierte en tu título y aparece junto a tu nombre.",
-			"counts": "El progreso cuenta lo que haces en la aplicación. Cada proyecto, tarea, comentario, archivo, mensaje o compañero cuenta una sola vez, para siempre.",
-			"limit": "Para que sea justo, como máximo {{cap}} acciones por categoría cuentan en 24 horas."
+			"counts": "El progreso cuenta lo que haces en la aplicación. Cada proyecto, tarea, comentario, archivo, mensaje o compañero cuenta una sola vez, para siempre."
 		},
 		"toast":
 		{

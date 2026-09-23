@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -10,8 +9,6 @@ from app.models.user_badge import UserBadge
 from app.services.gamification.catalog import (
     ACHIEVEMENTS,
     BADGES,
-    DAILY_CAP,
-    DAILY_WINDOW,
     Track,
     level_for,
 )
@@ -26,9 +23,6 @@ def record_activity(db: Session, user_id: UUID, track: Track, subject_id: UUID) 
 
     _lock_user_progress(db, user_id)
     if _already_counted(db, user_id, track, subject_id):
-        return
-    since = datetime.now(timezone.utc) - DAILY_WINDOW
-    if track_counts(db, user_id, since=since).get(track.value, 0) >= DAILY_CAP:
         return
 
     db.add(UserActivity(user_id=user_id, track=track.value, subject_id=subject_id))

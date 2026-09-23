@@ -28,12 +28,10 @@ class AchievementResponse(BaseModel):
 class TrackResponse(BaseModel):
     key: str
     count: int
-    recent: int
     achievements: list[AchievementResponse]
 
 
 class GamificationData(BaseModel):
     progress: ProgressResponse
-    daily_cap: int
     badges: list[BadgeResponse]
     tracks: list[TrackResponse]

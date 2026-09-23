@@ -290,7 +290,6 @@
 		"unlockedOn": "Unlocked on {{date}}",
 		"locked": "Locked",
 		"count": "Counted: {{count}}",
-		"dailyLimit": "Daily limit reached: new actions count again within 24 hours.",
 		"rewardXp": "+{{xp}} XP",
 		"badges":
 		{
@@ -351,8 +350,7 @@
 			"xp": "You earn XP by unlocking achievements. Each achievement unlocks once per account.",
 			"levels": "Your level depends on your total XP and goes up to level 100.",
 			"badges": "Badges are earned at levels 5, 10, 25, 50 and 100. Your highest badge becomes your title, shown next to your name.",
-			"counts": "Progress counts what you do in the app. Each project, task, comment, file, message or teammate counts once, forever.",
-			"limit": "To keep it fair, at most {{cap}} actions per category count in any 24 hours."
+			"counts": "Progress counts what you do in the app. Each project, task, comment, file, message or teammate counts once, forever."
 		},
 		"toast":
 		{

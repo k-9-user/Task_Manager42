@@ -2,11 +2,10 @@
 
 import json
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
 from threading import Event
 
 from fastapi.testclient import TestClient
-from sqlalchemy import event, func, select, update
+from sqlalchemy import event, func, select
 
 from app.main import app
 from app.routers import gdpr as gdpr_router
@@ -16,7 +15,6 @@ from app.models.user_badge import UserBadge
 from app.services.gamification.catalog import (
     ACHIEVEMENTS,
     BADGES,
-    DAILY_CAP,
     LEVEL_XP,
     MAX_LEVEL,
     TIER_XP,
@@ -211,26 +209,6 @@ def test_same_collaborator_counts_once(client, make_user, db_session):
     assert _counts(db_session, user_id)["collaborators"] == 1
 
 
-def test_daily_cap_limits_counted_actions_per_track(client, db_session):
-    user_id = client.current_user.id
-    task_id = _task(client, _project(client))
-
-    for index in range(DAILY_CAP + 1):
-        _comment(client, task_id, f"Comment {index}")
-
-    assert _counts(db_session, user_id)["comments"] == DAILY_CAP
-
-    db_session.execute(
-        update(UserActivity)
-        .where(UserActivity.user_id == user_id)
-        .values(created_at=datetime.now(timezone.utc) - timedelta(hours=25))
-    )
-    db_session.commit()
-    _comment(client, task_id, "Next day")
-
-    assert _counts(db_session, user_id)["comments"] == DAILY_CAP + 1
-
-
 def test_refused_actions_record_nothing(client, make_user, login_as, db_session):
     project_id = _project(client)
     task_id = _task(client, project_id)
@@ -341,7 +319,6 @@ def test_progress_summary_for_new_user(client):
     assert data["progress"] == {
         "xp": 0, "level": 1, "level_xp": 0, "next_level_xp": 50, "badge": None,
     }
-    assert data["daily_cap"] == DAILY_CAP
     assert [badge["key"] for badge in data["badges"]] == [badge.key for badge in BADGES]
     assert all(badge["awarded_at"] is None for badge in data["badges"])
     assert [track["key"] for track in data["tracks"]] == [track.value for track in Track]
@@ -358,7 +335,7 @@ def test_progress_summary_after_actions(client):
     assert data["progress"] == {
         "xp": 105, "level": 3, "level_xp": 102, "next_level_xp": 156, "badge": None,
     }
-    assert (tracks["projects"]["count"], tracks["projects"]["recent"]) == (1, 1)
+    assert tracks["projects"]["count"] == 1
     assert tracks["projects"]["achievements"][0]["unlocked_at"] is not None
     assert tracks["projects"]["achievements"][1]["unlocked_at"] is None
     assert [badge["key"] for badge in data["badges"] if badge["awarded_at"]] == []

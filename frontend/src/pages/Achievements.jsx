@@ -6,7 +6,7 @@ import { getMyProgress } from "../services/gamificationService";
 import { BADGE_ICONS, formatDate, tierLabel } from "../utils/gamification";
 import "./Achievements.css";
 
-const RULES = ["xp", "levels", "badges", "counts", "limit"];
+const RULES = ["xp", "levels", "badges", "counts"];
 
 function Achievements()
 {
@@ -56,7 +56,6 @@ function Achievements()
 						<h2>{t(`gamification.tracks.${track.key}.name`)}</h2>
 						<span className="track-count">{t("gamification.count", { count: track.count })}</span>
 					</div>
-					{track.recent >= data.daily_cap && <p className="track-limit">{t("gamification.dailyLimit")}</p>}
 					<ul className="tier-list">
 						{track.achievements.map((achievement, index) => {
 							const goal = t(`gamification.tracks.${track.key}.goal`, { count: achievement.threshold });
@@ -89,7 +88,7 @@ function Achievements()
 				<h2>{t("gamification.rulesTitle")}</h2>
 				<ul className="rules-list">
 					{RULES.map((rule) => (
-						<li key={rule}>{t(`gamification.rules.${rule}`, { cap: data.daily_cap })}</li>
+						<li key={rule}>{t(`gamification.rules.${rule}`)}</li>
 					))}
 				</ul>
 			</section>

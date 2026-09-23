@@ -1,6 +1,5 @@
 from bisect import bisect_right
 from dataclasses import dataclass
-from datetime import timedelta
 from enum import StrEnum
 from itertools import accumulate
 
@@ -30,8 +29,6 @@ class Badge:
 
 
 MAX_LEVEL = 100
-DAILY_CAP = 20
-DAILY_WINDOW = timedelta(hours=24)
 LEVEL_BASE_XP = 50
 LEVEL_GROWTH = 1.035
 TIER_XP = (35, 105, 315, 945, 2835, 8505)
