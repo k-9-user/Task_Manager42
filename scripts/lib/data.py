@@ -49,7 +49,7 @@ def clear_data_dir(path):
 
 
 def list_backups(postgres_db):
-    """Complete backups, oldest first. In-progress ones are dot-prefixed and never match."""
+    """Complete backups, oldest first: both archives present as regular files."""
 
     directory = backups_dir()
     require(not directory.is_symlink(), f"{directory} must not be a symlink")
@@ -58,5 +58,9 @@ def list_backups(postgres_db):
     pattern = re.compile(re.escape(postgres_db) + r"-[0-9]{8}T[0-9]{6}Z")
     return sorted(
         entry.name for entry in directory.iterdir()
-        if entry.is_dir() and not entry.is_symlink() and pattern.fullmatch(entry.name)
+        if entry.is_dir()
+        and not entry.is_symlink()
+        and pattern.fullmatch(entry.name)
+        and all((entry / part).is_file() and not (entry / part).is_symlink()
+                for part in ("database.sql.gz", "uploads.tar.gz"))
     )

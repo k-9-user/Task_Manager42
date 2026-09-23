@@ -60,6 +60,20 @@ class BackupTests(unittest.TestCase):
                 backup.restore_backup(self.env, "default", "taskmanager")
             run.assert_not_called()
 
+    def test_restore_never_offers_an_incomplete_backup(self):
+        with backups(self.older, self.newer) as data:
+            (data / paths.DATA_BACKUPS / self.newer / "uploads.tar.gz").unlink()
+            with patch.object(backup, "run") as run, \
+                    patch("builtins.input", return_value="restore") as confirm:
+                name = backup.restore_backup(self.env, "default", "taskmanager")
+            with self.assertRaisesRegex(ValueError, "Unknown backup"), patch("builtins.input") as never:
+                backup.restore_backup(self.env, "default", "taskmanager", self.newer)
+            never.assert_not_called()
+
+        self.assertEqual(name, self.older)
+        self.assertIn(f"{self.older} (latest) (1 available)", confirm.call_args.args[0])
+        self.assertEqual(run.call_args_list[1].args[0][-1], self.older)
+
     def test_failed_restore_still_restarts_the_stack_and_reports_the_error(self):
         steps = []
 

@@ -67,6 +67,16 @@ referenced_uploads() {
 
 archived_uploads() { tar -tzf "$1" | sed -n 's|^\./\(..*\)$|\1|p' | sort -u; }
 
+# Uploads are flat: only the ./ directory and plain files directly under it are accepted.
+archive_is_flat() {
+    tar -tvzf "$1" | awk '
+        NF != 6 { bad = 1 }
+        substr($1, 1, 1) == "d" && $6 == "./" { next }
+        substr($1, 1, 1) != "-" || $6 !~ /^\.\/[^\/.][^\/]*$/ { bad = 1 }
+        END { exit bad }
+    '
+}
+
 # $1 plain dump, $2 sorted archived names: every upload the dump references must be archived.
 uploads_complete() {
     missing="$(referenced_uploads "$1" | comm -23 - "$2")"
@@ -192,6 +202,7 @@ restore_now() {
     log "checking $name"
     { gunzip -c "$source/database.sql.gz" > "$sql" && dump_is_complete "$sql"; } \
         || die "corrupt or truncated database dump in $name"
+    archive_is_flat "$source/uploads.tar.gz" || die "unsafe entries in uploads archive of $name"
     tar -xzf "$source/uploads.tar.gz" -C "$STAGING/new" || die "corrupt uploads archive in $name"
     archived_uploads "$source/uploads.tar.gz" > "$STAGING/names"
     uploads_complete "$sql" "$STAGING/names" || die "inconsistent backup: $name"

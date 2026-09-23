@@ -106,4 +106,6 @@ def backups(*names):
         directory.mkdir()
         for name in names:
             (directory / name).mkdir()
+            for part in ("database.sql.gz", "uploads.tar.gz"):
+                (directory / name / part).write_text("archive")
         yield data
