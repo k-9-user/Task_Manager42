@@ -16,6 +16,7 @@ from app.auth.security import (
     hash_password,
     verify_password_and_update,
 )
+from app.config import get_settings
 from app.database import SessionLocal
 from app.main import app
 from app.models.user import User, UserRole, UserStatus
@@ -110,13 +111,100 @@ def test_access_tokens_round_trip_and_reject_invalid_values() -> None:
 
 def test_registration_schema_is_strict() -> None:
     invalid_payloads = (
-        {**VALID_REGISTRATION, "password": "too-short"},
+        {**VALID_REGISTRATION, "password": "short"},
         {**VALID_REGISTRATION, "username": "spaces are invalid"},
         {**VALID_REGISTRATION, "unexpected": True},
     )
     for payload in invalid_payloads:
         with pytest.raises(ValidationError):
             UserRegister.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    "password",
+    ("sixsix", "a" * 128, "mot de passe", "éàçüñß", "🔑" * 6, "  pad  "),
+)
+def test_registration_accepts_every_visible_password(password: str) -> None:
+    registration = UserRegister.model_validate(
+        {**VALID_REGISTRATION, "password": password}
+    )
+
+    assert registration.password.get_secret_value() == password
+
+
+@pytest.mark.parametrize(
+    "password",
+    ("fives", "🔑" * 5, "a" * 129, "a\tbcdef", "abc\ndef", "abc\x7fdef", "abc\x00def"),
+)
+def test_registration_rejects_short_long_or_invisible_passwords(password: str) -> None:
+    with pytest.raises(ValidationError):
+        UserRegister.model_validate({**VALID_REGISTRATION, "password": password})
+
+
+def test_password_min_length_follows_the_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PASSWORD_MIN_LENGTH", "10")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValidationError):
+            UserRegister.model_validate(
+                {**VALID_REGISTRATION, "password": "eightchr"}
+            )
+        assert UserRegister.model_validate(
+            {**VALID_REGISTRATION, "password": "tencharact"}
+        )
+    finally:
+        get_settings.cache_clear()
+
+
+def test_password_max_length_follows_the_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PASSWORD_MAX_LENGTH", "20")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValidationError):
+            UserRegister.model_validate({**VALID_REGISTRATION, "password": "a" * 21})
+        with pytest.raises(ValidationError):
+            UserLogin.model_validate({"identifier": "first_user", "password": "a" * 21})
+        assert UserRegister.model_validate({**VALID_REGISTRATION, "password": "a" * 20})
+    finally:
+        get_settings.cache_clear()
+
+
+def test_openapi_documents_the_configured_password_limits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    register = UserRegister.model_json_schema()["properties"]["password"]
+    login = UserLogin.model_json_schema()["properties"]["password"]
+    assert (register["minLength"], register["maxLength"]) == (6, 128)
+    assert (login["minLength"], login["maxLength"]) == (1, 128)
+
+    monkeypatch.setenv("PASSWORD_MIN_LENGTH", "10")
+    get_settings.cache_clear()
+    try:
+        assert UserRegister.model_json_schema()["properties"]["password"]["minLength"] == 10
+    finally:
+        get_settings.cache_clear()
+
+
+def test_register_route_enforces_the_password_minimum(client: TestClient) -> None:
+    too_short = client.post(
+        "/api/auth/register",
+        json={**VALID_REGISTRATION, "password": "fives"},
+    )
+    minimum = client.post(
+        "/api/auth/register",
+        json={**VALID_REGISTRATION, "password": "sixsix"},
+    )
+
+    assert too_short.status_code == 422
+    assert minimum.status_code == 201
+
+
+def test_login_accepts_any_stored_password_length() -> None:
+    assert UserLogin.model_validate({"identifier": "first_user", "password": "x"})
 
 
 def test_login_schema_is_strict_and_trims_the_identifier() -> None:
@@ -385,6 +473,26 @@ def test_successful_login_returns_a_usable_token(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert current_user.status_code == 200
+
+
+def test_login_normalizes_email_identifiers_like_registration(
+    client: TestClient,
+) -> None:
+    registration = client.post(
+        "/api/auth/register",
+        json={**VALID_REGISTRATION, "email": "first@example.xn--p1ai"},
+    )
+    assert registration.status_code == 201
+
+    for identifier in ("first@example.xn--p1ai", "FIRST@EXAMPLE.рф"):
+        response = client.post(
+            "/api/auth/login",
+            json={
+                "identifier": identifier,
+                "password": VALID_REGISTRATION["password"],
+            },
+        )
+        assert response.status_code == 200, identifier
 
 
 def test_login_rejects_the_legacy_email_field(client: TestClient) -> None:

@@ -72,7 +72,7 @@ def setup_configuration(root=ROOT):
         if migrated:
             print("Migrated local URLs to default HTTPS ports; preserved secret files.")
         if missing:
-            print("Added default backup settings to .env; preserved secret files.")
+            print("Added new default settings to .env; preserved secret files.")
         if not migrated and not missing:
             print("Preserved existing .env and secret files.")
         return

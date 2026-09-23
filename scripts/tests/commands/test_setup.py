@@ -42,7 +42,7 @@ class SetupTests(unittest.TestCase):
 
             self.assertEqual(env.read_env(root / ".env"), custom)
             self.assertEqual(secret_files.read_secret_files(root / "secrets"), self.secret_values)
-            self.assertIn("Added default backup settings", output.getvalue())
+            self.assertIn("Added new default settings", output.getvalue())
 
     def test_fresh_setup_creates_private_secret_files_without_printing_values(self):
         with tempfile.TemporaryDirectory() as temporary:

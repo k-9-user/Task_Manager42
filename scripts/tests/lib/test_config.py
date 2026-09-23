@@ -31,9 +31,10 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(output.getvalue(), "")
 
     def test_invalid_config_is_rejected_without_values(self):
-        env_cases = [(key, value) for key in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB",
+        env_cases = [(key, value) for key in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB", "PASSWORD_MIN_LENGTH", "PASSWORD_MAX_LENGTH",
                                               "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION")
                      for value in ("", "0", "00", "-1", "1.5", "no", "1e3")]
+        env_cases += [("PASSWORD_MIN_LENGTH", "129"), ("PASSWORD_MAX_LENGTH", "5")]
         env_cases += [
             ("UPLOAD_DIR", "/tmp/uploads"),
             ("OAUTH_GOOGLE_REDIRECT_URI", ""),
@@ -57,7 +58,8 @@ class ConfigTests(unittest.TestCase):
             ("database_url", "postgresql://private:credential@db:5432/other"),
             ("oauth_session_secret", self.secret_values["jwt_secret"]),
             ("jwt_secret", "replace_with_" + "x" * 40),
-            ("bootstrap_admin_password", "too-short"),
+            ("bootstrap_admin_password", "short"),
+            ("bootstrap_admin_password", "a" * 129),
         ]
         for key, value in secret_cases:
             with self.subTest(key=key), contextlib.redirect_stderr(io.StringIO()), \

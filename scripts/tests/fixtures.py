@@ -19,6 +19,8 @@ def valid_env():
         "CORS_ORIGINS": "https://localhost",
         "UPLOAD_DIR": "/app/uploads",
         "MAX_UPLOAD_SIZE_MB": "10",
+        "PASSWORD_MIN_LENGTH": "6",
+        "PASSWORD_MAX_LENGTH": "128",
         "FORWARDED_ALLOW_IPS": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
         "BOOTSTRAP_ADMIN_EMAIL": "admin@example.com",
         "BOOTSTRAP_ADMIN_USERNAME": "admin",

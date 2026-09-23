@@ -10,6 +10,7 @@ from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from joserfc.errors import JoseError
+from pydantic import EmailStr, TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -51,6 +52,7 @@ GOOGLE_ISSUERS = (
 )
 OAUTH_HANDOFF_KEY = "google_handoff"
 OAUTH_HANDOFF_MAX_AGE_SECONDS = 60
+EMAIL_ADAPTER = TypeAdapter(EmailStr)
 
 
 def _auth_response(user: User) -> AuthResponse:
@@ -84,6 +86,14 @@ def _oauth_exchange_error() -> HTTPException:
 
 def _hash_oauth_handoff(raw_handoff: str) -> str:
     return hashlib.sha256(raw_handoff.encode("utf-8")).hexdigest()
+
+
+def _stored_email_form(identifier: str) -> str:
+    email = normalize_email(identifier)
+    try:
+        return str(EMAIL_ADAPTER.validate_python(email))
+    except PydanticValidationError:
+        return email
 
 
 def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
@@ -243,7 +253,7 @@ def login(
 
     identifier = payload.identifier
     if "@" in identifier:
-        lookup = User.email == normalize_email(identifier)
+        lookup = User.email == _stored_email_form(identifier)
     else:
         lookup = func.lower(User.username) == identifier.lower()
     user = db.scalar(select(User).where(lookup))

@@ -21,6 +21,48 @@
 	font-size: 0.85rem;
 	color: #2c1a4d;
 }
+
+.profile-header {
+	width: 100%;
+	max-width: 42rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.profile-header h1 {
+	margin: 0;
+}
+
+.profile-identity {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.profile-avatar {
+	width: 64px;
+	height: 64px;
+	flex-shrink: 0;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--color-brand-surface-border);
+}
+
+.profile-identity p {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.profile-page .profile-username {
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.profile-page .profile-email {
+	color: #6b5a8a;
+}
 .profile-edit {
 	width: 100%;
 	max-width: 42rem;

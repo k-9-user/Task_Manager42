@@ -76,10 +76,16 @@ function Profile() {
 
 	return (
 		<div className="profile-page">
-			<h1>{t("random.myprofile")}</h1>
-			<p>{t("login.username")} : {user.username} </p>
-			<p>Email : {user.email}</p>
-			<img src={user.avatar_url} alt="avatar" />
+			<header className="profile-header">
+				<h1>{t("random.myprofile")}</h1>
+				<div className="profile-identity">
+					<img className="profile-avatar" src={user.avatar_url} alt="" />
+					<div>
+						<p className="profile-username">{user.username}</p>
+						<p className="profile-email">{user.email}</p>
+					</div>
+				</div>
+			</header>
 			<form className="profile-edit" onSubmit={handleSave}>
 				<h2>{t("gdpr.editTitle")}</h2>
 				<label htmlFor="profile-username">{t("login.username")}</label>

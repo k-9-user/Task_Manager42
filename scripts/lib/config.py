@@ -30,11 +30,6 @@ def validate_config(values, secret_values):
                 f"Secret file {name} must be at least 32 URL-safe characters")
         require(not value.lower().startswith("test"),
                 f"Secret file {name} must not use test credentials")
-    admin_password = secret_values["bootstrap_admin_password"]
-    require(12 <= len(admin_password) <= 128
-            and not any(ord(character) < 0x20 or ord(character) == 0x7f
-                        for character in admin_password),
-            "Secret file bootstrap_admin_password must be 12-128 printable characters")
     independent = [secret_values[name] for name in
                    ("postgres_password", "jwt_secret", "oauth_session_secret",
                     "bootstrap_admin_password")]
@@ -50,8 +45,16 @@ def validate_config(values, secret_values):
     for name in ("CORS_ORIGINS", "VITE_API_URL"):
         require(values[name] == "https://localhost", f"{name} must be https://localhost")
 
-    for name in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB", "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION"):
+    for name in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB", "PASSWORD_MIN_LENGTH", "PASSWORD_MAX_LENGTH",
+                 "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION"):
         require(re.fullmatch(r"[0-9]+", values[name]) and values[name].lstrip("0"), f"{name} must be a positive integer")
+    password_min, password_max = int(values["PASSWORD_MIN_LENGTH"]), int(values["PASSWORD_MAX_LENGTH"])
+    require(password_min <= password_max, "PASSWORD_MIN_LENGTH must not exceed PASSWORD_MAX_LENGTH")
+    admin_password = secret_values["bootstrap_admin_password"]
+    require(password_min <= len(admin_password) <= password_max
+            and not any(ord(character) < 0x20 or ord(character) == 0x7f
+                        for character in admin_password),
+            "Secret file bootstrap_admin_password must be printable and within PASSWORD_MIN_LENGTH..PASSWORD_MAX_LENGTH")
     require(values["UPLOAD_DIR"] == "/app/uploads", "UPLOAD_DIR must be /app/uploads for persistent storage")
     require(values["OAUTH_GOOGLE_REDIRECT_URI"] == "https://localhost/api/auth/oauth/google/callback", "OAUTH_GOOGLE_REDIRECT_URI must be https://localhost/api/auth/oauth/google/callback")
     try:
