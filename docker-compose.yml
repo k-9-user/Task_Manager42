@@ -11,6 +11,16 @@ x-backend-image: &backend-image
   build:
     context: ./backend
 
+x-backup-service: &backup-service
+  image: postgres:17-alpine
+  environment:
+    POSTGRES_DB: ${POSTGRES_DB:-taskmanager}
+    POSTGRES_USER: ${POSTGRES_USER:-user}
+    BACKUP_INTERVAL_MINUTES: ${BACKUP_INTERVAL_MINUTES:-60}
+    BACKUP_RETENTION: ${BACKUP_RETENTION:-24}
+  secrets:
+    - postgres_password
+
 x-backend-environment: &backend-environment
   JWT_EXPIRATION: ${JWT_EXPIRATION:-3600}
   OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
@@ -96,6 +106,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_uploads:/app/uploads
+      - backup_status:/run/backup-status:ro
     depends_on:
       db:
         condition: service_healthy
@@ -121,6 +132,35 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  backup:
+    <<: *backup-service
+    entrypoint: ["/bin/sh", "/opt/backup/backup.sh"]
+    command: ["schedule"]
+    restart: on-failure:5
+    volumes:
+      - ./backup/backup.sh:/opt/backup/backup.sh:ro
+      - backend_uploads:/uploads:ro
+      - backup_status:/status
+      - ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      init-data:
+        condition: service_completed_successfully
+
+  restore:
+    <<: *backup-service
+    profiles: [restore]
+    entrypoint: ["/bin/sh", "/opt/backup/backup.sh", "restore"]
+    restart: "no"
+    volumes:
+      - ./backup/backup.sh:/opt/backup/backup.sh:ro
+      - backend_uploads:/uploads
+      - ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/backups:/backups:ro
+    depends_on:
+      db:
+        condition: service_healthy
 
   mailpit:
     image: axllent/mailpit:v1.27
@@ -253,3 +293,4 @@ volumes:
       o: bind
       device: ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/uploads
   frontend_node_modules:
+  backup_status:

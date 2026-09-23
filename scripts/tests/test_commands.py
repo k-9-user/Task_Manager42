@@ -128,6 +128,45 @@ class CommandTests(unittest.TestCase):
         reset.assert_not_called()
         confirm.assert_not_called()
 
+    def test_backup_runs_the_backup_service_once_after_checks(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        events = []
+        with patch.object(commands.sys, "argv", ["make.py", "backup"]), \
+                patch.object(commands.config, "ensure_data_dirs"), \
+                patch.object(commands, "check", side_effect=lambda: (events.append("check") or (env, "default"))), \
+                patch.object(commands, "run", side_effect=lambda args, **_kwargs: events.append(args[len(core.COMPOSE):])):
+            commands.main()
+        self.assertEqual(events, ["check", ["run", "--rm", "backup", "once"]])
+
+    def test_restore_checks_then_restores_the_requested_backup_then_starts(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        events = []
+        with patch.object(commands.sys, "argv", ["make.py", "restore"]), \
+                patch.dict(commands.os.environ, {"BACKUP": "taskmanager-20260923T100000Z"}), \
+                patch.object(commands.config, "ensure_data_dirs"), \
+                patch.object(commands.config, "read_env", return_value={"POSTGRES_DB": "taskmanager"}), \
+                patch.object(commands, "check", side_effect=lambda: (events.append("check") or (env, "default"))), \
+                patch.object(commands.docker, "restore_backup",
+                             side_effect=lambda *args: events.append(("restore", *args[2:])) or args[3]), \
+                patch.object(commands, "run", side_effect=lambda args, **_kwargs: events.append(args[len(core.COMPOSE):])):
+            commands.main()
+        self.assertEqual(events, [
+            "check",
+            ("restore", "taskmanager", "taskmanager-20260923T100000Z"),
+            ["up", "--build", "--detach", "--wait"],
+        ])
+
+    def test_remote_restore_rejected_before_confirmation(self):
+        with patch.object(commands.sys, "argv", ["make.py", "restore"]), \
+                patch.object(commands.config, "ensure_data_dirs"), \
+                patch.object(commands, "check", side_effect=ValueError("Local Docker endpoint required")), \
+                patch.object(commands.docker, "restore_backup") as restore, \
+                patch("builtins.input") as confirm, \
+                self.assertRaisesRegex(ValueError, "Local Docker endpoint required"):
+            commands.main()
+        restore.assert_not_called()
+        confirm.assert_not_called()
+
     def test_re_checks_before_destructive_cleanup_then_starts(self):
         env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
         events = []

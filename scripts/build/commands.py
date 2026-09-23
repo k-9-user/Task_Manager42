@@ -1,6 +1,5 @@
 """Make target implementations and command dispatch."""
 
-from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -11,10 +10,7 @@ import tempfile
 
 from . import config
 from . import docker
-from .core import ACTIONS, CERT, CERTS, COMPOSE, DATA, KEY, ROOT, require, run, tools
-
-
-BACKUP_RETENTION = 7
+from .core import ACTIONS, CERT, CERTS, COMPOSE, KEY, ROOT, require, run, tools
 
 
 def setup():
@@ -121,7 +117,7 @@ def smoke():
         "/health": "get", "/api/auth/login": "post", "/api/auth/register": "post",
         "/api/projects": "get", "/api/tasks/{task_id}": "put",
         "/api/notifications": "get", "/api/search/tasks": "get", "/api/gdpr/export": "get",
-        "/api/users/me": "get", "/api/v1/public/tasks": "get",
+        "/api/users/me": "get", "/api/v1/public/tasks": "get", "/api/status": "get",
         "/api/export": "get", "/api/import": "post",
         "/api/tasks/{task_id}/attachments": "post", "/api/attachments/{attachment_id}": "delete",
         "/api/auth/oauth/google/exchange": "post", "/api/api-keys": "post",
@@ -132,42 +128,13 @@ def smoke():
 
 
 def backup(env):
-    """Dump the development database to a timestamped, retained local file."""
+    """Take one backup now with the script the scheduled backup service runs."""
 
-    values = config.read_env(ROOT / ".env")
-    postgres_db = values["POSTGRES_DB"]
-    postgres_user = values["POSTGRES_USER"]
-
-    backups_dir = DATA / "backups"
-    require(not backups_dir.is_symlink(), "data/backups must not be a symlink")
-    backups_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    target = backups_dir / f"{postgres_db}-{timestamp}.sql"
-    dump = run(
-        COMPOSE + [
-            "exec", "-T", "db", "pg_dump",
-            "--no-owner", "--no-privileges",
-            "-U", postgres_user, postgres_db,
-        ],
-        quiet=True, env=env,
-    )
-    require(dump.startswith("--"), "pg_dump produced no output; refusing to write an empty backup")
-    target.write_text(dump)
-    target.chmod(0o600)
-
-    kept = sorted(backups_dir.glob(f"{postgres_db}-*.sql"))
-    for stale in kept[:-BACKUP_RETENTION]:
-        stale.unlink()
-    kept = sorted(backups_dir.glob(f"{postgres_db}-*.sql"))
-    print(
-        f"Backup written to {target.relative_to(ROOT)} "
-        f"({len(kept)} kept, retention={BACKUP_RETENTION})."
-    )
+    run(COMPOSE + ["run", "--rm", "backup", "once"], env=env)
 
 
 def main():
-    require(len(sys.argv) == 2 and sys.argv[1] in ACTIONS, "Usage: dev.py {" + "|".join(sorted(ACTIONS)) + "}")
+    require(len(sys.argv) == 2 and sys.argv[1] in ACTIONS, "Usage: make.py {" + "|".join(sorted(ACTIONS)) + "}")
     action = sys.argv[1]
 
     if action == "setup":
@@ -176,7 +143,7 @@ def main():
 
     config.ensure_data_dirs()
 
-    if action in {"check", "up", "test", "smoke", "reset-db", "re", "backup"}:
+    if action in {"check", "up", "test", "smoke", "reset-db", "re", "backup", "restore"}:
         env, context = check()
     else:
         env, context = docker.local_docker_env(config.compose_env())
@@ -186,6 +153,12 @@ def main():
 
     elif action == "backup":
         backup(env)
+
+    elif action == "restore":
+        postgres_db = config.read_env(ROOT / ".env")["POSTGRES_DB"]
+        name = docker.restore_backup(env, context, postgres_db, os.environ.get("BACKUP", ""))
+        run(COMPOSE + ["up", "--build", "--detach", "--wait"], env=env)
+        print(f"Restored {name}. Verify with make smoke and https://localhost/status.")
 
     elif action in {"down", "clean", "logs", "ps"}:
         args = {

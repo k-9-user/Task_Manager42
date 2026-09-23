@@ -1,7 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, TypeVar
-
 from pydantic import EmailStr, Field, SecretStr, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict, SettingsError
 
@@ -52,6 +51,7 @@ class Settings(DatabaseSettings):
     smtp_host: str = ""
     smtp_port: int = Field(default=1025, gt=0, le=65535)
     mail_from: str = "no-reply@taskmanager.local"
+    backup_status_file: str = "/run/backup-status/status.json"
 
     @field_validator("cors_origins", mode="before")
     @classmethod

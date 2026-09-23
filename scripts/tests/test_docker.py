@@ -251,6 +251,82 @@ class DockerSafetyTests(unittest.TestCase):
             confirm.assert_not_called()
             self.assertTrue((data / "uploads" / "payload").is_file())
 
+    def test_fclean_keeps_backups(self):
+        env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+        with bound_data() as data:
+            backup = data / core.DATA_BACKUPS / "taskmanager-20260923T170000Z"
+            backup.mkdir(parents=True)
+            (backup / "database.sql.gz").write_text("state")
+            volumes = compose_volumes(data)
+            with patch.object(docker_tools, "run", side_effect=[
+                json.dumps({"volumes": volumes}), "", "", "", None,
+            ]), patch("builtins.input", return_value="fclean") as confirm:
+                docker_tools.fclean(env, "default", confirmation="fclean")
+            self.assertIn(f"Backups in {data / core.DATA_BACKUPS} are kept", confirm.call_args.args[0])
+            self.assertTrue((backup / "database.sql.gz").is_file())
+
+
+@contextlib.contextmanager
+def backups(*names):
+    with bound_data(populate=False) as data:
+        directory = data / core.DATA_BACKUPS
+        directory.mkdir()
+        for name in names:
+            (directory / name).mkdir()
+        yield data
+
+
+class RestoreTests(unittest.TestCase):
+    env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
+    older = "taskmanager-20260922T100000Z"
+    newer = "taskmanager-20260923T100000Z"
+
+    def test_restore_picks_latest_complete_backup_then_stops_writers_and_restores(self):
+        with backups(self.older, self.newer, ".taskmanager-20260923T110000Z.partial",
+                     "other-20260924T100000Z", "taskmanager-latest") as data:
+            (data / core.DATA_BACKUPS / "taskmanager-20260924T100000Z").symlink_to(data)
+            with patch.object(docker_tools, "run") as run, \
+                    patch("builtins.input", return_value="restore") as confirm:
+                name = docker_tools.restore_backup(self.env, "desktop-linux", "taskmanager")
+
+        self.assertEqual(name, self.newer)
+        prompt = confirm.call_args.args[0]
+        for text in ("desktop-linux", self.env["DOCKER_HOST"], f"{self.newer} (latest) (2 available)"):
+            self.assertIn(text, prompt)
+        self.assertEqual([call.args[0][len(core.COMPOSE):] for call in run.call_args_list], [
+            ["stop", "nginx", "backend", "backup"],
+            ["--profile", "restore", "run", "--rm", "restore", self.newer],
+        ])
+        for call in run.call_args_list:
+            self.assertIs(call.kwargs["env"], self.env)
+
+    def test_restore_honours_the_requested_backup(self):
+        with backups(self.older, self.newer), patch.object(docker_tools, "run") as run, \
+                patch("builtins.input", return_value="restore"):
+            docker_tools.restore_backup(self.env, "default", "taskmanager", self.older)
+        self.assertEqual(run.call_args.args[0][-1], self.older)
+
+    def test_restore_rejects_unknown_names_before_confirmation(self):
+        for requested in ("../postgres", f"{self.newer}/..", "other-20260923T100000Z",
+                          ".taskmanager-20260923T110000Z.partial", "taskmanager-20260101T000000Z"):
+            with self.subTest(requested=requested), \
+                    backups(self.newer, ".taskmanager-20260923T110000Z.partial"), \
+                    patch.object(docker_tools, "run") as run, patch("builtins.input") as confirm, \
+                    self.assertRaisesRegex(ValueError, "Unknown backup"):
+                docker_tools.restore_backup(self.env, "default", "taskmanager", requested)
+            confirm.assert_not_called()
+            run.assert_not_called()
+
+    def test_restore_without_backups_or_confirmation_runs_nothing(self):
+        cases = ((backups(), "", "No backup"), (backups(self.newer), "yes", "Restore cancelled"))
+        for context, answer, message in cases:
+            with self.subTest(message=message), context, \
+                    patch.object(docker_tools, "run") as run, \
+                    patch("builtins.input", return_value=answer), \
+                    self.assertRaisesRegex(ValueError, message):
+                docker_tools.restore_backup(self.env, "default", "taskmanager")
+            run.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

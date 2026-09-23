@@ -9,7 +9,9 @@ import sys
 import tempfile
 
 from .core import (
+    ADDED_ENV_NAMES,
     DATA,
+    DATA_BACKUPS,
     DATA_DIRS,
     ENV_NAMES,
     LEGACY_LOCAL_URLS,
@@ -139,7 +141,8 @@ def _migrate_local_urls(values):
 
 
 def validate_config(values, secret_values):
-    require(set(values) == set(ENV_NAMES), ".env must contain exactly the documented non-secret keys")
+    require(set(values) == set(ENV_NAMES),
+            ".env must contain exactly the documented non-secret keys; run make setup to add new keys")
     require(set(secret_values) == set(SECRET_NAMES),
             "secrets directory must contain exactly the documented secret files")
     for name, value in values.items():
@@ -173,7 +176,7 @@ def validate_config(values, secret_values):
     for name in ("CORS_ORIGINS", "VITE_API_URL"):
         require(values[name] == "https://localhost", f"{name} must be https://localhost")
 
-    for name in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB"):
+    for name in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB", "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION"):
         require(re.fullmatch(r"[0-9]+", values[name]) and values[name].lstrip("0"), f"{name} must be a positive integer")
     require(values["UPLOAD_DIR"] == "/app/uploads", "UPLOAD_DIR must be /app/uploads for persistent storage")
     require(values["OAUTH_GOOGLE_REDIRECT_URI"] == "https://localhost/api/auth/oauth/google/callback", "OAUTH_GOOGLE_REDIRECT_URI must be https://localhost/api/auth/oauth/google/callback")
@@ -230,19 +233,26 @@ def setup_configuration(root=ROOT):
     current = read_env(env_path)
     legacy_keys = set(current) & set(LEGACY_SECRET_NAMES)
     if not legacy_keys:
-        require(set(current) == set(ENV_NAMES), ".env must contain exactly the documented non-secret keys")
+        missing = set(ENV_NAMES) - set(current)
+        require(set(current) <= set(ENV_NAMES) and missing <= set(ADDED_ENV_NAMES),
+                ".env must contain exactly the documented non-secret keys")
+        current = current | {name: example_values[name] for name in missing}
         current, migrated = _migrate_local_urls(current)
         validate_config(current, read_secret_files(secret_dir))
-        if migrated:
+        if migrated or missing:
             _write_env(env_path, template, current)
+        if migrated:
             print("Migrated local URLs to default HTTPS ports; preserved secret files.")
-        else:
+        if missing:
+            print("Added default backup settings to .env; preserved secret files.")
+        if not migrated and not missing:
             print("Preserved existing .env and secret files.")
         return
 
-    expected_legacy = (set(ENV_NAMES) - {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME"}) \
-        | set(LEGACY_SECRET_NAMES)
-    require(set(current) == expected_legacy, "Legacy .env must be complete before secret migration")
+    expected_legacy = (set(ENV_NAMES) - {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME"}
+                       - set(ADDED_ENV_NAMES)) | set(LEGACY_SECRET_NAMES)
+    require(expected_legacy <= set(current) <= expected_legacy | set(ADDED_ENV_NAMES),
+            "Legacy .env must be complete before secret migration")
     env_values = {
         name: current.get(name, example_values[name])
         for name in ENV_NAMES
@@ -273,11 +283,11 @@ def setup_configuration(root=ROOT):
 
 
 def ensure_data_dirs(data=DATA):
-    """Create the host directories the stateful Compose volumes bind to."""
+    """Create the host directories the stateful Compose volumes and backups bind to."""
 
     require(not data.is_symlink(), f"{data.name} must not be a symlink")
     require(not data.exists() or data.is_dir(), f"{data.name} exists but is not a directory")
-    for name in DATA_DIRS:
+    for name in DATA_DIRS + (DATA_BACKUPS,):
         path = data / name
         require(not path.is_symlink(), f"{data.name}/{name} must not be a symlink")
         require(not path.exists() or path.is_dir(), f"{data.name}/{name} exists but is not a directory")

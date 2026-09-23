@@ -24,6 +24,8 @@ class ConfigTests(unittest.TestCase):
             "FORWARDED_ALLOW_IPS": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
             "BOOTSTRAP_ADMIN_EMAIL": "admin@example.com",
             "BOOTSTRAP_ADMIN_USERNAME": "admin",
+            "BACKUP_INTERVAL_MINUTES": "60",
+            "BACKUP_RETENTION": "24",
             "VITE_API_URL": "https://localhost",
         }
         password = "p" * 40
@@ -68,8 +70,9 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(output.getvalue(), "")
 
     def test_invalid_config_is_rejected_without_values(self):
-        env_cases = [(key, value) for key in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB")
-                     for value in ("", "0", "-1", "1.5", "no", "1e3")]
+        env_cases = [(key, value) for key in ("JWT_EXPIRATION", "MAX_UPLOAD_SIZE_MB",
+                                              "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION")
+                     for value in ("", "0", "00", "-1", "1.5", "no", "1e3")]
         env_cases += [
             ("UPLOAD_DIR", "/tmp/uploads"),
             ("OAUTH_GOOGLE_REDIRECT_URI", ""),
@@ -172,6 +175,35 @@ class ConfigTests(unittest.TestCase):
         self.assertNotIn("DATA_DIR", core.ENV_NAMES)
         self.assertEqual(set(self.values), set(core.ENV_NAMES))
         self.assertEqual(core.DATA_DIRS, tuple(core.DATA_VOLUMES.values()))
+        self.assertNotIn(core.DATA_BACKUPS, core.DATA_VOLUMES.values())
+
+    def test_ensure_data_dirs_creates_the_backup_directory_privately(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data = Path(temporary) / "data"
+            config.ensure_data_dirs(data)
+            self.assertTrue((data / core.DATA_BACKUPS).is_dir())
+            self.assertEqual((data / core.DATA_BACKUPS).stat().st_mode & 0o777, 0o700)
+
+    def test_setup_adds_missing_backup_keys_without_touching_other_values(self):
+        custom = self.values | {"JWT_EXPIRATION": "7200"}
+        old = {key: value for key, value in custom.items() if key not in core.ADDED_ENV_NAMES}
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._write_example(root)
+            (root / ".env").write_text("\n".join(f"{key}={value}" for key, value in old.items()) + "\n")
+            self._write_secret_files(root)
+
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                config.setup_configuration(root)
+
+            self.assertEqual(config.read_env(root / ".env"), custom)
+            self.assertEqual(config.read_secret_files(root / "secrets"), self.secret_values)
+            self.assertIn("Added default backup settings", output.getvalue())
+
+    def test_check_asks_for_setup_when_backup_keys_are_missing(self):
+        old = {key: value for key, value in self.values.items() if key not in core.ADDED_ENV_NAMES}
+        with self.assertRaisesRegex(ValueError, "run make setup"):
+            config.validate_config(old, self.secret_values)
 
     def test_fresh_setup_creates_private_secret_files_without_printing_values(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -207,7 +239,7 @@ class ConfigTests(unittest.TestCase):
             self._write_example(root)
             legacy_env = {
                 key: value for key, value in self.values.items()
-                if key not in {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME"}
+                if key not in {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME", *core.ADDED_ENV_NAMES}
             } | core.LEGACY_LOCAL_URLS | legacy_secrets
             (root / ".env").write_text(
                 "\n".join(f"{key}={value}" for key, value in legacy_env.items()) + "\n"
@@ -274,7 +306,7 @@ class ConfigTests(unittest.TestCase):
             self._write_example(root)
             legacy_env = {
                 key: value for key, value in self.values.items()
-                if key not in {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME"}
+                if key not in {"BOOTSTRAP_ADMIN_EMAIL", "BOOTSTRAP_ADMIN_USERNAME", *core.ADDED_ENV_NAMES}
             } | core.LEGACY_LOCAL_URLS | legacy_secrets
             original = "\n".join(f"{key}={value}" for key, value in legacy_env.items()) + "\n"
             (root / ".env").write_text(original)

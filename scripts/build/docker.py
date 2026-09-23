@@ -2,7 +2,7 @@ import json
 import re
 import shutil
 
-from .core import APP_IMAGES, COMPOSE, DATA, DATA_VOLUMES, require, run
+from .core import APP_IMAGES, COMPOSE, DATA, DATA_BACKUPS, DATA_VOLUMES, require, run
 
 
 def _bound_data_dir(config, logical):
@@ -95,6 +95,7 @@ def fclean(env, context, *, confirmation):
         f"Docker context: {context!r}\nEndpoint: {env['DOCKER_HOST']!r}\n"
         f"Project volumes:\n{volume_list}\n"
         f"Host directories to erase:\n{directory_list}\n"
+        f"Backups in {DATA / DATA_BACKUPS} are kept.\n"
         f"Type {confirmation}: "
     )
     require(input(prompt) == confirmation, "Cleanup cancelled")
@@ -129,8 +130,44 @@ def reset_database(env, context):
         ) == "reset-db",
         "Reset cancelled",
     )
-    run(COMPOSE + ["stop", "nginx", "backend", "migrate", "db"], env=env)
+    run(COMPOSE + ["stop", "nginx", "backend", "backup", "migrate", "db"], env=env)
     run(COMPOSE + ["rm", "--force", "db"], env=env)
     run(["docker", "volume", "rm", volume], env=env)
     _clear_data_dir(data_dir)
     print("Dev database removed; uploads preserved. Run make up to recreate and migrate.")
+
+
+def list_backups(postgres_db):
+    """Complete backups, oldest first. In-progress ones are dot-prefixed and never match."""
+
+    backups_dir = DATA / DATA_BACKUPS
+    require(not backups_dir.is_symlink(), f"{backups_dir} must not be a symlink")
+    if not backups_dir.is_dir():
+        return []
+    pattern = re.compile(re.escape(postgres_db) + r"-[0-9]{8}T[0-9]{6}Z")
+    return sorted(
+        entry.name for entry in backups_dir.iterdir()
+        if entry.is_dir() and not entry.is_symlink() and pattern.fullmatch(entry.name)
+    )
+
+
+def restore_backup(env, context, postgres_db, requested=""):
+    """Replace the database and uploads with one backup; the caller restarts the stack."""
+
+    backups = list_backups(postgres_db)
+    require(backups, f"No backup in {DATA / DATA_BACKUPS}; run make backup first")
+    name = requested or backups[-1]
+    require(name in backups, f"Unknown backup {name!r}; latest is {backups[-1]}")
+    latest = " (latest)" if name == backups[-1] else ""
+    require(
+        input(
+            "WARNING: this replaces the current database and uploads with a backup.\n"
+            f"Docker context: {context!r}\nEndpoint: {env['DOCKER_HOST']!r}\n"
+            f"Backup: {name}{latest} ({len(backups)} available)\n"
+            "Type restore: "
+        ) == "restore",
+        "Restore cancelled",
+    )
+    run(COMPOSE + ["stop", "nginx", "backend", "backup"], env=env)
+    run(COMPOSE + ["--profile", "restore", "run", "--rm", "restore", name], env=env)
+    return name

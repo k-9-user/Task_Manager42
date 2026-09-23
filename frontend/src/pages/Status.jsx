@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const REFRESH_INTERVAL_MS = 15000;
+const BACKUP_STATE_COLORS = { ok: "text-green-600", stale: "text-amber-600" };
 
 function Status()
 {
@@ -18,7 +19,7 @@ function Status()
 		{
 			try
 			{
-				const response = await fetch(`${import.meta.env.VITE_API_URL}/health`);
+				const response = await fetch(`${import.meta.env.VITE_API_URL}/api/status`);
 				const data = await response.json().catch(() => null);
 				if (cancelled)
 					return ;
@@ -44,7 +45,10 @@ function Status()
 		return () => { cancelled = true; clearInterval(interval); };
 	}, []);
 
-	const operational = health?.ok && health?.data?.status === "ok" && health?.data?.db === "ok";
+	const operational = health?.ok && health?.data?.status === "ok";
+	const backups = health?.data?.backups;
+	const backupState = backups?.state ?? "missing";
+	const lastBackup = backups?.last_success_at ? new Date(backups.last_success_at).toLocaleString() : t("status.never");
 
 	return (
 		<div className="flex min-h-full flex-col gap-6 bg-brand-surface-alt p-8 font-sans max-sm:p-4">
@@ -79,8 +83,20 @@ function Status()
 					</li>
 					<li className="flex items-center justify-between rounded-lg bg-brand-surface-alt px-3 py-2">
 						<span>{t("status.database")}</span>
-						<span className={health?.data?.db === "ok" ? "text-green-600" : "text-red-600"}>
-							{health?.data?.db === "ok" ? t("status.up") : t("status.down")}
+						<span className={health?.data?.database === "ok" ? "text-green-600" : "text-red-600"}>
+							{health?.data?.database === "ok" ? t("status.up") : t("status.down")}
+						</span>
+					</li>
+					<li className="flex items-center justify-between gap-3 rounded-lg bg-brand-surface-alt px-3 py-2">
+						<div>
+							<span>{t("status.backups")}</span>
+							<p className="m-0 text-xs text-gray-500">
+								{t("status.lastBackup")} {lastBackup}
+								{backups?.count > 0 && ` · ${t("status.backupCount", { count: backups.count })}`}
+							</p>
+						</div>
+						<span className={BACKUP_STATE_COLORS[backupState] ?? "text-red-600"}>
+							{t(`status.backupState.${backupState}`)}
 						</span>
 					</li>
 				</ul>

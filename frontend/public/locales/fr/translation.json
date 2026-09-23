@@ -158,8 +158,19 @@
 		"up": "OK",
 		"down": "Indisponible",
 		"database": "Base de données",
+		"backups": "Sauvegardes",
+		"lastBackup": "Dernière sauvegarde :",
+		"never": "aucune pour l'instant",
+		"backupCount": "{{count}} conservées",
+		"backupState":
+		{
+			"ok": "OK",
+			"stale": "En retard",
+			"failing": "En échec",
+			"missing": "Aucune sauvegarde"
+		},
 		"backupTitle": "Sauvegardes et reprise après sinistre",
-		"backupBody": "La base de données est sauvegardée régulièrement (dump PostgreSQL horodaté, 7 dernières sauvegardes conservées) via 'make backup'. En cas d'incident, une sauvegarde peut être restaurée manuellement pour reprendre le service."
+		"backupBody": "La base de données et les fichiers envoyés sont sauvegardés automatiquement à intervalle fixe (toutes les heures par défaut), et les sauvegardes les plus récentes sont conservées. Après un incident, une seule commande, make restore, remet en place la dernière sauvegarde et relance le service."
 	},
 	"legal":
 	{

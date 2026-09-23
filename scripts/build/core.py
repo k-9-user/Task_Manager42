@@ -11,21 +11,24 @@ SECRETS = ROOT / "secrets"
 DATA = ROOT / "data"
 DATA_VOLUMES = {"postgres_data": "postgres", "backend_uploads": "uploads"}
 DATA_DIRS = tuple(DATA_VOLUMES.values())
+DATA_BACKUPS = "backups"
 COMPOSE = [
     "docker", "compose", "--project-name", "task-manager", "--file",
     str(ROOT / "docker-compose.yml"), "--env-file", str(ROOT / ".env"),
 ]
 ACTIONS = {
     "setup", "check", "up", "down", "clean", "fclean", "re",
-    "logs", "ps", "smoke", "test", "reset-db", "backup",
+    "logs", "ps", "smoke", "test", "reset-db", "backup", "restore",
 }
 APP_IMAGES = ("task-manager-back:latest", "task-manager-front:latest")
 ENV_NAMES = (
     "POSTGRES_DB", "POSTGRES_USER", "JWT_EXPIRATION", "OAUTH_GOOGLE_CLIENT_ID",
     "OAUTH_GOOGLE_REDIRECT_URI", "CORS_ORIGINS", "UPLOAD_DIR",
     "MAX_UPLOAD_SIZE_MB", "FORWARDED_ALLOW_IPS", "BOOTSTRAP_ADMIN_EMAIL",
-    "BOOTSTRAP_ADMIN_USERNAME", "VITE_API_URL",
+    "BOOTSTRAP_ADMIN_USERNAME", "BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION",
+    "VITE_API_URL",
 )
+ADDED_ENV_NAMES = ("BACKUP_INTERVAL_MINUTES", "BACKUP_RETENTION")
 SECRET_NAMES = (
     "postgres_password", "database_url", "jwt_secret", "oauth_session_secret",
     "oauth_google_client_secret", "bootstrap_admin_password",
