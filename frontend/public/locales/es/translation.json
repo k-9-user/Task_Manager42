@@ -112,9 +112,16 @@
 	"attachments":
 	{
 		"preview": "Vista previa",
-		"openPreview": "Abrir vista previa",
 		"download": "Descargar",
-		"delete": "Eliminar"
+		"delete": "Eliminar",
+		"hintTypes": "Formatos permitidos: {{types}}",
+		"hintSize": "Tamaño máx.: {{max}} MB",
+		"progress": "Progreso de la subida",
+		"errors":
+		{
+			"type": "Tipo de archivo no permitido",
+			"size": "Archivo demasiado grande (máx. {{max}} MB)"
+		}
 	},
 	"members":
 	{
