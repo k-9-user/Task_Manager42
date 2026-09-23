@@ -1,14 +1,3 @@
-"""
-Router FastAPI pour le module GDPR (Owner : B).
-
-- `GET /api/gdpr/export` : droit d'accès et portabilité (Art. 15 / 20).
-- `DELETE /api/gdpr/account` : droit à l'effacement (Art. 17), body
-  `{"confirm": true, "confirm_username": "<username exact>"}`.
-
-Chaque opération envoie un email de confirmation (Mailpit en local), après
-le commit, sans jamais faire échouer l'opération si l'envoi échoue.
-"""
-
 import json
 from datetime import date, datetime, timezone
 

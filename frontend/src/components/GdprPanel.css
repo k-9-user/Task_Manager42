@@ -57,6 +57,10 @@
 	margin: 0;
 }
 
+.gdpr-block > button {
+	align-self: center;
+}
+
 .gdpr-panel button {
 	cursor: pointer;
 	border: 1px solid var(--color-brand-primary);
@@ -101,6 +105,7 @@
 
 .gdpr-actions {
 	display: flex;
+	justify-content: center;
 	gap: 0.5rem;
 }
 

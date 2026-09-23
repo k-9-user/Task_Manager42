@@ -50,7 +50,7 @@
 }
 
 .profile-edit button {
-	align-self: flex-start;
+	align-self: center;
 	cursor: pointer;
 	border: 1px solid var(--color-brand-primary);
 	border-radius: 0.5rem;
