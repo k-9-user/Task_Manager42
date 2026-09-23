@@ -125,7 +125,7 @@ def test_user_deletion_blocks_member_task_update(
                 "DELETE",
                 "/api/gdpr/account",
                 headers=editor_headers,
-                json={"confirm": True},
+                json={"confirm": True, "confirm_username": editor.username},
             )
 
     def update_task():
@@ -212,8 +212,6 @@ def test_gdpr_transfer_blocks_successor_removing_own_membership(
             and "FROM project_members" in statement
             and "project_members.user_id !=" in statement
         ):
-            # Pause after PostgreSQL has selected B, before GDPR can transfer or
-            # delete anything. B already has OWNER role, so no role UPDATE saves us.
             pids["gdpr"] = connection.connection.driver_connection.get_backend_pid()
             successor_selected.set()
             assert release_transfer.wait(15), "Timed out releasing GDPR transfer"
@@ -227,7 +225,8 @@ def test_gdpr_transfer_blocks_successor_removing_own_membership(
         with TestClient(app, base_url="https://testserver") as requester:
             return requester.request(
                 "DELETE", "/api/gdpr/account",
-                headers=owner_headers, json={"confirm": True},
+                headers=owner_headers,
+                json={"confirm": True, "confirm_username": owner.username},
             )
 
     def remove_self():
@@ -248,7 +247,6 @@ def test_gdpr_transfer_blocks_successor_removing_own_membership(
                 removal = executor.submit(remove_self)
                 assert removal_started.wait(10), "Member removal never reached its project lock"
                 assert pids["gdpr"] != pids["removal"]
-                # Observe an actual PostgreSQL lock wait, not just a slow thread.
                 with database.connect() as observer:
                     deadline = monotonic() + 5
                     while monotonic() < deadline:

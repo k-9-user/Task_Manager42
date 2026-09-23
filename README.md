@@ -95,7 +95,7 @@ status and current notification type.
 | Health check endpoint + user-facing status page + backups | Eraad |
 | Projects & tasks CRUD, members with owner/editor/viewer roles | khderdou |
 | Project message wall (per-project team chat) | khderdou (backend) + nratajcz (frontend) |
-| GDPR data export and confirmed account deletion | khderdou |
+| GDPR data export and confirmed account deletion (Profile → My data, confirmation emails) | khderdou |
 | Notifications (task assignment/status change) | khderdou |
 | Public API with API-key auth and rate limiting | ksupinsk |
 | Advanced search (tasks and projects: text, filters, sort, pagination) | ksupinsk (backend) + nratajcz (frontend) |
@@ -118,7 +118,7 @@ status and current notification type.
 | User Management | OAuth (Google) | Minor | 1 | Eraad |
 | Accessibility | Multi-language support (FR/EN/ES, all visible text) | Minor | 1 | nratajcz |
 | Data & Analytics | Export/import (CSV/JSON) | Minor | 1 | ksupinsk |
-| Data & Analytics | GDPR (export + confirmed deletion) | Minor | 1 | khderdou |
+| Data & Analytics | GDPR (export + confirmed deletion + confirmation emails) | Minor | 1 | khderdou |
 | DevOps | Health check + status page + backups + disaster recovery | Minor | 1 | Eraad |
 | **Total** | | | **14** | |
 
@@ -206,7 +206,7 @@ The wrapper accepts plain `KEY=value` entries in `.env`: no quotes, interpolatio
 
 Compose builds two local application images, `task-manager-back:latest` and `task-manager-front:latest`. This localhost-only stack has no development/production image variants.
 
-**Use localhost only.** The canonical address is **https://localhost**. Only nginx publishes ports, on `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged container listens internally on 8080/8443. HTTP redirects to HTTPS while preserving the request URI. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
+**Use localhost only.** The canonical address is **https://localhost**. Only nginx publishes application ports, on `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged container listens internally on 8080/8443. The Mailpit mail catcher publishes its inbox on `127.0.0.1:8025`: it **captures** every GDPR confirmation email and delivers none to real addresses (Gmail and others never receive them). Read them in the Mailpit inbox; nothing leaves the machine. HTTP redirects to HTTPS while preserving the request URI. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
 
 Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic. Because the database now persists on the host, this matters beyond first boot: editing `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_USERNAME` or `secrets/bootstrap_admin_password` after the first start blocks every later `make up` until the matching credentials are restored or the database is explicitly reset.
 
@@ -223,6 +223,7 @@ The database cluster and uploaded attachments live on the host under `data/` at 
 | https://localhost/docs | Swagger UI for the real API |
 | https://localhost/openapi.json | Generated API specification |
 | https://localhost/health | Backend/database health JSON |
+| http://localhost:8025 | Mailpit inbox (captured GDPR confirmation emails, never delivered outside) |
 
 The frontend is served under a nonce-based Content-Security-Policy: nginx mints a unique nonce per request and Vite stamps it on the tags it generates, via `html.cspNonce` in `frontend/vite.config.js`. `script-src` never allows `'unsafe-inline'`, and the strict nonce-free policy stays on `/api/`, `/health`, `/docs` and `/openapi.json`. If a script is ever blocked, add the nonce to the tag rather than relaxing `script-src` — a blocked inline script renders a blank page while nginx and Vite both log a clean 200. See `scripts/README.md`.
 

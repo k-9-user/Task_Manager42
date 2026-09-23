@@ -55,10 +55,11 @@ def test_attachment_uploaded_by_column():
     column = Attachment.__table__.c.uploaded_by
 
     assert isinstance(column.type, UUID)
-    assert column.nullable is False
-    assert {foreign_key.target_fullname for foreign_key in column.foreign_keys} == {
-        "users.id"
-    }
+    assert column.nullable is True
+    assert {
+        (foreign_key.target_fullname, foreign_key.ondelete)
+        for foreign_key in column.foreign_keys
+    } == {("users.id", "SET NULL")}
 
 
 def test_attachment_created_at_column():

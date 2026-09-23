@@ -19,8 +19,8 @@ class Attachment(Base):
     file_name = Column(String, nullable=False)
     uploaded_by = Column(
         UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
     created_at = Column(
         DateTime(timezone=True),

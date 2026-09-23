@@ -18,6 +18,8 @@ x-backend-environment: &backend-environment
   CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost}
   UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
   MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
 
 services:
   db:
@@ -104,6 +106,8 @@ services:
         condition: service_completed_successfully
       init-data:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
     healthcheck:
       test:
         - CMD
@@ -117,6 +121,14 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: on-failure:5
+    expose:
+      - "1025"
+    ports:
+      - "127.0.0.1:8025:8025"
 
   frontend:
     image: task-manager-front:latest

@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Column, Enum, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -36,6 +36,7 @@ class ProjectMember(Base):
         nullable=False,
         default=ProjectRole.VIEWER,
     )
+    joined_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     project = relationship("Project", back_populates="members")
     user = relationship("User")

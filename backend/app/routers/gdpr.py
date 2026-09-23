@@ -1,31 +1,49 @@
 import json
-import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.auth.project_permissions import lock_user_projects_for_write
 from app.database import get_db
 from app.auth.dependencies import get_current_user
+from app.models.api_key import ApiKey
+from app.models.attachment import Attachment
+from app.models.comment import Comment
+from app.models.notification import Notification
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
+from app.models.project_message import ProjectMessage
 from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
 from app.utils.locks import lock_admin_invariants
+from app.utils.mailer import send_mail
 
 router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])
 
 
-def _json_default(value):
-    """Convertit UUID/date/datetime en str pour `json.dumps` — ces types ne
-    sont pas sérialisables nativement en JSON."""
+def _fmt_dt(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc)
+    return f"{value:%Y-%m-%d %H:%M} UTC"
 
-    if isinstance(value, (uuid.UUID, date, datetime)):
-        return str(value)
-    raise TypeError(f"Type non sérialisable : {type(value)}")
+
+def _fmt_date(value: date | None) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _enum_value(value):
+    return getattr(value, "value", value)
+
+
+def _compact(row: dict) -> dict:
+    """Retire les champs vides pour garder un export lisible."""
+
+    return {key: value for key, value in row.items() if value not in (None, "", [])}
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +53,7 @@ def _json_default(value):
 
 @router.get("/export")
 def export_my_data(
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -42,49 +61,163 @@ def export_my_data(
     un fichier JSON téléchargeable (droit à la portabilité RGPD).
     """
 
-    owned_projects = db.query(Project).filter(Project.owner_id == current_user.id).all()
+    user_id = current_user.id
+    exported_at = datetime.now(timezone.utc)
 
     memberships = (
-        db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).all()
+        db.query(ProjectMember)
+        .options(joinedload(ProjectMember.project))
+        .filter(ProjectMember.user_id == user_id)
+        .order_by(ProjectMember.joined_at)
+        .all()
+    )
+    member_project_ids = {m.project_id for m in memberships}
+    owned_without_membership = [
+        project
+        for project in db.query(Project)
+        .filter(Project.owner_id == user_id)
+        .order_by(Project.created_at)
+        .all()
+        if project.id not in member_project_ids
+    ]
+    assigned_tasks = (
+        db.query(Task)
+        .options(joinedload(Task.project))
+        .filter(Task.assignee_id == user_id)
+        .order_by(Task.created_at)
+        .all()
+    )
+    comments = (
+        db.query(Comment)
+        .options(joinedload(Comment.task).joinedload(Task.project))
+        .filter(Comment.author_id == user_id)
+        .order_by(Comment.created_at)
+        .all()
+    )
+    messages = (
+        db.query(ProjectMessage)
+        .options(joinedload(ProjectMessage.project))
+        .filter(ProjectMessage.author_id == user_id)
+        .order_by(ProjectMessage.created_at)
+        .all()
+    )
+    uploads = (
+        db.query(Attachment, Task.title, Project.name)
+        .join(Task, Attachment.task_id == Task.id)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Attachment.uploaded_by == user_id)
+        .order_by(Attachment.created_at)
+        .all()
+    )
+    notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user_id)
+        .order_by(Notification.created_at)
+        .all()
+    )
+    api_keys = (
+        db.query(ApiKey).filter(ApiKey.user_id == user_id).order_by(ApiKey.created_at).all()
     )
 
-    assigned_tasks = db.query(Task).filter(Task.assignee_id == current_user.id).all()
-
     export_data = {
-        "profile": {
-            "id": current_user.id,
+        "about": {
+            "service": "Task Manager 42",
+            "exported_at": _fmt_dt(exported_at),
+            "note": (
+                "All personal data linked to your account. Passwords, API key "
+                "values and file contents are never exported."
+            ),
+        },
+        "profile": _compact({
             "email": current_user.email,
             "username": current_user.username,
-            "role": current_user.role,
+            "display_name": current_user.display_name,
+            "role": _enum_value(current_user.role),
+            "sign_in": current_user.oauth_provider or "password",
             "avatar_url": current_user.avatar_url,
-            "created_at": current_user.created_at,
-        },
-        "owned_projects": [
-            {
-                "id": p.id,
+            "member_since": _fmt_dt(current_user.created_at),
+            "last_updated": _fmt_dt(current_user.updated_at),
+        }),
+        "projects": [
+            _compact({
+                "name": m.project.name,
+                "description": m.project.description,
+                "your_role": _enum_value(m.role),
+                "owner": m.project.owner_id == user_id,
+                "joined_at": _fmt_dt(m.joined_at),
+            })
+            for m in memberships
+        ] + [
+            _compact({
                 "name": p.name,
                 "description": p.description,
-                "created_at": p.created_at,
-            }
-            for p in owned_projects
-        ],
-        "project_memberships": [
-            {"project_id": m.project_id, "role": m.role}
-            for m in memberships
+                "your_role": ProjectRole.OWNER.value,
+                "owner": True,
+            })
+            for p in owned_without_membership
         ],
         "assigned_tasks": [
-            {
-                "id": t.id,
-                "project_id": t.project_id,
+            _compact({
                 "title": t.title,
-                "status": t.status,
-                "due_date": t.due_date,
-            }
+                "project": t.project.name,
+                "status": _enum_value(t.status),
+                "due_date": _fmt_date(t.due_date),
+            })
             for t in assigned_tasks
         ],
+        "comments": [
+            _compact({
+                "task": c.task.title,
+                "project": c.task.project.name,
+                "text": c.content,
+                "written_at": _fmt_dt(c.created_at),
+                "edited_at": (
+                    _fmt_dt(c.updated_at)
+                    if c.updated_at and c.updated_at != c.created_at
+                    else None
+                ),
+            })
+            for c in comments
+        ],
+        "project_messages": [
+            {
+                "project": m.project.name,
+                "text": m.content,
+                "written_at": _fmt_dt(m.created_at),
+            }
+            for m in messages
+        ],
+        "uploaded_files": [
+            {
+                "file_name": attachment.file_name,
+                "task": task_title,
+                "project": project_name,
+                "uploaded_at": _fmt_dt(attachment.created_at),
+            }
+            for attachment, task_title, project_name in uploads
+        ],
+        "notifications": [
+            {
+                "type": _enum_value(n.type),
+                "text": n.content,
+                "read": n.read,
+                "received_at": _fmt_dt(n.created_at),
+            }
+            for n in notifications
+        ],
+        "api_keys": [{"created_at": _fmt_dt(k.created_at)} for k in api_keys],
     }
+    export_data = {key: value for key, value in export_data.items() if value}
 
-    body = json.dumps(export_data, default=_json_default, indent=2, ensure_ascii=False)
+    body = json.dumps(export_data, indent=2, ensure_ascii=False)
+    background_tasks.add_task(
+        send_mail,
+        current_user.email,
+        "Your Task Manager data export",
+        f"Hello {current_user.username},\n\n"
+        f"A copy of your personal data was exported from your account on {_fmt_dt(exported_at)}.\n\n"
+        "If you did not request it, change your password and contact an administrator.\n",
+    )
     return Response(
         content=body,
         media_type="application/json",
@@ -99,11 +232,13 @@ def export_my_data(
 
 class GDPRDeleteRequest(StrictRequest):
     confirm: bool
+    confirm_username: str
 
 
 @router.delete("/account", response_model=SimpleSuccessResponse)
 def delete_my_account(
     payload: GDPRDeleteRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -134,6 +269,11 @@ def delete_my_account(
         )
     if current_user.status == UserStatus.BANNED:
         raise HTTPException(status_code=403, detail="Account is banned")
+    if payload.confirm_username != current_user.username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username confirmation does not match",
+        )
     if current_user.role == UserRole.ADMIN:
         active_admins = db.scalar(
             select(func.count()).select_from(User).where(
@@ -163,7 +303,7 @@ def delete_my_account(
                 ProjectMember.project_id == project.id,
                 ProjectMember.user_id != current_user.id,
             )
-            .order_by(ProjectMember.id)
+            .order_by(ProjectMember.joined_at, ProjectMember.id)
             .all()
         )
 
@@ -180,7 +320,18 @@ def delete_my_account(
     db.flush()
     db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).delete()
 
+    email, username = current_user.email, current_user.username
     db.delete(current_user)
     db.commit()
 
+    background_tasks.add_task(
+        send_mail,
+        email,
+        "Your Task Manager account was deleted",
+        f"Hello {username},\n\n"
+        "Your account and the personal data attached to it were permanently deleted.\n"
+        "Projects you shared were handed to another member; files you uploaded stay "
+        "in their project without your name.\n\n"
+        "If you did not request this, contact an administrator.\n",
+    )
     return SimpleSuccessResponse()
