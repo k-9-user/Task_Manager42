@@ -12,6 +12,10 @@
 		"title": "Task Manager",
 		"subtitle": "Inicia sesión para encontrar tus proyectos",
 		"username": "Nombre de usuario",
+		"identifier": "Correo electrónico o nombre de usuario",
+		"identifierRequired": "Introduce tu correo electrónico o nombre de usuario",
+		"passwordRequired": "Introduce tu contraseña",
+		"invalidIdentifier": "Introduce un correo electrónico válido o un nombre de usuario de 3 a 50 caracteres alfanuméricos (., _, - permitidos)",
 		"password": "Contraseña",
 		"submit": "Iniciar sesión",
 		"noAccount": "¿Sin cuenta?",
@@ -34,7 +38,10 @@
 		"cpassword": "Confirma tu contraseña",
 		"invaemail": "Dirección de correo electrónico no válida",
 		"invausername": "El nombre de usuario debe tener entre 3 y 50 caracteres alfanuméricos (., _, - permitidos)",
-		"invapassword": "La contraseña debe tener al menos 12 caracteres"
+		"invapassword": "La contraseña debe tener al menos {{min}} caracteres",
+		"invapasswordlong": "La contraseña debe tener como máximo {{max}} caracteres",
+		"invapasswordchars": "La contraseña no puede contener caracteres invisibles (tabulación, salto de línea…)",
+		"passwordRules": "Usa {{min}} caracteres o más. Se aceptan símbolos como ! @ # $ %."
 	},
 	"loading":
 	{
@@ -178,48 +185,55 @@
 		"privacy":
 		{
 			"title": "Política de privacidad",
-			"section1Title": "1. Datos que recopilamos",
-			"section1Body": "Al registrarte recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña (con hash mediante Argon2, nunca almacenada en texto plano); con el inicio de sesión de Google guardamos el identificador de tu cuenta de Google en lugar de una contraseña. También conservamos lo que creas en el servicio: proyectos, tareas, comentarios, mensajes, archivos subidos y notificaciones.",
-			"section2Title": "2. Uso de tus datos",
-			"section2Body": "Utilizamos tus datos únicamente dentro de Task Manager, ya sea para la autenticación o para cualquier actividad en la plataforma.",
-			"section3Title": "3. Conservación de tus datos",
-			"section3Body": "Tus datos se conservan desde la creación de tu cuenta hasta su eliminación.",
-			"section4Title": "4. Tus derechos (RGPD)",
-			"section4Intro": "Conforme al RGPD, tienes los siguientes derechos:",
-			"rights":
+			"updated": "Última actualización: 23 de septiembre de 2026",
+			"sections":
 			{
-				"access":
+				"collect":
 				{
-					"name": "Acceso y portabilidad (art. 15 y 20):",
-					"body": "descarga todos tus datos en un archivo JSON legible desde tu página de Perfil."
+					"title": "1. Datos que recopilamos",
+					"body": "Al crear tu cuenta, recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña. Si inicias sesión con Google, recibimos el identificador de tu cuenta de Google, tu correo electrónico y tu foto de perfil, sin contraseña. También guardamos lo que creas en Task Manager: proyectos, tareas, comentarios, mensajes, archivos y claves API."
 				},
-				"rectification":
+				"use":
 				{
-					"name": "Rectificación (art. 16):",
-					"body": "modifica tu nombre de usuario y tu nombre visible en tu página de Perfil. Para cambiar tu correo, contacta con un administrador."
+					"title": "2. Uso de tus datos",
+					"body": "Usamos tus datos solo para que Task Manager funcione: iniciar tu sesión, gestionar tus proyectos y enviarte correos sobre tu cuenta. Nunca los usamos para publicidad ni para elaborar perfiles."
 				},
-				"erasure":
+				"sharing":
 				{
-					"name": "Supresión (art. 17):",
-					"body": "elimina tu cuenta y tus datos personales desde tu página de Perfil."
+					"title": "3. Compartir tus datos",
+					"body": "No vendemos tus datos ni los compartimos con terceros. El contenido de un proyecto es visible para sus miembros, y los administradores del servicio pueden acceder a tu cuenta para mantener el servicio en funcionamiento."
 				},
-				"restriction":
+				"security":
 				{
-					"name": "Limitación y oposición (art. 18 y 21):",
-					"body": "no se ofrecen en la aplicación. No hacemos marketing ni elaboramos perfiles, y solo tratamos lo necesario para el servicio. Aun así puedes escribir a un administrador."
+					"title": "4. Seguridad",
+					"body": "Protegemos tus datos con medidas adecuadas: conexión cifrada, contraseñas que nunca se guardan en texto plano y acceso restringido."
 				},
-				"automated":
+				"retention":
 				{
-					"name": "Decisiones automatizadas (art. 22):",
-					"body": "ninguna. Ningún algoritmo toma decisiones sobre ti."
+					"title": "5. Conservación",
+					"body": "Conservamos tus datos mientras tu cuenta exista. Pueden quedar copias de seguridad durante poco tiempo después de eliminarla."
 				}
 			},
-			"section4Footer": "Cada exportación o eliminación se confirma con un correo enviado a tu dirección.",
-			"profileLink": "Ir a mi página de Perfil",
-			"section5Title": "5. Compartir tus datos",
-			"section5Body": "Tus datos nunca se comunican fuera del proyecto; solo tú y el equipo del proyecto con acceso de administrador pueden acceder a ellos.",
+			"rights":
+			{
+				"title": "6. Tus derechos",
+				"intro": "Según el RGPD, puedes en cualquier momento:",
+				"items":
+				{
+					"access": "acceder a tus datos y descargarlos desde tu página de Perfil;",
+					"rectification": "corregir tu nombre de usuario y tu nombre visible desde tu página de Perfil (para cambiar tu correo, contacta con un administrador);",
+					"erasure": "eliminar tu cuenta desde tu página de Perfil;",
+					"objection": "oponerte al uso de tus datos o pedir que se limite contactando con un administrador."
+				},
+				"footer": "Cada descarga o eliminación se confirma por correo electrónico."
+			},
+			"deletion":
+			{
+				"title": "7. Eliminación de la cuenta",
+				"body": "Puedes eliminar tu cuenta en cualquier momento desde tu página de Perfil. Tus datos personales se borran de forma permanente. Los proyectos, tareas y archivos compartidos con otros miembros siguen disponibles para ellos, sin tu nombre."
+			},
 			"contactTitle": "Contacto",
-			"contactBody": "Para cualquier pregunta sobre tus datos, contacta con el equipo del proyecto."
+			"contactBody": "Si tienes alguna pregunta sobre tus datos, contacta con el equipo de Task Manager."
 		},
 		"terms":
 		{
@@ -234,25 +248,14 @@
 	},
 	"gdpr":
 	{
-		"title": "Mis datos (RGPD)",
+		"title": "Mis datos",
 		"rightsLink": "Consultar tus derechos RGPD",
-		"mailNote": "Se envía un correo de confirmación a tu dirección.",
-		"exportTitle": "Descargar mis datos",
-		"exportBody": "Un archivo JSON legible con tu perfil, proyectos, tareas, comentarios, mensajes, archivos subidos y notificaciones.",
+		"exportBody": "Descarga una copia de tus datos en formato JSON.",
 		"exportButton": "Descargar mis datos",
 		"exporting": "Preparando...",
 		"exportDone": "Tus datos se han descargado.",
-		"deleteTitle": "Eliminar mi cuenta",
-		"deleteIntro": "Qué hace la eliminación:",
-		"deleteEffects":
-		{
-			"projects": "Tus proyectos pasan al miembro restante más antiguo, o se eliminan si estás solo.",
-			"content": "Se eliminan tus membresías, comentarios, mensajes, notificaciones y claves API.",
-			"tasks": "Tus tareas asignadas quedan en su proyecto, sin asignar.",
-			"files": "Tus archivos subidos quedan en su proyecto, sin tu nombre.",
-			"admin": "El último administrador activo no puede eliminar su cuenta."
-		},
-		"irreversible": "Esta acción no se puede deshacer.",
+		"deleteBody": "Tu cuenta y tus datos personales se eliminarán de forma permanente.",
+		"learnMore": "Más información.",
 		"deleteButton": "Eliminar mi cuenta",
 		"confirmLabel": "Escribe tu nombre de usuario ({{username}}) para confirmar",
 		"confirmButton": "Eliminar definitivamente",

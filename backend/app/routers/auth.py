@@ -10,6 +10,7 @@ from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from joserfc.errors import JoseError
+from pydantic import EmailStr, TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -39,6 +40,7 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.utils.locks import lock_admin_invariants
+from app.utils.validators import normalize_email
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -50,6 +52,7 @@ GOOGLE_ISSUERS = (
 )
 OAUTH_HANDOFF_KEY = "google_handoff"
 OAUTH_HANDOFF_MAX_AGE_SECONDS = 60
+EMAIL_ADAPTER = TypeAdapter(EmailStr)
 
 
 def _auth_response(user: User) -> AuthResponse:
@@ -83,6 +86,14 @@ def _oauth_exchange_error() -> HTTPException:
 
 def _hash_oauth_handoff(raw_handoff: str) -> str:
     return hashlib.sha256(raw_handoff.encode("utf-8")).hexdigest()
+
+
+def _stored_email_form(identifier: str) -> str:
+    email = normalize_email(identifier)
+    try:
+        return str(EMAIL_ADAPTER.validate_python(email))
+    except PydanticValidationError:
+        return email
 
 
 def _resolve_google_user(db: Session, claims: GoogleClaims) -> User:
@@ -227,7 +238,7 @@ def register(
 
 @router.post(
     "/login",
-    summary="Log in with email",
+    summary="Log in with email or username",
     response_model=AuthResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -240,8 +251,12 @@ def login(
 ) -> AuthResponse:
     """Verify local credentials and issue a bearer token."""
 
-    email = str(payload.email)
-    user = db.scalar(select(User).where(User.email == email))
+    identifier = payload.identifier
+    if "@" in identifier:
+        lookup = User.email == _stored_email_form(identifier)
+    else:
+        lookup = func.lower(User.username) == identifier.lower()
+    user = db.scalar(select(User).where(lookup))
     password = payload.password.get_secret_value()
     password_is_valid, updated_hash = verify_password_and_update(
         password,
@@ -250,7 +265,7 @@ def login(
     if user is None or not password_is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid email, username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     _ensure_active_user(user)

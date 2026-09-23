@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import './register.css';
 import { Link } from "react-router-dom";
-import { isvalidemail, isvalidusername, isvalidpassword } from '../utils/validation';
+import {
+	PASSWORD_MAX_LENGTH,
+	PASSWORD_MIN_LENGTH,
+	hasControlCharacters,
+	isvalidemail,
+	isvalidpassword,
+	isvalidusername,
+	passwordLength,
+} from '../utils/validation';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { register } from "../services/authService";
@@ -16,6 +24,7 @@ function Register()
 	const [error, setError] = useState("");
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	const passwordLimits = { min: PASSWORD_MIN_LENGTH, max: PASSWORD_MAX_LENGTH };
 
 	async function handleSubmit (e) {
 		e.preventDefault();
@@ -41,9 +50,16 @@ function Register()
 			setError(t("register.invausername"));
 			return ;
 		}
+		if (hasControlCharacters(password))
+		{
+			setError(t("register.invapasswordchars"));
+			return ;
+		}
 		if (!isvalidpassword(password))
 		{
-			setError(t("register.invapassword"));
+			setError(passwordLength(password) > PASSWORD_MAX_LENGTH
+				? t("register.invapasswordlong", passwordLimits)
+				: t("register.invapassword", passwordLimits));
 			return ;
 		}
 		if (password !== confirmPassword)
@@ -52,7 +68,6 @@ function Register()
 			return ;
 		}
 		setError("");
-		// console.log(`Nouveau compte : ${username}, ${email}`);
 		try
 		{
 			await register(username, email, password);
@@ -81,11 +96,15 @@ function Register()
 						</div>
 						<div className='input-field'>
 							<label htmlFor='password'>{t("login.password")} : </label>
-							<input id='password' type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+							<input id='password' type="password" autoComplete="new-password" aria-describedby="password-help" required value={password} onChange={(e) => setPassword(e.target.value)} />
+							<small id='password-help' className='password-help'>{t("register.passwordRules", passwordLimits)}</small>
 						</div>
 						<div className='input-field'>
 							<label htmlFor='confirmpassword'>{t("register.confirmpassword")} : </label>
-							<input id='confirmpassword' type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+							<input id='confirmpassword' type="password" autoComplete="new-password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+							{confirmPassword && confirmPassword !== password && (
+								<small className='password-help password-mismatch' aria-live="polite">{t("register.falsepassword")}</small>
+							)}
 						</div>
 						<button>{t("register.createcount")}</button>
 						<div className='login-link'>

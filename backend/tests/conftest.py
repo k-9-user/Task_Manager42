@@ -31,6 +31,8 @@ os.environ.update(
     OAUTH_GOOGLE_CLIENT_SECRET="test-google-secret",
     OAUTH_GOOGLE_REDIRECT_URI="https://testserver/api/auth/oauth/google/callback",
     UPLOAD_DIR="/tmp/test-uploads",
+    PASSWORD_MIN_LENGTH="6",
+    PASSWORD_MAX_LENGTH="128",
 )
 Path(os.environ["UPLOAD_DIR"]).mkdir(parents=True, exist_ok=True)
 

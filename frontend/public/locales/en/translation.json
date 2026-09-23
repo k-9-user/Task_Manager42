@@ -12,6 +12,10 @@
 		"title": "Task Manager",
 		"subtitle": "Log in to find your projects",
 		"username": "Username",
+		"identifier": "Email or username",
+		"identifierRequired": "Please enter your email or username",
+		"passwordRequired": "Please enter your password",
+		"invalidIdentifier": "Enter a valid email address or a username of 3-50 alphanumeric characters (., _, - allowed)",
 		"password": "Password",
 		"submit": "Log in",
 		"noAccount": "No account?",
@@ -24,8 +28,8 @@
 	},
 	"register":
 	{
-		"confirmpassword": "Confirm pasword",
-		"createcount": "Creat my account",
+		"confirmpassword": "Confirm password",
+		"createcount": "Create my account",
 		"return": "return",
 		"falsepassword": "The passwords do not match",
 		"username": "Please enter a username",
@@ -34,7 +38,10 @@
 		"cpassword": "Please confirm your password",
 		"invaemail": "Invalid email address",
 		"invausername": "Username must be 3-50 alphanumeric characters (., _, - allowed)",
-		"invapassword": "Password must be at least 12 characters long"
+		"invapassword": "Password must be at least {{min}} characters long",
+		"invapasswordlong": "Password must be at most {{max}} characters long",
+		"invapasswordchars": "Password cannot contain invisible characters (tab, line break…)",
+		"passwordRules": "Use {{min}} or more characters. Symbols like ! @ # $ % work too."
 	},
 	"loading":
 	{
@@ -178,48 +185,55 @@
 		"privacy":
 		{
 			"title": "Privacy Policy",
-			"section1Title": "1. Data we collect",
-			"section1Body": "When you sign up we collect your username, your email and your password (hashed with Argon2, never stored in plain text); with Google sign-in we store your Google account identifier instead of a password. We also keep what you create in the service: projects, tasks, comments, messages, uploaded files and notifications.",
-			"section2Title": "2. How we use your data",
-			"section2Body": "We use your data only within Task Manager, whether for authentication or for any activity on the platform.",
-			"section3Title": "3. Data retention",
-			"section3Body": "Your data is kept from the creation of your account until it is deleted.",
-			"section4Title": "4. Your rights (GDPR)",
-			"section4Intro": "Under the GDPR you have the following rights:",
-			"rights":
+			"updated": "Last updated: September 23, 2026",
+			"sections":
 			{
-				"access":
+				"collect":
 				{
-					"name": "Access and portability (Art. 15 and 20):",
-					"body": "download all your data as a readable JSON file from your Profile page."
+					"title": "1. Data we collect",
+					"body": "When you create an account, we collect your username, email address and password. If you sign in with Google, we receive your Google account ID, email address and profile picture instead of a password. We also store what you create in Task Manager: projects, tasks, comments, messages, files and API keys."
 				},
-				"rectification":
+				"use":
 				{
-					"name": "Rectification (Art. 16):",
-					"body": "edit your username and display name on your Profile page. To change your email, contact an administrator."
+					"title": "2. How we use your data",
+					"body": "We use your data only to run Task Manager: signing you in, managing your projects and sending emails about your account. We never use it for advertising or profiling."
 				},
-				"erasure":
+				"sharing":
 				{
-					"name": "Erasure (Art. 17):",
-					"body": "delete your account and your personal data from your Profile page."
+					"title": "3. Sharing your data",
+					"body": "We do not sell your data or share it with third parties. Project content is visible to the project's members, and service administrators can access your account to keep the service running."
 				},
-				"restriction":
+				"security":
 				{
-					"name": "Restriction and objection (Art. 18 and 21):",
-					"body": "not offered in the app. We do no marketing and no profiling, and only process what the service needs to work. You can still write to an administrator."
+					"title": "4. Security",
+					"body": "We protect your data with appropriate measures: encrypted connections, passwords never stored in plain text, and restricted access."
 				},
-				"automated":
+				"retention":
 				{
-					"name": "Automated decisions (Art. 22):",
-					"body": "none. No decision about you is made by an algorithm."
+					"title": "5. Data retention",
+					"body": "We keep your data for as long as your account exists. Backup copies may remain for a short time after it is deleted."
 				}
 			},
-			"section4Footer": "Each export or deletion is confirmed by an email sent to your address.",
-			"profileLink": "Go to my Profile page",
-			"section5Title": "5. Sharing your data",
-			"section5Body": "Your data is never shared outside the project; only you and the project team with administrator access can access it.",
+			"rights":
+			{
+				"title": "6. Your rights",
+				"intro": "Under the GDPR, you can at any time:",
+				"items":
+				{
+					"access": "access and download your data from your Profile page;",
+					"rectification": "correct your username and display name from your Profile page (contact an administrator to change your email);",
+					"erasure": "delete your account from your Profile page;",
+					"objection": "object to or restrict the use of your data by contacting an administrator."
+				},
+				"footer": "Each download or deletion is confirmed by email."
+			},
+			"deletion":
+			{
+				"title": "7. Deleting your account",
+				"body": "You can delete your account at any time from your Profile page. Your personal data is then permanently erased. Projects, tasks and files shared with other members stay available to them, without your name."
+			},
 			"contactTitle": "Contact",
-			"contactBody": "For any question about your data, contact the project team."
+			"contactBody": "For any question about your data, contact the Task Manager team."
 		},
 		"terms":
 		{
@@ -234,25 +248,14 @@
 	},
 	"gdpr":
 	{
-		"title": "My data (GDPR)",
+		"title": "My data",
 		"rightsLink": "Read your GDPR rights",
-		"mailNote": "A confirmation email is sent to your address.",
-		"exportTitle": "Download my data",
-		"exportBody": "A readable JSON file with your profile, projects, tasks, comments, messages, uploaded files and notifications.",
+		"exportBody": "Download a copy of your data as a JSON file.",
 		"exportButton": "Download my data",
 		"exporting": "Preparing...",
 		"exportDone": "Your data was downloaded.",
-		"deleteTitle": "Delete my account",
-		"deleteIntro": "What deletion does:",
-		"deleteEffects":
-		{
-			"projects": "Your projects go to their oldest remaining member, or are deleted if you are alone.",
-			"content": "Your memberships, comments, messages, notifications and API keys are deleted.",
-			"tasks": "Tasks assigned to you stay in their project, unassigned.",
-			"files": "Files you uploaded stay in their project, without your name.",
-			"admin": "The last active administrator cannot delete their account."
-		},
-		"irreversible": "This cannot be undone.",
+		"deleteBody": "Your account and personal data will be permanently deleted.",
+		"learnMore": "Learn more.",
 		"deleteButton": "Delete my account",
 		"confirmLabel": "Type your username ({{username}}) to confirm",
 		"confirmButton": "Delete permanently",

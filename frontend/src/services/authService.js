@@ -2,11 +2,11 @@ import { apiFetch } from "./api";
 
 export const googleOAuthUrl = `${import.meta.env.VITE_API_URL}/api/auth/oauth/google`;
 
-export async function login(email, password) {
+export async function login(identifier, password) {
 	const data = await apiFetch("/api/auth/login",
 		{
 			method: "POST",
-			body: JSON.stringify({ email, password}),
+			body: JSON.stringify({ identifier, password }),
 		}
 	);
 	localStorage.setItem("token", data.token);

@@ -131,7 +131,8 @@ def test_bootstrap_settings_validate_identity_and_password() -> None:
     for overrides in (
         {"bootstrap_admin_email": "invalid"},
         {"bootstrap_admin_username": "bad user"},
-        {"bootstrap_admin_password": "too-short"},
+        {"bootstrap_admin_password": "short"},
+        {"bootstrap_admin_password": "a" * 129},
     ):
         with pytest.raises(ValidationError):
             BootstrapSettings(**({
@@ -198,3 +199,23 @@ def test_numeric_settings_must_be_positive() -> None:
             _settings(jwt_expiration=value)
         with pytest.raises(ValidationError):
             _settings(max_upload_size_mb=value)
+        with pytest.raises(ValidationError):
+            _settings(password_min_length=value)
+        with pytest.raises(ValidationError):
+            _settings(password_max_length=value)
+
+
+def test_password_limits_come_from_the_environment_and_stay_ordered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _settings()
+    assert (settings.password_min_length, settings.password_max_length) == (6, 128)
+    assert _settings(password_min_length=20, password_max_length=20)
+    with pytest.raises(ValidationError):
+        _settings(password_min_length=21, password_max_length=20)
+
+    for name in ("PASSWORD_MIN_LENGTH", "PASSWORD_MAX_LENGTH"):
+        with monkeypatch.context() as patched:
+            patched.delenv(name)
+            with pytest.raises(ValidationError):
+                Settings()

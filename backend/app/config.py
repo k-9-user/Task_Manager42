@@ -36,7 +36,18 @@ class DatabaseSettings(BaseSettings):
     )
 
 
-class Settings(DatabaseSettings):
+class PasswordSettings(DatabaseSettings):
+    password_min_length: int = Field(gt=0)
+    password_max_length: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def require_ordered_password_limits(self) -> "PasswordSettings":
+        if self.password_min_length > self.password_max_length:
+            raise ValueError("PASSWORD_MIN_LENGTH must not exceed PASSWORD_MAX_LENGTH")
+        return self
+
+
+class Settings(PasswordSettings):
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_expiration: int = Field(default=3600, gt=0)
     oauth_google_client_id: str = ""
@@ -118,14 +129,14 @@ class Settings(DatabaseSettings):
         return self
 
 
-class BootstrapSettings(DatabaseSettings):
+class BootstrapSettings(PasswordSettings):
     bootstrap_admin_email: EmailStr
     bootstrap_admin_username: str = Field(
         min_length=USERNAME_MIN_LENGTH,
         max_length=USERNAME_MAX_LENGTH,
         pattern=USERNAME_PATTERN,
     )
-    bootstrap_admin_password: SecretStr = Field(min_length=12, max_length=128)
+    bootstrap_admin_password: SecretStr
 
     _email_normalizer = field_validator("bootstrap_admin_email", mode="before")(
         normalize_email
@@ -141,6 +152,13 @@ class BootstrapSettings(DatabaseSettings):
         if any(ord(character) < 0x20 or ord(character) == 0x7F for character in password):
             raise ValueError("bootstrap admin password must contain printable characters")
         return value
+
+    @model_validator(mode="after")
+    def require_admin_password_length(self) -> "BootstrapSettings":
+        length = len(self.bootstrap_admin_password.get_secret_value())
+        if not self.password_min_length <= length <= self.password_max_length:
+            raise ValueError("bootstrap admin password length is outside the password limits")
+        return self
 
 
 def _load_settings(settings_type: type[SettingsType]) -> SettingsType:

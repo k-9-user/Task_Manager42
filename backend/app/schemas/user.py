@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -12,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.config import get_settings
 from app.models.user import UserRole, UserStatus
 from app.schemas.common import StrictRequest
 from app.utils.validators import (
@@ -21,12 +22,23 @@ from app.utils.validators import (
     USERNAME_MAX_LENGTH,
     USERNAME_MIN_LENGTH,
     USERNAME_PATTERN,
+    has_control_characters,
     normalize_email,
     validate_avatar,
     validate_display_name,
     validate_status_reason,
     validate_username,
 )
+
+
+def _document_password_limits(schema: dict[str, Any]) -> None:
+    settings = get_settings()
+    schema["minLength"] = settings.password_min_length
+    schema["maxLength"] = settings.password_max_length
+
+
+def _document_password_maximum(schema: dict[str, Any]) -> None:
+    schema["maxLength"] = get_settings().password_max_length
 
 
 class UserRegister(StrictRequest):
@@ -36,17 +48,42 @@ class UserRegister(StrictRequest):
         max_length=USERNAME_MAX_LENGTH,
         pattern=USERNAME_PATTERN,
     )
-    password: SecretStr = Field(min_length=12, max_length=128)
+    password: SecretStr = Field(json_schema_extra=_document_password_limits)
 
     _email_normalizer = field_validator("email", mode="before")(normalize_email)
     _username_validator = field_validator("username", mode="before")(validate_username)
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: SecretStr) -> SecretStr:
+        password = value.get_secret_value()
+        if has_control_characters(password):
+            raise ValueError("password must contain visible characters only")
+        settings = get_settings()
+        if len(password) < settings.password_min_length:
+            raise ValueError("password is too short")
+        if len(password) > settings.password_max_length:
+            raise ValueError("password is too long")
+        return value
+
 
 class UserLogin(StrictRequest):
-    email: EmailStr
-    password: SecretStr = Field(min_length=1, max_length=128)
+    identifier: str = Field(min_length=1, max_length=254)
+    password: SecretStr = Field(
+        min_length=1,
+        json_schema_extra=_document_password_maximum,
+    )
 
-    _email_normalizer = field_validator("email", mode="before")(normalize_email)
+    _identifier_validator = field_validator("identifier", mode="before")(
+        validate_username
+    )
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: SecretStr) -> SecretStr:
+        if len(value.get_secret_value()) > get_settings().password_max_length:
+            raise ValueError("password is too long")
+        return value
 
 
 class UserUpdate(StrictRequest):

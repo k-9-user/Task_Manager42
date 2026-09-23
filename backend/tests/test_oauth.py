@@ -340,15 +340,20 @@ def test_oauth_only_account_rejects_password_login(
     client: TestClient,
     user_factory: Any,
 ) -> None:
-    user_factory(email="oauth-only@example.com", oauth_id="oauth-only-subject")
-
-    response = client.post(
-        "/api/auth/login",
-        json={"email": "oauth-only@example.com", "password": "any-password"},
+    user_factory(
+        email="oauth-only@example.com",
+        username="oauth_only",
+        oauth_id="oauth-only-subject",
     )
 
-    assert response.status_code == 401
-    assert response.json()["error"] == "Invalid email or password"
+    for identifier in ("oauth-only@example.com", "oauth_only"):
+        response = client.post(
+            "/api/auth/login",
+            json={"identifier": identifier, "password": "any-password"},
+        )
+
+        assert response.status_code == 401
+        assert response.json()["error"] == "Invalid email, username or password"
 
 
 def test_google_callback_rejects_a_banned_provider_account(

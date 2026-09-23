@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import { googleOAuthUrl, login } from '../services/authService';
+import { isvalididentifier } from '../utils/validation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const FIELD_INPUT = "w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-3 py-2.5 text-[15px] text-[#2c1a4d] transition-shadow focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary-soft";
 
 function Login()
 {
-	const [email, setEmail] = useState("");
+	const [identifier, setIdentifier] = useState("");
 	const [password, setPassword] = useState("");
 	const { t } = useTranslation();
 	const navigate = useNavigate();
@@ -22,10 +23,26 @@ function Login()
 	async function handleSubmit(e) {
 		e.preventDefault();
 		setError("");
+		const trimmedIdentifier = identifier.trim();
+		if (!trimmedIdentifier)
+		{
+			setError(t("login.identifierRequired"));
+			return ;
+		}
+		if (!password)
+		{
+			setError(t("login.passwordRequired"));
+			return ;
+		}
+		if (!isvalididentifier(trimmedIdentifier))
+		{
+			setError(t("login.invalidIdentifier"));
+			return ;
+		}
 
 		try
 		{
-			await login(email, password);
+			await login(trimmedIdentifier, password);
 			navigate("/projects");
 		}
 		catch (err)
@@ -50,12 +67,12 @@ function Login()
 					)}
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1.5">
-							<label htmlFor='username' className="text-[13px] font-semibold text-[#4c1d95]">{t("login.username")}</label>
-							<input id='username' type="text" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD_INPUT} />
+							<label htmlFor='identifier' className="text-[13px] font-semibold text-[#4c1d95]">{t("login.identifier")}</label>
+							<input id='identifier' type="text" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={FIELD_INPUT} />
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<label htmlFor='password' className="text-[13px] font-semibold text-[#4c1d95]">{t("login.password")}</label>
-							<input id='password' type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={FIELD_INPUT} />
+							<input id='password' type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={FIELD_INPUT} />
 						</div>
 					</div>
 					<button

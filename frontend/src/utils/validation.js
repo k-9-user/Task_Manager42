@@ -1,6 +1,9 @@
+export const PASSWORD_MIN_LENGTH = Number(import.meta.env.VITE_PASSWORD_MIN_LENGTH);
+export const PASSWORD_MAX_LENGTH = Number(import.meta.env.VITE_PASSWORD_MAX_LENGTH);
+
 export function isvalidemail(email)
 {
-	const adr = /^.+@.+\.[a-zA-Z]{2,}$/;
+	const adr = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 	return adr.test(email);
 }
 
@@ -10,7 +13,26 @@ export function isvalidusername(username)
 	return pattern.test(username);
 }
 
+export function passwordLength(password)
+{
+	return [...password].length;
+}
+
+export function hasControlCharacters(value)
+{
+	return [...value].some((character) => {
+		const code = character.codePointAt(0);
+		return code < 0x20 || code === 0x7f;
+	});
+}
+
 export function isvalidpassword(password)
 {
-	return password.length >= 12 && password.length <= 128;
+	const length = passwordLength(password);
+	return length >= PASSWORD_MIN_LENGTH && length <= PASSWORD_MAX_LENGTH && !hasControlCharacters(password);
+}
+
+export function isvalididentifier(identifier)
+{
+	return identifier.includes("@") ? isvalidemail(identifier) : isvalidusername(identifier);
 }

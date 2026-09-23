@@ -4,8 +4,6 @@ import { useTranslation } from "react-i18next";
 import { deleteMyAccount, exportMyData } from "../services/gdprService";
 import "./GdprPanel.css";
 
-const DELETE_EFFECTS = ["projects", "content", "tasks", "files", "admin"];
-
 function GdprPanel({ user })
 {
 	const { t } = useTranslation();
@@ -67,12 +65,10 @@ function GdprPanel({ user })
 	return (
 		<section className="gdpr-panel" aria-labelledby="gdpr-title">
 			<h2 id="gdpr-title">{t("gdpr.title")}</h2>
-			<p><Link to="/PrivacyPolicy">{t("gdpr.rightsLink")}</Link></p>
+			<p><Link to="/PrivacyPolicy#your-rights">{t("gdpr.rightsLink")}</Link></p>
 
 			<div className="gdpr-block">
-				<h3>{t("gdpr.exportTitle")}</h3>
 				<p>{t("gdpr.exportBody")}</p>
-				<p className="gdpr-note">{t("gdpr.mailNote")}</p>
 				<button type="button" onClick={handleExport} disabled={exporting}>
 					{exporting ? t("gdpr.exporting") : t("gdpr.exportButton")}
 				</button>
@@ -80,15 +76,10 @@ function GdprPanel({ user })
 			</div>
 
 			<div className="gdpr-block gdpr-danger">
-				<h3>{t("gdpr.deleteTitle")}</h3>
-				<p>{t("gdpr.deleteIntro")}</p>
-				<ul>
-					{DELETE_EFFECTS.map((effect) => (
-						<li key={effect}>{t(`gdpr.deleteEffects.${effect}`)}</li>
-					))}
-				</ul>
-				<p><strong>{t("gdpr.irreversible")}</strong></p>
-				<p className="gdpr-note">{t("gdpr.mailNote")}</p>
+				<p>
+					{t("gdpr.deleteBody")}{" "}
+					<Link to="/PrivacyPolicy#account-deletion">{t("gdpr.learnMore")}</Link>
+				</p>
 				{!confirming ? (
 					<button type="button" className="gdpr-danger-button" onClick={() => setConfirming(true)}>
 						{t("gdpr.deleteButton")}
