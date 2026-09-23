@@ -18,12 +18,14 @@ def backup(env, _context):
 def restore(env, context):
     postgres_db = read_env(ROOT / ".env")["POSTGRES_DB"]
     name = restore_backup(env, context, postgres_db, os.environ.get("BACKUP", ""))
-    run(COMPOSE + ["up", "--build", "--detach", "--wait"], env=env)
     print(f"Restored {name}. Verify with make smoke and https://localhost/status.")
 
 
 def restore_backup(env, context, postgres_db, requested=""):
-    """Replace the database and uploads with one backup; the caller restarts the stack."""
+    """Replace the database and uploads with one backup, then restart the stack.
+
+    A failed restore leaves the live data unchanged, so the stack restarts on it either way.
+    """
 
     backups = list_backups(postgres_db)
     require(backups, f"No backup in {backups_dir()}; run make backup first")
@@ -40,5 +42,8 @@ def restore_backup(env, context, postgres_db, requested=""):
         "Restore cancelled",
     )
     run(COMPOSE + ["stop", "nginx", "backend", "backup"], env=env)
-    run(COMPOSE + ["--profile", "restore", "run", "--rm", "restore", name], env=env)
+    try:
+        run(COMPOSE + ["--profile", "restore", "run", "--rm", "restore", name], env=env)
+    finally:
+        run(COMPOSE + ["up", "--build", "--detach", "--wait"], env=env)
     return name

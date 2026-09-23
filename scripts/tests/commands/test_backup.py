@@ -28,6 +28,7 @@ class BackupTests(unittest.TestCase):
         self.assertEqual([call.args[0][len(compose.COMPOSE):] for call in run.call_args_list], [
             ["stop", "nginx", "backend", "backup"],
             ["--profile", "restore", "run", "--rm", "restore", self.newer],
+            ["up", "--build", "--detach", "--wait"],
         ])
         for call in run.call_args_list:
             self.assertIs(call.kwargs["env"], self.env)
@@ -36,7 +37,7 @@ class BackupTests(unittest.TestCase):
         with backups(self.older, self.newer), patch.object(backup, "run") as run, \
                 patch("builtins.input", return_value="restore"):
             backup.restore_backup(self.env, "default", "taskmanager", self.older)
-        self.assertEqual(run.call_args.args[0][-1], self.older)
+        self.assertEqual(run.call_args_list[1].args[0][-1], self.older)
 
     def test_restore_rejects_unknown_names_before_confirmation(self):
         for requested in ("../postgres", f"{self.newer}/..", "other-20260923T100000Z",
@@ -58,6 +59,20 @@ class BackupTests(unittest.TestCase):
                     self.assertRaisesRegex(ValueError, message):
                 backup.restore_backup(self.env, "default", "taskmanager")
             run.assert_not_called()
+
+    def test_failed_restore_still_restarts_the_stack_and_reports_the_error(self):
+        steps = []
+
+        def fake_run(args, **_kwargs):
+            steps.append(args[len(compose.COMPOSE):][:2])
+            if "restore" in args:
+                raise ValueError("docker command failed (exit 1)")
+
+        with backups(self.newer), patch.object(backup, "run", side_effect=fake_run), \
+                patch("builtins.input", return_value="restore"), \
+                self.assertRaisesRegex(ValueError, "exit 1"):
+            backup.restore_backup(self.env, "default", "taskmanager")
+        self.assertEqual(steps, [["stop", "nginx"], ["--profile", "restore"], ["up", "--build"]])
 
 
 if __name__ == "__main__":

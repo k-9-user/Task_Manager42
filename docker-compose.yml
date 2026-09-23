@@ -157,6 +157,7 @@ services:
     volumes:
       - ./backup/backup.sh:/opt/backup/backup.sh:ro
       - backend_uploads:/uploads
+      - backup_status:/status
       - ${DATA_DIR:?DATA_DIR is set by scripts/make.py; run make up instead of docker compose}/backups:/backups:ro
     depends_on:
       db:

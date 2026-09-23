@@ -37,7 +37,7 @@ class MainTests(unittest.TestCase):
             commands.main()
         self.assertEqual(events, ["check", ["run", "--rm", "backup", "once"]])
 
-    def test_restore_checks_then_restores_the_requested_backup_then_starts(self):
+    def test_restore_checks_then_restores_the_requested_backup(self):
         env = {"DOCKER_HOST": "unix:///var/run/docker.sock"}
         events = []
         with patch.object(commands.sys, "argv", ["make.py", "restore"]), \
@@ -46,13 +46,11 @@ class MainTests(unittest.TestCase):
                 patch.object(backup, "read_env", return_value={"POSTGRES_DB": "taskmanager"}), \
                 patch.object(check, "check", side_effect=lambda: (events.append("check") or (env, "default"))), \
                 patch.object(backup, "restore_backup",
-                             side_effect=lambda *args: events.append(("restore", *args[2:])) or args[3]), \
-                patch.object(backup, "run", side_effect=lambda args, **_kwargs: events.append(args[len(compose.COMPOSE):])):
+                             side_effect=lambda *args: events.append(("restore", *args[2:])) or args[3]):
             commands.main()
         self.assertEqual(events, [
             "check",
             ("restore", "taskmanager", "taskmanager-20260923T100000Z"),
-            ["up", "--build", "--detach", "--wait"],
         ])
 
     def test_remote_restore_rejected_before_confirmation(self):
