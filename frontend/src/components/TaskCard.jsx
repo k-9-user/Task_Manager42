@@ -11,12 +11,10 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 {
 	const [attachments, setAttachments] = useState([]);
 	const [attachmentError, setAttachmentError] = useState("");
-	const [preview, setPreview] = useState(null);
 	const attachmentLoadId = useRef(0);
-	const [showupload, setshowupload] = useState(false);
 	const [hasBanner, setHasBanner] = useState(!!task.banner_url);
 	const [bannerBlobUrl, setBannerBlobUrl] = useState(null);
-	const [showbanner, setshowbanner] = useState(false);
+	const [bannerVersion, setBannerVersion] = useState(0);
 	const [showcomments, setshowcomments] = useState(false);
 	const { t } = useTranslation();
 
@@ -34,11 +32,6 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 			});
 		return () => { attachmentLoadId.current++; };
 	}, [task.id]);
-
-	useEffect(() => () => {
-		if (preview?.url)
-			URL.revokeObjectURL(preview.url);
-	}, [preview]);
 
 	useEffect(() =>
 	{
@@ -65,7 +58,7 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 			if (objectUrl)
 				URL.revokeObjectURL(objectUrl);
 		};
-	}, [hasBanner, task.id]);
+	}, [hasBanner, bannerVersion, task.id]);
 
 	async function uploadsuccess()
 	{
@@ -75,20 +68,26 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 		{
 			setAttachments(data.attachments);
 			setAttachmentError("");
-			setshowupload(false);
 		}
 	}
 
 	async function handlePreview(attachment)
 	{
+		const win = window.open("", "_blank");
 		try
 		{
 			const url = await fetchAuthenticatedBlobUrl(`/api/attachments/${attachment.id}`);
-			setPreview({ id: attachment.id, url });
+			if (win)
+			{
+				win.opener = null;
+				win.location.href = url;
+			}
+			setTimeout(() => URL.revokeObjectURL(url), 60000);
 			setAttachmentError("");
 		}
 		catch (err)
 		{
+			win?.close();
 			setAttachmentError(err.message);
 		}
 	}
@@ -119,8 +118,6 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 		{
 			await deleteAttachment(attachment.id);
 			setAttachments((current) => current.filter((item) => item.id !== attachment.id));
-			if (preview?.id === attachment.id)
-				setPreview(null);
 			setAttachmentError("");
 		}
 		catch (err)
@@ -132,7 +129,7 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 	function bannerUploadSuccess()
 	{
 		setHasBanner(true);
-		setshowbanner(false);
+		setBannerVersion((version) => version + 1);
 	}
 	return (
 		<div className="task-card">
@@ -153,26 +150,20 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 						attachments.map((att) =>
 							(	
 								<li key={att.id}>
-									<span>📎{att.filename}</span>{" "}
-									<button type="button" onClick={() => handlePreview(att)}>{t("attachments.preview")}</button>{" "}
-									<button type="button" onClick={() => handleDownload(att)}>{t("attachments.download")}</button>{" "}
-									{canManageAttachments && <button type="button" onClick={() => handleDelete(att)}>{t("attachments.delete")}</button>}
-									{preview?.id === att.id && (
-										<a href={preview.url} target="_blank" rel="noopener noreferrer">{t("attachments.openPreview")}</a>
-									)}
+									<span>📎{att.filename}</span>
+									<div className="attachment-actions">
+										<button type="button" onClick={() => handlePreview(att)}>{t("attachments.preview")}</button>
+										<button type="button" onClick={() => handleDownload(att)}>{t("attachments.download")}</button>
+										{canManageAttachments && <button type="button" onClick={() => handleDelete(att)}>{t("attachments.delete")}</button>}
+									</div>
 								</li>
 							)
 						)
 					}
 				</ul>
 			)}
-			{canManageAttachments && (showupload ? (
-				<AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />
-			) : (<button type="button" onClick={() => setshowupload(true)}>{t("random.addfichier")}</button>))}
-			{showbanner ? (
-				<BannerUpload taskId={task.id} uploadsuccess={bannerUploadSuccess} />
-			) : (<button onClick={() => setshowbanner(true)}>{t("random.addbanniere")}</button>)
-			}
+			{canManageAttachments && <AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />}
+			{canManageAttachments && <BannerUpload taskId={task.id} uploadsuccess={bannerUploadSuccess} />}
 			<button onClick={() => setshowcomments(!showcomments)}>
 				{showcomments ? t("random.masquercommentaires") : t("random.voircommentaires")}
 			</button>
