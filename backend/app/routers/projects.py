@@ -82,7 +82,11 @@ NOTIFICATION_INACTIVITY_THRESHOLD = timedelta(days=182)  # ~6 mois
 
 
 def _user_is_notifiable(db: Session, user_id: uuid.UUID) -> bool:
-    """Faux si le compte est inactif depuis plus de 6 mois."""
+    """Return false when the user's profile has not been updated for six months.
+
+    ``User.updated_at`` is only a proxy for activity; logins and normal usage do
+    not refresh it.
+    """
 
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
