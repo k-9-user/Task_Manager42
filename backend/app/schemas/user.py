@@ -43,10 +43,12 @@ class UserRegister(StrictRequest):
 
 
 class UserLogin(StrictRequest):
-    email: EmailStr
+    identifier: str = Field(min_length=1, max_length=254)
     password: SecretStr = Field(min_length=1, max_length=128)
 
-    _email_normalizer = field_validator("email", mode="before")(normalize_email)
+    _identifier_validator = field_validator("identifier", mode="before")(
+        validate_username
+    )
 
 
 class UserUpdate(StrictRequest):

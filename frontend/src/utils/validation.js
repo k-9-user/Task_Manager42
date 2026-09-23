@@ -14,3 +14,8 @@ export function isvalidpassword(password)
 {
 	return password.length >= 12 && password.length <= 128;
 }
+
+export function isvalididentifier(identifier)
+{
+	return identifier.includes("@") ? isvalidemail(identifier) : isvalidusername(identifier);
+}

@@ -39,6 +39,7 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.utils.locks import lock_admin_invariants
+from app.utils.validators import normalize_email
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -227,7 +228,7 @@ def register(
 
 @router.post(
     "/login",
-    summary="Log in with email",
+    summary="Log in with email or username",
     response_model=AuthResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"model": ErrorResponse},
@@ -240,8 +241,12 @@ def login(
 ) -> AuthResponse:
     """Verify local credentials and issue a bearer token."""
 
-    email = str(payload.email)
-    user = db.scalar(select(User).where(User.email == email))
+    identifier = payload.identifier
+    if "@" in identifier:
+        lookup = User.email == normalize_email(identifier)
+    else:
+        lookup = func.lower(User.username) == identifier.lower()
+    user = db.scalar(select(User).where(lookup))
     password = payload.password.get_secret_value()
     password_is_valid, updated_hash = verify_password_and_update(
         password,
@@ -250,7 +255,7 @@ def login(
     if user is None or not password_is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid email, username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     _ensure_active_user(user)

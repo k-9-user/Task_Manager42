@@ -20,6 +20,7 @@ from app.database import SessionLocal
 from app.main import app
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
+    UserLogin,
     UserRegister,
     UserStatusUpdate,
     UserUpdate,
@@ -76,12 +77,12 @@ def test_password_with_injection_metacharacters_remains_opaque(
 
     valid_login = client.post(
         "/api/auth/login",
-        json={"email": "opaque-password@example.com", "password": password},
+        json={"identifier": "opaque-password@example.com", "password": password},
     )
     bypass_attempt = client.post(
         "/api/auth/login",
         json={
-            "email": "opaque-password@example.com",
+            "identifier": "opaque-password@example.com",
             "password": "' OR 1=1 --",
         },
     )
@@ -116,6 +117,22 @@ def test_registration_schema_is_strict() -> None:
     for payload in invalid_payloads:
         with pytest.raises(ValidationError):
             UserRegister.model_validate(payload)
+
+
+def test_login_schema_is_strict_and_trims_the_identifier() -> None:
+    assert UserLogin.model_validate(
+        {"identifier": "  first_user  ", "password": "valid-password"}
+    ).identifier == "first_user"
+
+    invalid_payloads = (
+        {"email": "first@example.com", "password": "valid-password"},
+        {"identifier": "   ", "password": "valid-password"},
+        {"identifier": "a" * 255, "password": "valid-password"},
+        {"identifier": "first_user", "password": ""},
+    )
+    for payload in invalid_payloads:
+        with pytest.raises(ValidationError):
+            UserLogin.model_validate(payload)
 
 
 def test_profile_schema_rejects_unsafe_avatars() -> None:
@@ -289,34 +306,72 @@ def test_duplicate_registration_returns_conflict(client: TestClient) -> None:
     assert duplicate_username.json()["error"] == "Username already taken"
 
 
-def test_login_failure_is_generic_for_unknown_email_and_wrong_password(
+def test_login_failure_is_generic_for_every_unknown_identifier_and_wrong_password(
     client: TestClient,
 ) -> None:
     assert client.post("/api/auth/register", json=VALID_REGISTRATION).status_code == 201
 
-    wrong_password = client.post(
+    failures = [
+        client.post(
+            "/api/auth/login",
+            json={"identifier": identifier, "password": "wrong-password"},
+        )
+        for identifier in (
+            "first@example.com",
+            "first_user",
+            "unknown@example.com",
+            "unknown_user",
+        )
+    ]
+
+    for failure in failures:
+        assert failure.status_code == 401
+        assert failure.json() == {
+            "success": False,
+            "error": "Invalid email, username or password",
+        }
+
+
+def test_unknown_username_still_runs_a_password_verification(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str | None] = []
+
+    def spy(password: str, password_hash: str | None) -> tuple[bool, str | None]:
+        calls.append(password_hash)
+        return verify_password_and_update(password, password_hash)
+
+    monkeypatch.setattr("app.routers.auth.verify_password_and_update", spy)
+
+    response = client.post(
         "/api/auth/login",
-        json={"email": "first@example.com", "password": "wrong-password"},
-    )
-    unknown_email = client.post(
-        "/api/auth/login",
-        json={"email": "unknown@example.com", "password": "wrong-password"},
+        json={"identifier": "nobody_here", "password": "wrong-password"},
     )
 
-    assert wrong_password.status_code == unknown_email.status_code == 401
-    assert wrong_password.json() == unknown_email.json() == {
-        "success": False,
-        "error": "Invalid email or password",
-    }
+    assert response.status_code == 401
+    assert calls == [None]
 
 
-def test_successful_login_returns_a_usable_token(client: TestClient) -> None:
+@pytest.mark.parametrize(
+    "identifier",
+    (
+        VALID_REGISTRATION["email"],
+        VALID_REGISTRATION["username"],
+        "FIRST_USER",
+        "  first_user  ",
+    ),
+)
+def test_successful_login_returns_a_usable_token(
+    client: TestClient,
+    identifier: str,
+) -> None:
     registration = client.post("/api/auth/register", json=VALID_REGISTRATION)
 
     response = client.post(
         "/api/auth/login",
         json={
-            "email": VALID_REGISTRATION["email"],
+            "identifier": identifier,
             "password": VALID_REGISTRATION["password"],
         },
     )
@@ -330,6 +385,20 @@ def test_successful_login_returns_a_usable_token(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert current_user.status_code == 200
+
+
+def test_login_rejects_the_legacy_email_field(client: TestClient) -> None:
+    assert client.post("/api/auth/register", json=VALID_REGISTRATION).status_code == 201
+
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": VALID_REGISTRATION["email"],
+            "password": VALID_REGISTRATION["password"],
+        },
+    )
+
+    assert response.status_code == 422
 
 
 def test_current_user_rejects_invalid_or_orphaned_tokens(client: TestClient) -> None:
@@ -416,15 +485,19 @@ def test_banned_user_cannot_login_or_use_existing_token(
     headers = auth_headers(user)
 
     current = client.get("/api/users/me", headers=headers)
-    login = client.post(
-        "/api/auth/login",
-        json={"email": user.email, "password": "valid-password-42"},
-    )
+    logins = [
+        client.post(
+            "/api/auth/login",
+            json={"identifier": identifier, "password": "valid-password-42"},
+        )
+        for identifier in (user.email, user.username)
+    ]
 
     assert current.status_code == 403
     assert current.json()["error"] == "Account is banned"
-    assert login.status_code == 403
-    assert login.json()["error"] == "Account is banned"
+    for login in logins:
+        assert login.status_code == 403
+        assert login.json()["error"] == "Account is banned"
 
 
 def test_registration_matches_a_stored_email_regardless_of_input_case(
@@ -443,7 +516,7 @@ def test_registration_matches_a_stored_email_regardless_of_input_case(
     login = client.post(
         "/api/auth/login",
         json={
-            "email": "FIRST@EXAMPLE.COM",
+            "identifier": " FIRST@EXAMPLE.COM ",
             "password": VALID_REGISTRATION["password"],
         },
     )
