@@ -48,6 +48,7 @@
 	{
 		"usermanag": "Gestion des utilisateurs",
 		"role": "Rôle",
+		"email": "E-mail",
 		"action": "Action",
 		"user": "Utilisateur",
 		"admin": "Administrateur",
@@ -81,7 +82,10 @@
 		"rehercheencours": "Recherche en cours ...",
 		"impossibleserv": "Impossible de contacter le serveur: ",
 		"noreult": "Aucun résultat trouvé",
+		"rechercheencours": "Recherche en cours",
 		"tricreation": "Date de création",
+		"taches": "Tâches",
+		"projets": "Projets",
 		"tritre": "Titre",
 		"triecheance": "Échéance",
 		"tristatut": "Statut",

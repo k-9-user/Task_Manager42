@@ -48,6 +48,7 @@
 	{
 		"usermanag": "gestión de usuarios",
 		"role": "función",
+		"email": "Correo electrónico",
 		"action": "acción",
 		"user": "usuario",
 		"admin": "administrador",
@@ -81,7 +82,10 @@
 		"rehercheencours": "Búsqueda en curso ...",
 		"impossibleserv": "No se puede establecer contacto con el servidor: ",
 		"noreult": "No se han encontrado resultados",
+		"rechercheencours": "Buscando",
 		"tricreation": "Fecha de creación",
+		"taches": "Tareas",
+		"projets": "Proyectos",
 		"tritre": "Título",
 		"triecheance": "Vencimiento",
 		"tristatut": "Estado",

@@ -20,13 +20,11 @@ class ProjectMember(Base):
     """
     Table `project_members`.
     Table de liaison project <-> user avec un rôle par membre.
-    Utilisée pour vérifier les permissions (ex: un viewer ne peut pas
-    modifier une tâche, cf semaine 3).
+    Utilisée pour vérifier les permissions.
     """
 
     __tablename__ = "project_members"
     __table_args__ = (
-        # Un même utilisateur ne peut apparaître qu'une fois par projet.
         UniqueConstraint("project_id", "user_id", name="uq_project_member"),
     )
 
@@ -39,7 +37,6 @@ class ProjectMember(Base):
         default=ProjectRole.VIEWER,
     )
 
-    # Relations
     project = relationship("Project", back_populates="members")
     user = relationship("User")
 
