@@ -33,7 +33,6 @@ now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 log() { echo "[backup] $(now) $*"; }
 die() { log "ERROR: $*"; exit 1; }
 
-# Every backup and restore holds this lock, so runs never overlap.
 locked() { ( flock 9 || exit 1; "$@" ) 9>"$STATUS_DIR/.lock"; }
 
 list_backups() { ls -1 "$BACKUPS" | grep -E "$NAME_PATTERN" | sort; }
@@ -44,8 +43,6 @@ iso_from_name() {
 
 dump_is_complete() { tail -n 10 "$1" | grep -q "PostgreSQL database dump complete"; }
 
-# Upload file names referenced by attachments.file_url and tasks.banner_url in a plain dump.
-# A table whose column is not found yields an impossible name, so the check fails closed.
 referenced_uploads() {
     awk -F '\t' '
         /^COPY public\.(attachments|tasks) \(/ {
@@ -67,7 +64,6 @@ referenced_uploads() {
 
 archived_uploads() { tar -tzf "$1" | sed -n 's|^\./\(..*\)$|\1|p' | sort -u; }
 
-# Uploads are flat: only the ./ directory and plain files directly under it are accepted.
 archive_is_flat() {
     tar -tvzf "$1" | awk '
         NF != 6 { bad = 1 }
@@ -77,7 +73,6 @@ archive_is_flat() {
     '
 }
 
-# $1 plain dump, $2 sorted archived names: every upload the dump references must be archived.
 uploads_complete() {
     missing="$(referenced_uploads "$1" | comm -23 - "$2")"
     [ -z "$missing" ] || { log "uploads referenced by the database but not archived: $(echo $missing)"; return 1; }
@@ -110,8 +105,6 @@ prune() {
     done
 }
 
-# Dump first, archive second: an upload is written before its row commits, so only a delete
-# racing the two steps can leave a dumped row without its file, and the check catches it.
 capture() {
     pg_dump --clean --if-exists --no-owner --no-privileges --file "$1/database.sql" "$POSTGRES_DB" \
         && dump_is_complete "$1/database.sql" \
