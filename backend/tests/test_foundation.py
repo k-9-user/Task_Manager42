@@ -80,6 +80,14 @@ def test_real_app_does_not_serve_upload_storage_directly(client):
     assert response.status_code == 404
 
 
+def test_real_app_serves_swagger_docs_but_not_redoc(client):
+    docs = client.get("/docs")
+
+    assert docs.status_code == 200
+    assert "swagger-ui-bundle.js" in docs.text
+    assert client.get("/redoc").status_code == 404
+
+
 def test_real_jwt_project_task_flow_enforces_membership(client, db_session):
     assert app.dependency_overrides == {}
     assert client.get("/api/projects").status_code == 401

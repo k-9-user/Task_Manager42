@@ -33,7 +33,7 @@ logging.getLogger("app").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(title="Task Manager 42", version="0.1.0")
+app = FastAPI(title="Task Manager 42", version="0.1.0", redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

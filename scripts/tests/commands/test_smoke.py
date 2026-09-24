@@ -1,11 +1,29 @@
 """make smoke and nginx CSP tests."""
 
+import contextlib
+import io
+import json
+import re
 import unittest
 from unittest.mock import patch
 
 from scripts.commands import smoke
 from scripts.lib import paths
-from scripts.tests.fixtures import ROOT_PAGE, nonced_page
+from scripts.tests.fixtures import ROOT_PAGE, docs_page, nonced_page
+
+
+def passing_run(docs):
+    """Every smoke response in call order, all valid, ending with the given /docs page."""
+
+    return [
+        '{"status":"ok","db":"ok"}',
+        ROOT_PAGE,
+        nonced_page("a" * 32), nonced_page("b" * 32),
+        'import "/node_modules/.vite/deps/react.js"; import "/src/App.jsx"; createRoot(root);',
+        '{"navbar":{"projects":"Projects"}}',
+        json.dumps({"paths": {path: {method: {}} for path, method in smoke.OPENAPI_OPERATIONS.items()}}),
+        docs,
+    ]
 
 
 class SmokeTests(unittest.TestCase):
@@ -28,6 +46,37 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(config.count("sub_filter_once off;"), 1)
         self.assertNotIn("'unsafe-inline'; script-src", config)
         self.assertNotIn("script-src 'self' 'unsafe-inline'", config)
+
+    def test_nginx_scopes_the_docs_policy_to_the_docs_page(self):
+        config = (paths.ROOT / "nginx/default.conf").read_text(encoding="utf-8")
+        docs = re.search(r"location = /docs \{.*?\n    \}", config, re.S)
+
+        self.assertIsNotNone(docs)
+        for header in ("X-Content-Type-Options nosniff", "X-Frame-Options DENY", "Referrer-Policy no-referrer"):
+            self.assertIn(f"add_header {header} always;", docs.group(0))
+        self.assertRegex(docs.group(0), r"script-src 'self' https://cdn\.jsdelivr\.net/npm/swagger-ui-dist@5/ 'sha256-[A-Za-z0-9+/]{43}=';")
+        self.assertIn("frame-ancestors 'none'", docs.group(0))
+        self.assertNotIn("cdn.jsdelivr.net", config.replace(docs.group(0), ""))
+        self.assertNotIn("location = /redoc", config)
+        self.assertNotIn("'unsafe-eval'", config)
+
+    def test_smoke_passes_when_every_docs_script_is_allowed(self):
+        with patch.object(smoke, "run", side_effect=passing_run(docs_page())) as run, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            smoke.smoke()
+        self.assertEqual(run.call_args.args[0][-2:], ["--include", "https://localhost/docs"])
+        self.assertIn("/docs CSP", output.getvalue())
+
+    def test_smoke_rejects_a_docs_script_its_policy_does_not_allow(self):
+        cases = (
+            (docs_page(sources="'self' https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/"), "hash"),
+            (docs_page(bundle="https://cdn.jsdelivr.net/npm/other-package@1/bundle.js"), "does not allow"),
+            (docs_page(bundle="https://attacker.example/swagger-ui-bundle.js"), "does not allow"),
+        )
+        for number, (page, message) in enumerate(cases):
+            with self.subTest(number=number), patch.object(smoke, "run", side_effect=passing_run(page)), \
+                    self.assertRaisesRegex(ValueError, message):
+                smoke.smoke()
 
     def test_smoke_rejects_untransformed_entry(self):
         with patch.object(smoke, "run", side_effect=[

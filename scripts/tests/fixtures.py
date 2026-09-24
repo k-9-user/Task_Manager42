@@ -1,6 +1,8 @@
 """Shared test data and throwaway data directories."""
 
+import base64
 import contextlib
+import hashlib
 from pathlib import Path
 import tempfile
 from unittest.mock import patch
@@ -64,6 +66,24 @@ def nonced_page(nonce, *, stamped=None, placeholder=False, preamble=True):
 
 
 ROOT_PAGE = '<div id="root"></div><script src="/src/main.jsx"></script>'
+
+SWAGGER_BUNDLE = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"
+SWAGGER_BOOTSTRAP = "\n    const ui = SwaggerUIBundle({url: '/openapi.json'})\n    "
+
+
+def docs_page(*, sources=None, bundle=SWAGGER_BUNDLE):
+    """/docs as nginx returns it: the Swagger bundle, FastAPI's inline bootstrap and the docs CSP."""
+
+    if sources is None:
+        digest = base64.b64encode(hashlib.sha256(SWAGGER_BOOTSTRAP.encode()).digest()).decode()
+        sources = f"'self' https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/ 'sha256-{digest}'"
+    headers = (
+        "HTTP/2 200\r\n"
+        "content-type: text/html; charset=utf-8\r\n"
+        f"content-security-policy: default-src 'self'; script-src {sources}; style-src 'self' 'unsafe-inline'\r\n"
+    )
+    body = f'<div id="swagger-ui"></div><script src="{bundle}"></script><script>{SWAGGER_BOOTSTRAP}</script>'
+    return headers + "\r\n" + body
 
 
 @contextlib.contextmanager
