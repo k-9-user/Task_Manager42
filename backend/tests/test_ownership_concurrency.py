@@ -87,10 +87,10 @@ def test_user_deletion_blocks_member_task_update(
     assert task_response.status_code == 201, task_response.text
     task_id = UUID(task_response.json()["data"]["task"]["id"])
     if not membership_exists:
-        removed = client.delete(
-            f"/api/projects/{project_id}/members/{editor.id}", headers=owner_headers,
-        )
-        assert removed.status_code == 200, removed.text
+        db_session.query(ProjectMember).filter_by(
+            project_id=project_id, user_id=editor.id,
+        ).delete()
+        db_session.commit()
 
     deletion_locked = Event()
     update_lock_started = Event()

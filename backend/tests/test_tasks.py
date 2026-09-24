@@ -275,6 +275,22 @@ def test_update_task_description_as_viewer_forbidden(client, make_user, db_sessi
     assert db_session.get(Task, uuid.UUID(task_id)).description == "Originale"
 
 
+def test_update_task_description_as_non_member_not_found(
+    client, make_user, db_session, login_as,
+):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Tache", "description": "Originale"},
+    ).json()["data"]["task"]["id"]
+
+    login_as(make_user())
+    response = client.put(f"/api/tasks/{task_id}", json={"description": "Modifiee"})
+
+    assert response.status_code == 404
+    assert db_session.get(Task, uuid.UUID(task_id)).description == "Originale"
+
+
 # ---------------------------------------------------------------------------
 # DELETE /api/tasks/{id}
 # ---------------------------------------------------------------------------

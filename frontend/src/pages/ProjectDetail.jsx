@@ -63,7 +63,9 @@ function ProjectDetail()
 
 	function handleTaskUpdated(updatedTask)
 	{
-		setTasks((current) => current.map((task) => (task.id === updatedTask.id ? updatedTask : task)));
+		setTasks((current) => current.map((task) => (task.id === updatedTask.id
+			? { ...task, description: updatedTask.description, updated_at: updatedTask.updated_at }
+			: task)));
 	}
 
 	async function handleCreateTask(e)

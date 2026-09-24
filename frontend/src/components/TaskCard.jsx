@@ -172,7 +172,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, canEdit })
 			</h4>
 			{!editingDescription && task.description && <p className="task-description">{task.description}</p>}
 			{canEdit && !editingDescription && (
-				<button type="button" onClick={startEditDescription}>{t("tasks.editDescription")}</button>
+				<button type="button" className="task-description-edit" onClick={startEditDescription}>{t("tasks.editDescription")}</button>
 			)}
 			{editingDescription && (
 				<form className="task-description-form" onSubmit={handleSaveDescription}>

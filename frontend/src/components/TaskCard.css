@@ -35,6 +35,10 @@
 	overflow-wrap: anywhere;
 }
 
+.task-card .task-description-edit {
+	align-self: flex-end;
+}
+
 .task-description-form {
 	display: flex;
 	flex-direction: column;

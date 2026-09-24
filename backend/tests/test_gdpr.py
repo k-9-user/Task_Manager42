@@ -67,6 +67,7 @@ def test_export_omits_empty_sections_and_internal_ids(client):
     response = client.get("/api/gdpr/export")
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
     body = response.json()
     assert set(body) == {"about", "profile"}
     assert "display_name" not in body["profile"]
@@ -112,6 +113,29 @@ def test_export_covers_user_content_without_secrets(client, db_session, sent_mai
     assert "key_hash" not in response.text
     assert "oauth_id" not in response.text
     assert sent_mails == [(client.current_user.email, "Your Task Manager data export")]
+
+
+def test_export_skips_tasks_of_projects_the_user_left(client, make_user, db_session):
+    other_owner = make_user()
+    project = Project(name="Left project", owner_id=other_owner.id)
+    db_session.add(project)
+    db_session.flush()
+    db_session.add_all([
+        ProjectMember(project_id=project.id, user_id=other_owner.id, role=ProjectRole.OWNER),
+        Task(
+            project_id=project.id,
+            title="Stale task",
+            description="Written after the user left",
+            assignee_id=client.current_user.id,
+        ),
+    ])
+    db_session.commit()
+
+    response = client.get("/api/gdpr/export")
+
+    assert response.status_code == 200
+    assert "assigned_tasks" not in response.json()
+    assert "Written after the user left" not in response.text
 
 
 def test_delete_account_requires_confirm(client, sent_mails):
