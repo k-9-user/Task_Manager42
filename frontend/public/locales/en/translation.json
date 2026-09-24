@@ -131,6 +131,14 @@
 			"size": "File too large (max {{max}} MB)"
 		}
 	},
+	"tasks":
+	{
+		"editDescription": "Edit description",
+		"descriptionLabel": "Task description",
+		"save": "Save",
+		"saving": "Saving...",
+		"cancel": "Cancel"
+	},
 	"members":
 	{
 		"title": "Project members",

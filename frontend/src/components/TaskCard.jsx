@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import AttachmentUpload from "./AttachmentUpload";
 import BannerUpload from "./BannerUpload";
 import CommentSection from "./CommentSection";
-import { deleteAttachment, getTaskAttachments } from "../services/taskService";
+import { deleteAttachment, getTaskAttachments, updateTaskDescription } from "../services/taskService";
 import { fetchAuthenticatedBlobUrl } from "../services/api";
 import { useTranslation } from "react-i18next";
 import './TaskCard.css';
 
-function TaskCard ({ task, onStatusChange, canManageAttachments })
+function TaskCard ({ task, onStatusChange, onTaskUpdated, canEdit })
 {
 	const [attachments, setAttachments] = useState([]);
 	const [attachmentError, setAttachmentError] = useState("");
@@ -16,6 +16,10 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 	const [bannerBlobUrl, setBannerBlobUrl] = useState(null);
 	const [bannerVersion, setBannerVersion] = useState(0);
 	const [showcomments, setshowcomments] = useState(false);
+	const [editingDescription, setEditingDescription] = useState(false);
+	const [descriptionDraft, setDescriptionDraft] = useState("");
+	const [savingDescription, setSavingDescription] = useState(false);
+	const [descriptionError, setDescriptionError] = useState("");
 	const { t } = useTranslation();
 
 	useEffect(() =>
@@ -131,13 +135,66 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 		setHasBanner(true);
 		setBannerVersion((version) => version + 1);
 	}
+
+	function startEditDescription()
+	{
+		setDescriptionDraft(task.description ?? "");
+		setDescriptionError("");
+		setEditingDescription(true);
+	}
+
+	async function handleSaveDescription(e)
+	{
+		e.preventDefault();
+		setSavingDescription(true);
+		setDescriptionError("");
+		try
+		{
+			const data = await updateTaskDescription(task.id, descriptionDraft.trim() || null);
+			onTaskUpdated(data.task);
+			setEditingDescription(false);
+		}
+		catch (err)
+		{
+			setDescriptionError(err.message);
+		}
+		finally
+		{
+			setSavingDescription(false);
+		}
+	}
+
 	return (
 		<div className="task-card">
 			{bannerBlobUrl && <img className="task-banner" src={bannerBlobUrl} alt={task.title} />}
 			<h4>
 				{task.title}
 			</h4>
-			{task.description && <p>{task.description}</p>}
+			{!editingDescription && task.description && <p className="task-description">{task.description}</p>}
+			{canEdit && !editingDescription && (
+				<button type="button" onClick={startEditDescription}>{t("tasks.editDescription")}</button>
+			)}
+			{editingDescription && (
+				<form className="task-description-form" onSubmit={handleSaveDescription}>
+					<textarea
+						aria-label={t("tasks.descriptionLabel")}
+						value={descriptionDraft}
+						onChange={(e) => setDescriptionDraft(e.target.value)}
+						maxLength={5000}
+						rows={4}
+						autoFocus
+					/>
+					<div className="task-description-actions">
+						<button type="button" onClick={() => setEditingDescription(false)} disabled={savingDescription}>
+							{t("tasks.cancel")}
+						</button>
+						<button type="submit" disabled={savingDescription}>
+							{savingDescription ? t("tasks.saving") : t("tasks.save")}
+						</button>
+					</div>
+					{descriptionError && <p className="error" role="alert">{descriptionError}</p>}
+				</form>
+			)}
 			<select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)}>
 				<option value="todo">{t("random.afaire")}</option>
 				<option value="in_progress">{t("random.encours")}</option>
@@ -154,7 +211,7 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 									<div className="attachment-actions">
 										<button type="button" onClick={() => handlePreview(att)}>{t("attachments.preview")}</button>
 										<button type="button" onClick={() => handleDownload(att)}>{t("attachments.download")}</button>
-										{canManageAttachments && <button type="button" onClick={() => handleDelete(att)}>{t("attachments.delete")}</button>}
+										{canEdit && <button type="button" onClick={() => handleDelete(att)}>{t("attachments.delete")}</button>}
 									</div>
 								</li>
 							)
@@ -162,8 +219,8 @@ function TaskCard ({ task, onStatusChange, canManageAttachments })
 					}
 				</ul>
 			)}
-			{canManageAttachments && <AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />}
-			{canManageAttachments && <BannerUpload taskId={task.id} uploadsuccess={bannerUploadSuccess} />}
+			{canEdit && <AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />}
+			{canEdit && <BannerUpload taskId={task.id} uploadsuccess={bannerUploadSuccess} />}
 			<button onClick={() => setshowcomments(!showcomments)}>
 				{showcomments ? t("random.masquercommentaires") : t("random.voircommentaires")}
 			</button>

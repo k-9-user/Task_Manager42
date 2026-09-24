@@ -29,6 +29,35 @@
 	cursor: pointer;
 }
 
+.task-description {
+	margin: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.task-description-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.task-description-form textarea {
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--surface-alt);
+	color: #2c1a4d;
+	border: 1px solid var(--surface-border);
+	border-radius: 6px;
+	padding: 0.35rem 0.5rem;
+	font: inherit;
+	resize: vertical;
+}
+
+.task-description-actions {
+	display: flex;
+	gap: 0.35rem;
+}
+
 .task-banner {
 	width: 100%;
 	max-height: 120px;

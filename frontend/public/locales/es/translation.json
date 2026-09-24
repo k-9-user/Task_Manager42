@@ -131,6 +131,14 @@
 			"size": "Archivo demasiado grande (máx. {{max}} MB)"
 		}
 	},
+	"tasks":
+	{
+		"editDescription": "Editar la descripción",
+		"descriptionLabel": "Descripción de la tarea",
+		"save": "Guardar",
+		"saving": "Guardando...",
+		"cancel": "Cancelar"
+	},
 	"members":
 	{
 		"title": "Miembros del proyecto",

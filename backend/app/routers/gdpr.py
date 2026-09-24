@@ -202,6 +202,7 @@ def export_my_data(
         "assigned_tasks": [
             _compact({
                 "title": t.title,
+                "description": t.description,
                 "project": t.project.name,
                 "status": _enum_value(t.status),
                 "due_date": _fmt_date(t.due_date),

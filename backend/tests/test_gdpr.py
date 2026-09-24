@@ -80,7 +80,12 @@ def test_export_covers_user_content_without_secrets(client, db_session, sent_mai
         ]["project"]["id"]
     )
     user_id = client.current_user.id
-    task = Task(project_id=project_id, title="Exported task", assignee_id=user_id)
+    task = Task(
+        project_id=project_id,
+        title="Exported task",
+        description="Exported description",
+        assignee_id=user_id,
+    )
     db_session.add(task)
     db_session.flush()
     db_session.add(Comment(task_id=task.id, author_id=user_id, content="my comment"))
@@ -99,9 +104,9 @@ def test_export_covers_user_content_without_secrets(client, db_session, sent_mai
     assert [(f["file_name"], f["task"]) for f in body["uploaded_files"]] == [
         ("x.txt", "Exported task")
     ]
-    assert [(t["title"], t["project"]) for t in body["assigned_tasks"]] == [
-        ("Exported task", "Export")
-    ]
+    assert [
+        (t["title"], t["description"], t["project"]) for t in body["assigned_tasks"]
+    ] == [("Exported task", "Exported description", "Export")]
     assert UUID_PATTERN.search(response.text) is None
     assert "password_hash" not in response.text
     assert "key_hash" not in response.text
