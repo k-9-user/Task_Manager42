@@ -373,12 +373,36 @@ def test_gdpr_export_includes_progress(client, monkeypatch):
     assert [(item["achievement"], item["xp"]) for item in section["achievements"]] == [
         ("projects_1", 35)
     ]
+    history = section["activity_history"]
+    assert len(history) == 1
+    assert history[0]["type"] == "projects"
+    assert set(history[0]) == {"type", "recorded_at"}
+    assert history[0]["recorded_at"].endswith(" UTC")
+
+
+def test_gdpr_export_keeps_retired_activity_history(client, db_session, monkeypatch):
+    monkeypatch.setattr(gdpr_router, "send_mail", lambda to, subject, body: None)
+    _project(client)
+    activity = db_session.scalar(select(UserActivity))
+    activity.track = "retired_track"
+    db_session.commit()
+
+    section = client.get("/api/gdpr/export").json()["gamification"]
+
+    assert "activity" not in section
+    assert section["activity_history"][0]["type"] == "retired_track"
 
 
 def test_account_deletion_removes_progress(client, db_session, monkeypatch):
     monkeypatch.setattr(gdpr_router, "send_mail", lambda to, subject, body: None)
     user = client.current_user
     _project(client)
+    db_session.add(UserBadge(user_id=user.id, badge_key=BADGES[0].key))
+    db_session.commit()
+
+    assert _counts(db_session, user.id) == {Track.PROJECTS.value: 1}
+    assert _unlocked(db_session, user.id) == {"projects_1"}
+    assert _badges(db_session, user.id) == {BADGES[0].key}
 
     response = client.request(
         "DELETE",

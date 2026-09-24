@@ -16,7 +16,8 @@ function GamificationWidget()
 	const [data, setData] = useState(null);
 	const [toasts, setToasts] = useState([]);
 	const previous = useRef(null);
-	const toastTimers = useRef([]);
+	const latestRequest = useRef(0);
+	const toastTimer = useRef(null);
 
 	const dismiss = useCallback((id) =>
 	{
@@ -25,17 +26,21 @@ function GamificationWidget()
 
 	const refresh = useCallback(() =>
 	{
+		const request = ++latestRequest.current;
 		getMyProgress()
 			.then((next) => {
+				if (request !== latestRequest.current)
+					return ;
 				const unlocks = previous.current ? newUnlocks(previous.current, next) : [];
 				previous.current = next;
 				setData(next);
 				if (unlocks.length === 0)
 					return ;
-				const stamped = unlocks.map((unlock) => ({ ...unlock, id: `${unlock.type}-${unlock.key}` }));
-				setToasts((current) => [...current, ...stamped]);
-				for (const toast of stamped)
-					toastTimers.current.push(setTimeout(() => dismiss(toast.id), TOAST_DURATION_MS));
+				const unlock = unlocks.at(-1);
+				const stamped = { ...unlock, id: `${unlock.type}-${unlock.key}` };
+				clearTimeout(toastTimer.current);
+				setToasts([stamped]);
+				toastTimer.current = setTimeout(() => dismiss(stamped.id), TOAST_DURATION_MS);
 			})
 			.catch(() => {});
 	}, [dismiss]);
@@ -51,6 +56,7 @@ function GamificationWidget()
 		refresh();
 		window.addEventListener(ACTIVITY_EVENT, scheduleRefresh);
 		return () => {
+			latestRequest.current += 1;
 			clearTimeout(pending);
 			window.removeEventListener(ACTIVITY_EVENT, scheduleRefresh);
 		};
@@ -58,8 +64,7 @@ function GamificationWidget()
 
 	useEffect(() =>
 	{
-		const timers = toastTimers.current;
-		return () => timers.forEach(clearTimeout);
+		return () => clearTimeout(toastTimer.current);
 	}, []);
 
 	function toastText(toast)

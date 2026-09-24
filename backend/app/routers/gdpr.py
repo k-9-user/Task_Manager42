@@ -17,6 +17,7 @@ from app.models.project_member import ProjectMember, ProjectRole
 from app.models.project_message import ProjectMessage
 from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
+from app.models.user_activity import UserActivity
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
 from app.services.gamification import build_summary
 from app.utils.locks import lock_admin_invariants
@@ -47,15 +48,22 @@ def _compact(row: dict) -> dict:
     return {key: value for key, value in row.items() if value not in (None, "", [])}
 
 
-def _gamification_export(summary: dict) -> dict | None:
+def _gamification_export(summary: dict, history: list[UserActivity]) -> dict | None:
     activity = {track["key"]: track["count"] for track in summary["tracks"] if track["count"]}
-    if not activity:
+    if not activity and not history:
         return None
     return _compact({
         "xp": summary["progress"]["xp"],
         "level": summary["progress"]["level"],
         "title": summary["progress"]["badge"],
-        "activity": activity,
+        "activity": activity or None,
+        "activity_history": [
+            {
+                "type": item.track,
+                "recorded_at": _fmt_dt(item.created_at),
+            }
+            for item in history
+        ],
         "badges": [
             {"badge": badge["key"], "earned_at": _fmt_dt(badge["awarded_at"])}
             for badge in summary["badges"]
@@ -146,6 +154,13 @@ def export_my_data(
     api_keys = (
         db.query(ApiKey).filter(ApiKey.user_id == user_id).order_by(ApiKey.created_at).all()
     )
+    gamification_history = list(
+        db.scalars(
+            select(UserActivity)
+            .where(UserActivity.user_id == user_id)
+            .order_by(UserActivity.created_at, UserActivity.id)
+        )
+    )
 
     export_data = {
         "about": {
@@ -234,7 +249,9 @@ def export_my_data(
             for n in notifications
         ],
         "api_keys": [{"created_at": _fmt_dt(k.created_at)} for k in api_keys],
-        "gamification": _gamification_export(build_summary(db, user_id)),
+        "gamification": _gamification_export(
+            build_summary(db, user_id), gamification_history
+        ),
     }
     export_data = {key: value for key, value in export_data.items() if value}
 
