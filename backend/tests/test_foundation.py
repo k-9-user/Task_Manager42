@@ -277,46 +277,54 @@ def test_owner_id_alone_grants_no_c_access(client, user_factory, auth_headers, d
     assert db_session.query(Task).filter_by(project_id=project.id).count() == 1
 
 
-@pytest.mark.parametrize("parent", ["task", "project"])
-def test_attachment_restricts_parent_deletion_and_rolls_back(
+@pytest.mark.parametrize("parent", ["task", "public-task", "project"])
+def test_deleting_parent_removes_attachments_and_files(
     client, user_factory, auth_headers, db_session, tmp_path, parent, monkeypatch,
 ):
     monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
-    owner = user_factory(role=UserRole.ADMIN)
+    owner = user_factory()
     uploader = user_factory()
-    project = Project(name="Protected parent", owner_id=owner.id)
+    raw_key = "parent-deletion-key"
+    project = Project(name="Parent with files", owner_id=owner.id)
     db_session.add(project)
     db_session.flush()
-    member = ProjectMember(project_id=project.id, user_id=owner.id, role=ProjectRole.OWNER)
-    task = Task(project_id=project.id, title="Protected task")
-    db_session.add_all([member, task])
+    task = Task(project_id=project.id, title="Task with files", banner_url="/uploads/banner.png")
+    db_session.add_all([
+        ProjectMember(project_id=project.id, user_id=owner.id, role=ProjectRole.OWNER),
+        ApiKey(user_id=owner.id, key_hash=hash_api_key(raw_key)),
+        task,
+    ])
     db_session.flush()
-    stored_path = tmp_path / "protected.txt"
-    stored_path.write_bytes(b"must survive restricted deletion")
-    attachment = Attachment(
-        task_id=task.id, uploaded_by=uploader.id,
-        file_url="/uploads/protected.txt", file_name="protected.txt",
-    )
-    db_session.add(attachment)
+    db_session.add_all([
+        Attachment(
+            task_id=task.id, uploaded_by=uploader.id,
+            file_url=f"/uploads/{name}", file_name=name,
+        )
+        for name in ("first.txt", "second.pdf")
+    ])
     db_session.commit()
-    ids = (project.id, member.id, task.id, uploader.id, attachment.id)
-    paths = {
-        "task": f"/api/tasks/{task.id}",
-        "project": f"/api/projects/{project.id}",
+    project_id, task_id = project.id, task.id
+    stored_files = [tmp_path / name for name in ("first.txt", "second.pdf", "banner.png")]
+    bystander = tmp_path / "bystander.txt"
+    for path in (*stored_files, bystander):
+        path.write_bytes(b"stored")
+    requests = {
+        "task": (f"/api/tasks/{task_id}", auth_headers(owner)),
+        "public-task": (f"/api/v1/public/tasks/{task_id}", {"X-API-Key": raw_key}),
+        "project": (f"/api/projects/{project_id}", auth_headers(owner)),
     }
 
-    response = client.delete(paths[parent], headers=auth_headers(owner))
+    url, headers = requests[parent]
+    response = client.delete(url, headers=headers)
 
-    assert response.status_code == 409, response.text
-    assert response.json() == {
-        "success": False,
-        "error": "Resource has related data or a referenced resource no longer exists",
-    }
+    assert response.status_code == 200, response.text
     db_session.expire_all()
-    for model, identity in zip((Project, ProjectMember, Task, User, Attachment), ids):
-        assert db_session.get(model, identity) is not None
-    assert stored_path.read_bytes() == b"must survive restricted deletion"
-    assert client.get(f"/api/projects/{ids[0]}", headers=auth_headers(owner)).status_code == 200
+    assert db_session.get(Task, task_id) is None
+    assert db_session.query(Attachment).filter_by(task_id=task_id).count() == 0
+    assert (db_session.get(Project, project_id) is None) == (parent == "project")
+    assert db_session.get(User, uploader.id) is not None
+    assert [path.name for path in stored_files if path.exists()] == []
+    assert bystander.read_bytes() == b"stored"
 
 
 def test_deleting_uploader_keeps_attachment_anonymized(

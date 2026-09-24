@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
 from app.auth.project_permissions import lock_project_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project_member import ProjectMember, ProjectRole
@@ -17,6 +18,7 @@ from app.routers.projects import _get_membership_or_404, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.task import TaskCreate, TaskData, TaskListResponse, TaskResponse, TaskUpdate
 from app.services.gamification import Track, record_activity
+from app.services.uploads import remove_files, task_files
 
 router = APIRouter(tags=["tasks"])
 
@@ -237,6 +239,7 @@ def delete_task(
     task_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ):
     project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
     if project_id is None:
@@ -252,7 +255,9 @@ def delete_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
+    files = task_files(db, settings, Task.id == task.id)
     db.delete(task)
     db.commit()
+    remove_files(files)
 
     return SimpleSuccessResponse()

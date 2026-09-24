@@ -137,7 +137,9 @@
 		"descriptionLabel": "Description de la tâche",
 		"save": "Enregistrer",
 		"saving": "Enregistrement...",
-		"cancel": "Annuler"
+		"cancel": "Annuler",
+		"delete": "Supprimer la tâche",
+		"confirmDelete": "Supprimer la tâche « {{title}} » ? Ses pièces jointes, sa bannière et ses commentaires seront aussi supprimés."
 	},
 	"members":
 	{

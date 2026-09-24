@@ -137,7 +137,9 @@
 		"descriptionLabel": "Task description",
 		"save": "Save",
 		"saving": "Saving...",
-		"cancel": "Cancel"
+		"cancel": "Cancel",
+		"delete": "Delete task",
+		"confirmDelete": "Delete the task \"{{title}}\"? Its attachments, banner and comments will be deleted too."
 	},
 	"members":
 	{

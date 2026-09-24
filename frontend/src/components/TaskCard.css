@@ -39,6 +39,18 @@
 	align-self: flex-end;
 }
 
+.task-card .task-delete {
+	align-self: flex-end;
+	color: #b91c1c;
+	border-color: #fecaca;
+}
+
+.task-card .task-delete:hover {
+	background: #b91c1c;
+	color: #ffffff;
+	border-color: #b91c1c;
+}
+
 .task-description-form {
 	display: flex;
 	flex-direction: column;

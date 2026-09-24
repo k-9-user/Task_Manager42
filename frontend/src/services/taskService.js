@@ -35,6 +35,15 @@ export function updateTaskDescription(taskID, description)
 	);
 }
 
+export function deleteTask(taskID)
+{
+	return apiFetch(`/api/tasks/${taskID}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
 export function searchtask (query, status="", sort="created_at", direction="desc")
 {
 	const params = new URLSearchParams({q : query, sort, direction});

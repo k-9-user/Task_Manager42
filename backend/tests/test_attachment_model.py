@@ -32,9 +32,10 @@ def test_attachment_task_id_column():
 
     assert isinstance(column.type, UUID)
     assert column.nullable is False
-    assert {foreign_key.target_fullname for foreign_key in column.foreign_keys} == {
-        "tasks.id"
-    }
+    assert {
+        (foreign_key.target_fullname, foreign_key.ondelete)
+        for foreign_key in column.foreign_keys
+    } == {("tasks.id", "CASCADE")}
 
 
 def test_attachment_file_url_column():

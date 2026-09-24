@@ -9,12 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.auth.api_key_auth import get_current_api_user
 from app.auth.project_permissions import lock_project_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.schemas.common import StrictRequest
+from app.services.uploads import remove_files, task_files
 from app.utils.rate_limiter import ApiKeyRateLimiter
 
 
@@ -26,6 +28,7 @@ rate_limiter = ApiKeyRateLimiter()
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
 AuthenticatedApiUser = Annotated[User, Depends(get_current_api_user)]
+ApplicationSettings = Annotated[Settings, Depends(get_settings)]
 RawApiKey = Annotated[
     str,
     Header(
@@ -172,6 +175,7 @@ def delete_public_task(
     db: DatabaseSession,
     current_user: AuthenticatedApiUser,
     x_api_key: RawApiKey,
+    settings: ApplicationSettings,
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
     project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
@@ -187,8 +191,10 @@ def delete_public_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
+    files = task_files(db, settings, Task.id == task.id)
     db.delete(task)
     db.commit()
+    remove_files(files)
 
     return _success_response()
 

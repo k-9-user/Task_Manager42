@@ -7,7 +7,7 @@ import { fetchAuthenticatedBlobUrl } from "../services/api";
 import { useTranslation } from "react-i18next";
 import './TaskCard.css';
 
-function TaskCard ({ task, onStatusChange, onTaskUpdated, canEdit })
+function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit })
 {
 	const [attachments, setAttachments] = useState([]);
 	const [attachmentError, setAttachmentError] = useState("");
@@ -225,6 +225,9 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, canEdit })
 				{showcomments ? t("random.masquercommentaires") : t("random.voircommentaires")}
 			</button>
 			{showcomments && <CommentSection taskId={task.id} />}
+			{canEdit && (
+				<button type="button" className="task-delete" onClick={() => onDeleteTask(task)}>{t("tasks.delete")}</button>
+			)}
 		</div>
 	);
 }

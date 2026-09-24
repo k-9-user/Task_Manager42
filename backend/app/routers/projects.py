@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
 from app.auth.project_permissions import lock_project_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project import Project
@@ -27,6 +28,7 @@ from app.schemas.project import (
 )
 from app.schemas.task import ProjectDetailResponse
 from app.services.gamification import Rank, Track, ranks_for, record_activity
+from app.services.uploads import remove_files, task_files
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -225,14 +227,17 @@ def delete_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ):
     project = lock_project_for_write(
         db, project_id, current_user.id, ProjectRole.OWNER,
         not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
     )
 
+    files = task_files(db, settings, Task.project_id == project.id)
     db.delete(project)
     db.commit()
+    remove_files(files)
 
     return SimpleSuccessResponse()
 

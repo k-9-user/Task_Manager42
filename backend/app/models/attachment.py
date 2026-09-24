@@ -12,7 +12,7 @@ class Attachment(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = Column(
         UUID(as_uuid=True),
-        ForeignKey("tasks.id"),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=False,
     )
     file_url = Column(String, nullable=False)

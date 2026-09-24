@@ -13,6 +13,7 @@ import pytest
 
 from tests.conftest import member_client as client
 
+from app.config import get_settings
 from app.models.attachment import Attachment
 from app.models.comment import Comment
 from app.models.project import Project
@@ -200,6 +201,51 @@ def test_delete_account_keeps_uploaded_attachment_anonymized(client, make_user, 
     kept = db_session.get(Attachment, attachment_id)
     assert kept is not None
     assert kept.uploaded_by is None
+
+
+def test_delete_account_removes_solo_project_files(
+    client, make_user, db_session, monkeypatch, tmp_path,
+):
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
+    user_id = client.current_user.id
+    other_owner = make_user()
+    solo = Project(name="Solo project", owner_id=user_id)
+    shared = Project(name="Shared project", owner_id=other_owner.id)
+    db_session.add_all([solo, shared])
+    db_session.flush()
+    solo_task = Task(project_id=solo.id, title="Solo task", banner_url="/uploads/solo-banner.png")
+    shared_task = Task(project_id=shared.id, title="Shared task")
+    db_session.add_all([
+        ProjectMember(project_id=solo.id, user_id=user_id, role=ProjectRole.OWNER),
+        ProjectMember(project_id=shared.id, user_id=other_owner.id, role=ProjectRole.OWNER),
+        ProjectMember(project_id=shared.id, user_id=user_id, role=ProjectRole.EDITOR),
+        solo_task,
+        shared_task,
+    ])
+    db_session.flush()
+    db_session.add_all([
+        Attachment(
+            task_id=task.id, file_url=f"/uploads/{name}", file_name=name, uploaded_by=user_id,
+        )
+        for task, name in ((solo_task, "solo.pdf"), (shared_task, "shared.pdf"))
+    ])
+    db_session.commit()
+    solo_id, solo_task_id, shared_task_id = solo.id, solo_task.id, shared_task.id
+    for name in ("solo.pdf", "solo-banner.png", "shared.pdf"):
+        (tmp_path / name).write_bytes(b"stored")
+
+    response = _delete_account(client)
+
+    assert response.status_code == 200, response.text
+    db_session.expire_all()
+    assert db_session.get(User, user_id) is None
+    assert db_session.get(Project, solo_id) is None
+    assert db_session.query(Attachment).filter_by(task_id=solo_task_id).count() == 0
+    assert not (tmp_path / "solo.pdf").exists()
+    assert not (tmp_path / "solo-banner.png").exists()
+    kept = db_session.query(Attachment).filter_by(task_id=shared_task_id).one()
+    assert kept.uploaded_by is None
+    assert (tmp_path / "shared.pdf").read_bytes() == b"stored"
 
 
 def test_delete_account_transfers_ownership_to_oldest_remaining_member(
