@@ -44,6 +44,22 @@ class SetupTests(unittest.TestCase):
             self.assertEqual(secret_files.read_secret_files(root / "secrets"), self.secret_values)
             self.assertIn("Added new default settings", output.getvalue())
 
+    def test_existing_configuration_is_left_untouched(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._write_example(root)
+            original = "# local notes\n" + "\n".join(f"{key}={value}" for key, value in self.values.items()) + "\n"
+            (root / ".env").write_text(original)
+            self._write_secret_files(root)
+            secrets_before = {path.name: path.read_bytes() for path in (root / "secrets").iterdir()}
+
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                setup.setup_configuration(root)
+
+            self.assertEqual((root / ".env").read_text(), original)
+            self.assertEqual({path.name: path.read_bytes() for path in (root / "secrets").iterdir()}, secrets_before)
+            self.assertIn("Preserved existing .env and secret files.", output.getvalue())
+
     def test_fresh_setup_creates_private_secret_files_without_printing_values(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

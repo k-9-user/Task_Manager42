@@ -7,7 +7,14 @@ from ..lib.process import require
 from . import backend_tests, backup, check, cleanup, reset_db, setup, smoke, stack
 
 
+def deploy(env, context):
+    stack.up(env, context)
+    smoke.smoke()
+    print("Deployed: https://localhost")
+
+
 TARGETS = {
+    "all": (True, deploy),
     "check": (True, lambda env, context: None),
     "up": (True, stack.up),
     "down": (False, stack.down),
@@ -29,8 +36,9 @@ def main():
     require(len(sys.argv) == 2 and sys.argv[1] in ACTIONS, "Usage: make.py {" + "|".join(sorted(ACTIONS)) + "}")
     action = sys.argv[1]
 
-    if action == "setup":
+    if action in ("setup", "all"):
         setup.setup()
+    if action == "setup":
         return
 
     data.ensure_data_dirs()
