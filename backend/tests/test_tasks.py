@@ -7,6 +7,8 @@ une vraie base Postgres de test.
 
 import uuid
 
+import pytest
+
 from tests.conftest import member_client as client
 
 from app.models.project_member import ProjectMember, ProjectRole
@@ -296,32 +298,33 @@ def test_update_task_description_as_non_member_not_found(
 # ---------------------------------------------------------------------------
 
 
-def test_delete_task_as_editor(client, make_user, db_session, login_as):
+def test_delete_task_as_owner(client, db_session):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "A supprimer"}
     ).json()["data"]["task"]["id"]
 
-    editor = make_user()
-    _add_member(db_session, uuid.UUID(project["id"]), editor.id, ProjectRole.EDITOR)
-
-    login_as(editor)
     response = client.delete(f"/api/tasks/{task_id}")
 
     assert response.status_code == 200
     assert response.json() == {"success": True, "data": {}}
+    assert db_session.get(Task, uuid.UUID(task_id)) is None
 
 
-def test_delete_task_as_viewer_forbidden(client, make_user, db_session, login_as):
+@pytest.mark.parametrize("role", [ProjectRole.EDITOR, ProjectRole.VIEWER])
+def test_delete_task_forbidden_for_editor_and_viewer(
+    client, make_user, db_session, login_as, role,
+):
     project = _create_project_via_api(client)
     task_id = client.post(
         f"/api/projects/{project['id']}/tasks", json={"title": "Protegee"}
     ).json()["data"]["task"]["id"]
 
-    viewer = make_user()
-    _add_member(db_session, uuid.UUID(project["id"]), viewer.id, ProjectRole.VIEWER)
+    member = make_user()
+    _add_member(db_session, uuid.UUID(project["id"]), member.id, role)
 
-    login_as(viewer)
+    login_as(member)
     response = client.delete(f"/api/tasks/{task_id}")
 
     assert response.status_code == 403
+    assert db_session.get(Task, uuid.UUID(task_id)) is not None

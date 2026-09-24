@@ -129,7 +129,7 @@ function ProjectDetail()
 					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
 					<button type="submit">{t("random.creertache")}</button>
 				</form>
-				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} />
+				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} canDelete={isOwner} />
 			</div>
 			<div className="project-detail-side">
 				<MembersPanel

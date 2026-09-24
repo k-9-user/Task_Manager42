@@ -246,7 +246,7 @@ def delete_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
     lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        db, project_id, current_user.id, ProjectRole.OWNER,
         not_found_detail="Tâche introuvable", forbidden_detail="Permission refusée",
     )
     task = db.scalar(

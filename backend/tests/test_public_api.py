@@ -563,14 +563,12 @@ def test_optional_status_may_be_omitted(
     assert response.json()["data"]["task"]["status"] == "todo"
 
 
-@pytest.mark.parametrize("access", ["owner", "editor"])
-def test_owner_or_editor_can_delete_task(
+def test_owner_can_delete_task(
     client: TestClient,
     db: Session,
     api_user: User,
-    access: str,
 ):
-    project = _create_project_for_access(db, api_user, access, "Delete")
+    project = _create_project_for_access(db, api_user, "owner", "Delete")
     task = _create_task(db, project, "Task to delete")
     task_id = task.id
 
@@ -584,13 +582,15 @@ def test_owner_or_editor_can_delete_task(
     assert db.get(Task, task_id) is None
 
 
-def test_viewer_cannot_delete_task(
+@pytest.mark.parametrize("access", ["editor", "viewer"])
+def test_editor_or_viewer_cannot_delete_task(
     client: TestClient,
     db: Session,
     api_user: User,
+    access: str,
 ):
-    project = _create_project_for_access(db, api_user, "viewer", "Viewer delete")
-    task = _create_task(db, project, "Viewer cannot delete")
+    project = _create_project_for_access(db, api_user, access, "Member delete")
+    task = _create_task(db, project, "Member cannot delete")
 
     response = client.delete(
         f"/api/v1/public/tasks/{task.id}",

@@ -165,10 +165,13 @@ def update_public_task(
     "/tasks/{task_id}",
     summary="Delete a task",
     description=(
-        "Delete an accessible task. Only project owners and members with the owner "
-        "or editor role may delete it."
+        "Delete an accessible task together with its attachments, banner and "
+        "comments. Only project owners may delete it."
     ),
-    responses=WRITE_RESPONSES,
+    responses={
+        **WRITE_RESPONSES,
+        status.HTTP_403_FORBIDDEN: {"description": "Account is banned or not the project owner."},
+    },
 )
 def delete_public_task(
     task_id: UUID,
@@ -182,8 +185,9 @@ def delete_public_task(
     if project_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        db, project_id, current_user.id, ProjectRole.OWNER,
         not_found_detail="Task not found",
+        forbidden_detail="Only the project owner can delete tasks",
     )
     task = db.scalar(
         select(Task).where(Task.id == task_id).execution_options(populate_existing=True)

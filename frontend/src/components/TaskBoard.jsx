@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import TaskCard from "./TaskCard";
 import './TaskBoard.css';
 
-function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit })
+function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
 {
 	const { t } = useTranslation()
 	const colonne = [{ key: "todo", label: t("random.afaire")}, { key: "in_progress", label: t("random.encours")}, { key: "done", label: t("random.termine") }];
@@ -14,7 +14,7 @@ function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit
 			</h3>
 			{tasks
 				.filter((task) => task.status === col.key)
-				.map((task) => (<TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} />
+				.map((task) => (<TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} canDelete={canDelete} />
 			))}
 			</div>	
 			))}
