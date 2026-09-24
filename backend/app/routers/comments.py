@@ -24,6 +24,7 @@ from app.models.user import User
 from app.routers.projects import _get_membership_or_404
 from app.schemas.comment import CommentCreate, CommentData, CommentListResponse, CommentResponse
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
+from app.services.gamification import Track, record_activity
 
 router = APIRouter(tags=["comments"])
 
@@ -79,6 +80,8 @@ def create_comment(
 
     comment = Comment(task_id=task_id, author_id=current_user.id, content=payload.content)
     db.add(comment)
+    db.flush()
+    record_activity(db, current_user.id, Track.COMMENTS, comment.id)
     db.commit()
     db.refresh(comment)
 

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import AdminRoute from "./pages/AdminRoute";
 import AdminUsers from "./pages/AdminUsers";
+import Achievements from "./pages/Achievements";
 import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -30,6 +31,7 @@ function AppContent() {
        <Routes>
          <Route path="/" element={<Navigate to="/login" />} />
          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+         <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
          <Route path="/login" element={<Login />} />
          <Route path="/oauth/callback" element={<OAuthCallback />} />
          <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />

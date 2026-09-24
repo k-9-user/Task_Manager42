@@ -5,7 +5,8 @@
 		"login": "Iniciar sesión",
 		"logout": "Cerrar sesión",
 		"search": "Bucar",
-		"profile": "Perfil"
+		"profile": "Perfil",
+		"achievements": "Logros"
 	},
 	"login":
 	{
@@ -185,13 +186,13 @@
 		"privacy":
 		{
 			"title": "Política de privacidad",
-			"updated": "Última actualización: 23 de septiembre de 2026",
+			"updated": "Última actualización: 24 de septiembre de 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Datos que recopilamos",
-					"body": "Al crear tu cuenta, recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña. Si inicias sesión con Google, recibimos el identificador de tu cuenta de Google, tu correo electrónico y tu foto de perfil, sin contraseña. También guardamos lo que creas en Task Manager: proyectos, tareas, comentarios, mensajes, archivos y claves API."
+					"body": "Al crear tu cuenta, recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña. Si inicias sesión con Google, recibimos el identificador de tu cuenta de Google, tu correo electrónico y tu foto de perfil, sin contraseña. También guardamos lo que creas en Task Manager: proyectos, tareas, comentarios, mensajes, archivos y claves API, además de tu progreso (XP, logros e insignias)."
 				},
 				"use":
 				{
@@ -267,5 +268,96 @@
 		"saving": "Guardando...",
 		"saved": "Perfil actualizado.",
 		"usernameInvalid": "Nombre de usuario: de 3 a 50 caracteres, letras, dígitos, punto, guion o guion bajo."
+	},
+	"gamification":
+	{
+		"title": "Logros",
+		"subtitle": "Desbloquea logros para ganar XP, subir de nivel y coleccionar insignias.",
+		"levelShort": "Nv. {{level}}",
+		"levelLong": "Nivel {{level}}",
+		"totalXp": "{{xp}} XP en total",
+		"xpProgress": "{{current}} / {{needed}} XP",
+		"toNextLevel": "hasta el nivel {{level}}",
+		"maxLevel": "Nivel máximo alcanzado",
+		"levelProgress": "Progreso de nivel",
+		"noBadge": "Aún sin insignia",
+		"nextBadge": "Próxima insignia: {{badge}} en el nivel {{level}}",
+		"allBadges": "Todas las insignias obtenidas",
+		"seeAll": "Ver todos los logros",
+		"badgesTitle": "Insignias",
+		"badgeLevel": "Nivel {{level}} · {{xp}} XP",
+		"earnedOn": "Obtenida el {{date}}",
+		"unlockedOn": "Desbloqueado el {{date}}",
+		"locked": "Bloqueado",
+		"count": "Contados: {{count}}",
+		"rewardXp": "+{{xp}} XP",
+		"badges":
+		{
+			"planner": "Planificador",
+			"organizer": "Organizador",
+			"achiever": "Triunfador",
+			"strategist": "Estratega",
+			"grandmaster": "Gran maestro"
+		},
+		"tracks":
+		{
+			"projects":
+			{
+				"name": "Fundador",
+				"goal_one": "Crea {{count}} proyecto",
+				"goal_other": "Crea {{count}} proyectos"
+			},
+			"tasks_created":
+			{
+				"name": "Constructor",
+				"goal_one": "Crea {{count}} tarea",
+				"goal_other": "Crea {{count}} tareas"
+			},
+			"tasks_completed":
+			{
+				"name": "Finalizador",
+				"goal_one": "Completa {{count}} tarea",
+				"goal_other": "Completa {{count}} tareas distintas"
+			},
+			"comments":
+			{
+				"name": "Comentarista",
+				"goal_one": "Publica {{count}} comentario",
+				"goal_other": "Publica {{count}} comentarios"
+			},
+			"files":
+			{
+				"name": "Archivista",
+				"goal_one": "Sube {{count}} archivo",
+				"goal_other": "Sube {{count}} archivos"
+			},
+			"messages":
+			{
+				"name": "Mensajero",
+				"goal_one": "Envía {{count}} mensaje de proyecto",
+				"goal_other": "Envía {{count}} mensajes de proyecto"
+			},
+			"collaborators":
+			{
+				"name": "Compañero de equipo",
+				"goal_one": "Añade {{count}} persona a tus proyectos",
+				"goal_other": "Añade {{count}} personas distintas a tus proyectos"
+			}
+		},
+		"rulesTitle": "Cómo funciona",
+		"rules":
+		{
+			"xp": "Ganas XP desbloqueando logros. Cada logro se desbloquea una sola vez por cuenta.",
+			"levels": "Tu nivel depende de tu XP total y llega hasta el nivel 100.",
+			"badges": "Las insignias se obtienen en los niveles 5, 10, 25, 50 y 100. Tu mejor insignia se convierte en tu título y aparece junto a tu nombre.",
+			"counts": "El progreso cuenta lo que haces en la aplicación. Cada proyecto, tarea, comentario, archivo, mensaje o compañero cuenta una sola vez, para siempre."
+		},
+		"toast":
+		{
+			"achievement": "Logro desbloqueado: {{name}}",
+			"badge": "Nueva insignia: {{badge}} (nivel {{level}})",
+			"level": "Nivel {{level}} alcanzado",
+			"close": "Cerrar notificación"
+		}
 	}
 }

@@ -16,6 +16,7 @@ from app.models.task import Task, TaskStatus
 from app.routers.projects import _get_membership_or_404, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.task import TaskCreate, TaskData, TaskListResponse, TaskResponse, TaskUpdate
+from app.services.gamification import Track, record_activity
 
 router = APIRouter(tags=["tasks"])
 
@@ -148,6 +149,7 @@ def create_task(
             project_id=project_id,
         )
 
+    record_activity(db, current_user.id, Track.TASKS_CREATED, task.id)
     db.commit()
     db.refresh(task)
 
@@ -215,6 +217,9 @@ def update_task(
             task_id=task.id,
             project_id=task.project_id,
         )
+
+    if status_changed and task.status == TaskStatus.DONE:
+        record_activity(db, current_user.id, Track.TASKS_COMPLETED, task.id)
 
     db.commit()
     db.refresh(task)

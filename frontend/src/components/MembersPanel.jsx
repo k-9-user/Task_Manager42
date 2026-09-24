@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { addProjectMember, lookupUserByEmail, removeProjectMember } from "../services/projectService";
 import { useTranslation } from "react-i18next";
+import UserBadge from "./UserBadge";
 import "./MembersPanel.css";
 
 function MembersPanel({ projectId, members, currentUserId, onMembersChange })
@@ -57,7 +58,10 @@ function MembersPanel({ projectId, members, currentUserId, onMembersChange })
 			<ul className="members-list">
 				{members.map((member) => (
 					<li key={member.id}>
-						<span>{member.username}</span>
+						<span className="member-name">
+							{member.username}
+							<UserBadge level={member.level} badge={member.badge} />
+						</span>
 						<span className={`role-badge role-${member.role}`}>{t(`members.role.${member.role}`)}</span>
 						{isOwner && member.user_id !== currentUserId && (
 							<button onClick={() => handleRemove(member.user_id)}>{t("members.remove")}</button>

@@ -25,6 +25,7 @@ from app.routers.attachments import router as attachments_router
 from app.routers.comments import router as comments_router
 from app.routers.project_messages import router as project_messages_router
 from app.routers.export_import import router as export_import_router
+from app.routers.gamification import router as gamification_router
 
 
 logging.basicConfig(level=logging.WARNING)
@@ -62,6 +63,7 @@ app.include_router(attachments_router)
 app.include_router(comments_router)
 app.include_router(project_messages_router)
 app.include_router(export_import_router)
+app.include_router(gamification_router)
 
 app.mount(
     "/static",

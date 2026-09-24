@@ -1,5 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
+export const ACTIVITY_EVENT = "taskmanager:activity";
+
+export function notifyActivity() {
+	window.dispatchEvent(new Event(ACTIVITY_EVENT));
+}
+
 export async function apiFetch(endpoint, options = {}) {
 	const token = localStorage.getItem("token");
 	const response = await fetch(`${API_URL}${endpoint}`,
@@ -16,6 +22,8 @@ export async function apiFetch(endpoint, options = {}) {
 
 	if (!result.success)
 		throw new Error(result.error || "Une erreur est survenue");
+	if (options.method && options.method !== "GET")
+		notifyActivity();
 	return result.data;
 }
 

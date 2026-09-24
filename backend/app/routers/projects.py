@@ -25,11 +25,12 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.schemas.task import ProjectDetailResponse
+from app.services.gamification import Rank, Track, ranks_for, record_activity
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-def _serialize_member(member: ProjectMember) -> ProjectMemberResponse:
+def _serialize_member(member: ProjectMember, rank: Rank) -> ProjectMemberResponse:
     """`ProjectMemberResponse` inclut username/email (pas juste user_id) pour que
     le frontend puisse afficher qui participe au projet sans appel supplémentaire
     — `member.user` est chargé via la relation SQLAlchemy."""
@@ -41,6 +42,8 @@ def _serialize_member(member: ProjectMember) -> ProjectMemberResponse:
         role=member.role,
         username=member.user.username,
         email=member.user.email,
+        level=rank.level,
+        badge=rank.badge,
     )
 
 
@@ -142,6 +145,7 @@ def create_project(
         project_id=project.id, user_id=current_user.id, role=ProjectRole.OWNER
     )
     db.add(owner_membership)
+    record_activity(db, current_user.id, Track.PROJECTS, project.id)
     db.commit()
     db.refresh(project)
 
@@ -173,10 +177,11 @@ def get_project(
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable")
 
+    ranks = ranks_for(db, [m.user_id for m in project.members])
     return SuccessEnvelope(
         data=ProjectDetailResponse(
             project=ProjectResponse.model_validate(project),
-            members=[_serialize_member(m) for m in project.members],
+            members=[_serialize_member(m, ranks[m.user_id]) for m in project.members],
             tasks=[t for t in project.tasks],
         )
     )
@@ -275,10 +280,12 @@ def add_member(
                 related_project_id=project_id,
             )
         )
+    record_activity(db, current_user.id, Track.COLLABORATORS, payload.user_id)
     db.commit()
     db.refresh(new_member)
 
-    return SuccessEnvelope(data=ProjectMemberData(member=_serialize_member(new_member)))
+    rank = ranks_for(db, [new_member.user_id])[new_member.user_id]
+    return SuccessEnvelope(data=ProjectMemberData(member=_serialize_member(new_member, rank)))
 
 
 # ---------------------------------------------------------------------------
