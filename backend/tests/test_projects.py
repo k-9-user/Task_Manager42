@@ -11,6 +11,7 @@ from tests.conftest import member_client as client
 
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
+from app.models.task import Task
 
 
 def _add_member(db_session, project_id, user_id, role: ProjectRole) -> ProjectMember:
@@ -275,6 +276,28 @@ def test_remove_member_success(client, make_user):
 
     assert response.status_code == 200
     assert response.json() == {"success": True, "data": {}}
+
+
+def test_remove_member_clears_their_assignments_in_that_project(client, make_user, db_session):
+    left = _create_project_via_api(client, name="Projet quitte")
+    kept = _create_project_via_api(client, name="Projet garde")
+    member = make_user()
+    task_ids = {}
+    for project in (left, kept):
+        client.post(
+            f"/api/projects/{project['id']}/members",
+            json={"user_id": str(member.id), "role": "editor"},
+        )
+        task_ids[project["id"]] = client.post(
+            f"/api/projects/{project['id']}/tasks",
+            json={"title": "Tache assignee", "assignee_id": str(member.id)},
+        ).json()["data"]["task"]["id"]
+
+    response = client.delete(f"/api/projects/{left['id']}/members/{member.id}")
+
+    assert response.status_code == 200
+    assert db_session.get(Task, uuid.UUID(task_ids[left["id"]])).assignee_id is None
+    assert db_session.get(Task, uuid.UUID(task_ids[kept["id"]])).assignee_id == member.id
 
 
 def test_removing_designated_owner_transfers_owner_id(

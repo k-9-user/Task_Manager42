@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
+from app.models.task import Task
 from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project import (
@@ -332,6 +333,9 @@ def remove_member(
         if project.owner_id == user_id:
             project.owner_id = successor.user_id
 
+    db.query(Task).filter(Task.project_id == project_id, Task.assignee_id == user_id).update(
+        {"assignee_id": None}
+    )
     db.delete(target)
     db.commit()
 

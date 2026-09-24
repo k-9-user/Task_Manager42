@@ -33,6 +33,7 @@ class TaskUpdate(StrictRequest):
     seuls ceux fournis par le client seront mis à jour côté routeur."""
 
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=5000)
     status: Optional[TaskStatus] = None
     assignee_id: Optional[uuid.UUID] = None
     due_date: Optional[date] = None

@@ -214,6 +214,83 @@ def test_update_task_unknown_id(client):
     assert response.status_code == 404
 
 
+def test_update_task_description_persists(client, db_session):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Tache", "description": "Ancienne description"},
+    ).json()["data"]["task"]["id"]
+
+    response = client.put(
+        f"/api/tasks/{task_id}", json={"description": "Nouvelle description"}
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]["task"]
+    assert data["description"] == "Nouvelle description"
+    assert data["title"] == "Tache"
+    assert data["status"] == "todo"
+    assert db_session.get(Task, uuid.UUID(task_id)).description == "Nouvelle description"
+
+
+def test_update_task_description_can_be_cleared(client, db_session):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Tache", "description": "A effacer"},
+    ).json()["data"]["task"]["id"]
+
+    response = client.put(f"/api/tasks/{task_id}", json={"description": None})
+
+    assert response.status_code == 200
+    assert response.json()["data"]["task"]["description"] is None
+    assert db_session.get(Task, uuid.UUID(task_id)).description is None
+
+
+def test_update_task_description_too_long_rejected(client):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks", json={"title": "Tache"}
+    ).json()["data"]["task"]["id"]
+
+    response = client.put(f"/api/tasks/{task_id}", json={"description": "x" * 5001})
+
+    assert response.status_code == 422
+
+
+def test_update_task_description_as_viewer_forbidden(client, make_user, db_session, login_as):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Tache", "description": "Originale"},
+    ).json()["data"]["task"]["id"]
+
+    viewer = make_user()
+    _add_member(db_session, uuid.UUID(project["id"]), viewer.id, ProjectRole.VIEWER)
+
+    login_as(viewer)
+    response = client.put(f"/api/tasks/{task_id}", json={"description": "Modifiee"})
+
+    assert response.status_code == 403
+    assert db_session.get(Task, uuid.UUID(task_id)).description == "Originale"
+
+
+def test_update_task_description_as_non_member_not_found(
+    client, make_user, db_session, login_as,
+):
+    project = _create_project_via_api(client)
+    task_id = client.post(
+        f"/api/projects/{project['id']}/tasks",
+        json={"title": "Tache", "description": "Originale"},
+    ).json()["data"]["task"]["id"]
+
+    login_as(make_user())
+    response = client.put(f"/api/tasks/{task_id}", json={"description": "Modifiee"})
+
+    assert response.status_code == 404
+    assert db_session.get(Task, uuid.UUID(task_id)).description == "Originale"
+
+
 # ---------------------------------------------------------------------------
 # DELETE /api/tasks/{id}
 # ---------------------------------------------------------------------------

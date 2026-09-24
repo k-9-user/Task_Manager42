@@ -25,6 +25,16 @@ export function updateTaskStatus( taskID, status)
 	);
 }
 
+export function updateTaskDescription(taskID, description)
+{
+	return apiFetch(`/api/tasks/${taskID}`,
+		{
+			method: "PUT",
+			body: JSON.stringify({ description }),
+		}
+	);
+}
+
 export function searchtask (query, status="", sort="created_at", direction="desc")
 {
 	const params = new URLSearchParams({q : query, sort, direction});

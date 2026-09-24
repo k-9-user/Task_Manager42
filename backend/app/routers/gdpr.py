@@ -119,7 +119,7 @@ def export_my_data(
     assigned_tasks = (
         db.query(Task)
         .options(joinedload(Task.project))
-        .filter(Task.assignee_id == user_id)
+        .filter(Task.assignee_id == user_id, Task.project_id.in_(member_project_ids))
         .order_by(Task.created_at)
         .all()
     )
@@ -202,6 +202,7 @@ def export_my_data(
         "assigned_tasks": [
             _compact({
                 "title": t.title,
+                "description": t.description,
                 "project": t.project.name,
                 "status": _enum_value(t.status),
                 "due_date": _fmt_date(t.due_date),
@@ -267,7 +268,10 @@ def export_my_data(
     return Response(
         content=body,
         media_type="application/json",
-        headers={"Content-Disposition": "attachment; filename=gdpr_export.json"},
+        headers={
+            "Content-Disposition": "attachment; filename=gdpr_export.json",
+            "Cache-Control": "no-store",
+        },
     )
 
 

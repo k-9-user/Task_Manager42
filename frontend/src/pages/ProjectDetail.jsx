@@ -61,6 +61,13 @@ function ProjectDetail()
 		}
 	}
 
+	function handleTaskUpdated(updatedTask)
+	{
+		setTasks((current) => current.map((task) => (task.id === updatedTask.id
+			? { ...task, description: updatedTask.description, updated_at: updatedTask.updated_at }
+			: task)));
+	}
+
 	async function handleCreateTask(e)
 	{
 		e.preventDefault();
@@ -91,7 +98,7 @@ function ProjectDetail()
 
 	const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
 	const currentMember = members.find((m) => m.user_id === currentUserId);
-	const canManageAttachments = ["owner", "editor"].includes(currentMember?.role);
+	const canEdit = ["owner", "editor"].includes(currentMember?.role);
 
 	return (<div className="project-detail-page">
 		<div className="project-detail-header">
@@ -106,7 +113,7 @@ function ProjectDetail()
 					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
 					<button type="submit">{t("random.creertache")}</button>
 				</form>
-				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} canManageAttachments={canManageAttachments} />
+				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} canEdit={canEdit} />
 			</div>
 			<div className="project-detail-side">
 				<MembersPanel

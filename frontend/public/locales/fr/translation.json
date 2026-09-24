@@ -131,6 +131,14 @@
 			"size": "Fichier trop volumineux ({{max}} Mo max)"
 		}
 	},
+	"tasks":
+	{
+		"editDescription": "Modifier la description",
+		"descriptionLabel": "Description de la tâche",
+		"save": "Enregistrer",
+		"saving": "Enregistrement...",
+		"cancel": "Annuler"
+	},
 	"members":
 	{
 		"title": "Membres du projet",
