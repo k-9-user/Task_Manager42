@@ -31,6 +31,7 @@ x-backend-environment: &backend-environment
   MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
   PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:?PASSWORD_MIN_LENGTH is set in .env; run make setup}
   PASSWORD_MAX_LENGTH: ${PASSWORD_MAX_LENGTH:?PASSWORD_MAX_LENGTH is set in .env; run make setup}
+  BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
   SMTP_HOST: mailpit
   SMTP_PORT: "1025"
 

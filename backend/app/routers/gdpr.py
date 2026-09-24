@@ -5,7 +5,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.project_permissions import lock_user_projects_for_write
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.auth.dependencies import get_current_user
@@ -20,8 +19,9 @@ from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
 from app.models.user_activity import UserActivity
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
+from app.services.accounts import ensure_not_bootstrap_admin, hand_off_projects
 from app.services.gamification import build_summary
-from app.services.uploads import remove_files, task_files
+from app.services.uploads import remove_files
 from app.utils.locks import lock_admin_invariants
 from app.utils.mailer import send_mail
 
@@ -322,6 +322,7 @@ def delete_my_account(
         )
     if current_user.status == UserStatus.BANNED:
         raise HTTPException(status_code=403, detail="Account is banned")
+    ensure_not_bootstrap_admin(current_user)
     if payload.confirm_username != current_user.username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -340,40 +341,7 @@ def delete_my_account(
                 detail="At least one active administrator is required",
             )
 
-    locked_projects = lock_user_projects_for_write(db, current_user.id)
-
-    db.query(Task).filter(Task.assignee_id == current_user.id).update(
-        {"assignee_id": None}
-    )
-
-    owned_projects = [
-        project for project in locked_projects if project.owner_id == current_user.id
-    ]
-    files = []
-    for project in owned_projects:
-        other_members = (
-            db.query(ProjectMember)
-            .filter(
-                ProjectMember.project_id == project.id,
-                ProjectMember.user_id != current_user.id,
-            )
-            .order_by(ProjectMember.joined_at, ProjectMember.id)
-            .all()
-        )
-
-        if not other_members:
-            files += task_files(db, settings, Task.project_id == project.id)
-            db.delete(project)
-            continue
-
-        successor = next(
-            (m for m in other_members if m.role == ProjectRole.OWNER), other_members[0]
-        )
-        successor.role = ProjectRole.OWNER
-        project.owner_id = successor.user_id
-
-    db.flush()
-    db.query(ProjectMember).filter(ProjectMember.user_id == current_user.id).delete()
+    files = hand_off_projects(db, current_user.id, settings)
 
     email, username = current_user.email, current_user.username
     db.delete(current_user)

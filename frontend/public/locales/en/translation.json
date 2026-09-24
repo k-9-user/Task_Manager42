@@ -6,7 +6,8 @@
 		"logout": "Log out",
 		"search": "To Search",
 		"profile": "Profile",
-		"achievements": "Achievements"
+		"achievements": "Achievements",
+		"users": "User management"
 	},
 	"login":
 	{
@@ -55,19 +56,40 @@
 	"admin":
 	{
 		"usermanag": "User management",
-		"role": "role",
+		"role": "Role",
 		"email": "Email",
-		"action": "action",
+		"action": "Actions",
 		"user": "User",
 		"admin": "Administrator",
-		"rmuser": "Delete this user ?",
+		"rmuser": "Delete {{username}}? Projects they own alone are deleted; shared projects go to another member.",
 		"delete": "Delete",
 		"status": "Status",
 		"active": "Active",
 		"banned": "Banned",
 		"ban": "Ban",
 		"restore": "Restore",
-		"empty": "No users found"
+		"empty": "No users found",
+		"search": "Search by name or email",
+		"searchButton": "Search",
+		"allRoles": "All roles",
+		"allStatuses": "All statuses",
+		"prev": "Previous",
+		"next": "Next",
+		"page": "Page {{page}} of {{pages}}",
+		"you": "You",
+		"selfLocked": "You cannot change your own role, ban or delete yourself here",
+		"edit": "Edit",
+		"save": "Save",
+		"cancel": "Cancel",
+		"displayName": "Display name",
+		"confirmBan": "Ban {{username}}? They lose access at once and cannot log in until restored.",
+		"errors":
+		{
+			"lastAdmin": "At least one active administrator must remain.",
+			"bootstrap": "The bootstrap administrator is protected: it cannot be demoted, banned, renamed or deleted.",
+			"usernameTaken": "This username is already taken.",
+			"notFound": "This user no longer exists."
+		}
 	},
 	"projects":
 	{

@@ -3,12 +3,17 @@ from threading import Barrier
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.auth.dependencies import require_admin
+from app.config import get_settings
 from app.database import SessionLocal
 from app.main import app
+from app.models.project import Project
+from app.models.project_member import ProjectMember, ProjectRole
+from app.models.task import Task
 from app.models.user import User, UserRole, UserStatus
 
 
@@ -80,6 +85,41 @@ def test_regular_user_cannot_change_roles_or_delete_users(
         persisted_target = session.get(User, target.id)
         assert persisted_target is not None
         assert persisted_target.role == UserRole.USER
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("GET", "/api/users", None),
+        ("PUT", "/api/users/{id}", {"display_name": "Nope"}),
+        ("PUT", "/api/users/{id}/role", {"role": "admin"}),
+        ("PUT", "/api/users/{id}/status", {"status": "banned"}),
+        ("DELETE", "/api/users/{id}", None),
+    ],
+)
+def test_admin_routes_refuse_anonymous_and_regular_users(
+    method: str,
+    path: str,
+    body: dict[str, str] | None,
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    regular_user = user_factory()
+    target = user_factory()
+    url = path.format(id=target.id)
+
+    anonymous = client.request(method, url, json=body)
+    regular = client.request(method, url, json=body, headers=auth_headers(regular_user))
+
+    assert anonymous.status_code == 401
+    assert regular.status_code == 403
+    with SessionLocal() as session:
+        stored = session.get(User, target.id)
+        assert stored is not None
+        assert stored.role == UserRole.USER
+        assert stored.status == UserStatus.ACTIVE
+        assert stored.display_name is None
 
 
 def test_admin_can_promote_and_demote_another_user(
@@ -403,3 +443,148 @@ def test_user_list_pages_newest_first_without_gaps_or_repeats(
 
     assert rejected.status_code == 422
     assert overflowing.status_code == 422
+
+
+def test_admin_deletes_a_project_owner_and_hands_off_shared_projects(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+    db_session: Any,
+    monkeypatch: Any,
+    tmp_path: Any,
+) -> None:
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
+    admin = user_factory(role=UserRole.ADMIN)
+    target = user_factory()
+    member = user_factory()
+    solo = Project(name="Solo", owner_id=target.id)
+    shared = Project(name="Shared", owner_id=target.id)
+    db_session.add_all([solo, shared])
+    db_session.flush()
+    db_session.add_all([
+        ProjectMember(project_id=solo.id, user_id=target.id, role=ProjectRole.OWNER),
+        ProjectMember(project_id=shared.id, user_id=target.id, role=ProjectRole.OWNER),
+        ProjectMember(project_id=shared.id, user_id=member.id, role=ProjectRole.EDITOR),
+        Task(project_id=solo.id, title="Solo task", banner_url="/uploads/solo-banner.png"),
+        Task(project_id=shared.id, title="Shared task", assignee_id=target.id),
+    ])
+    db_session.commit()
+    solo_id, shared_id = solo.id, shared.id
+    (tmp_path / "solo-banner.png").write_bytes(b"stored")
+
+    response = client.delete(f"/api/users/{target.id}", headers=auth_headers(admin))
+
+    assert response.status_code == 200, response.text
+    db_session.expire_all()
+    assert db_session.get(User, target.id) is None
+    assert db_session.get(Project, solo_id) is None
+    assert not (tmp_path / "solo-banner.png").exists()
+    assert db_session.get(Project, shared_id).owner_id == member.id
+    successor = db_session.query(ProjectMember).filter_by(
+        project_id=shared_id, user_id=member.id,
+    ).one()
+    assert successor.role == ProjectRole.OWNER
+    assert db_session.query(Task).filter_by(project_id=shared_id).one().assignee_id is None
+
+
+def test_bootstrap_admin_cannot_be_demoted_banned_renamed_or_deleted(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+    monkeypatch: Any,
+) -> None:
+    bootstrap = user_factory(role=UserRole.ADMIN, username="bootstrap_admin")
+    actor = user_factory(role=UserRole.ADMIN)
+    monkeypatch.setattr(get_settings(), "bootstrap_admin_email", bootstrap.email)
+    headers = auth_headers(actor)
+    bootstrap_headers = auth_headers(bootstrap)
+
+    refused = [
+        client.put(f"/api/users/{bootstrap.id}/role", headers=headers, json={"role": "user"}),
+        client.put(
+            f"/api/users/{bootstrap.id}/status", headers=headers, json={"status": "banned"},
+        ),
+        client.put(f"/api/users/{bootstrap.id}", headers=headers, json={"username": "renamed"}),
+        client.delete(f"/api/users/{bootstrap.id}", headers=headers),
+        client.put("/api/users/me", headers=bootstrap_headers, json={"username": "self_renamed"}),
+    ]
+    display_name = client.put(
+        f"/api/users/{bootstrap.id}", headers=headers, json={"display_name": "Root"},
+    )
+    unchanged_username = client.put(
+        "/api/users/me", headers=bootstrap_headers, json={"username": "bootstrap_admin"},
+    )
+    other_admin = client.put(
+        f"/api/users/{actor.id}/role", headers=bootstrap_headers, json={"role": "user"},
+    )
+
+    for response in refused:
+        assert response.status_code == 409, response.text
+        assert response.json()["error"] == "The bootstrap administrator is protected"
+    assert display_name.status_code == 200
+    assert unchanged_username.status_code == 200
+    assert other_admin.status_code == 200
+    with SessionLocal() as session:
+        stored = session.get(User, bootstrap.id)
+        assert stored is not None
+        assert stored.username == "bootstrap_admin"
+        assert stored.role == UserRole.ADMIN
+        assert stored.status == UserStatus.ACTIVE
+        assert stored.display_name == "Root"
+
+
+def test_banned_bootstrap_admin_can_still_be_restored(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+    monkeypatch: Any,
+) -> None:
+    bootstrap = user_factory(role=UserRole.ADMIN, status=UserStatus.BANNED)
+    actor = user_factory(role=UserRole.ADMIN)
+    monkeypatch.setattr(get_settings(), "bootstrap_admin_email", bootstrap.email)
+
+    response = client.put(
+        f"/api/users/{bootstrap.id}/status",
+        headers=auth_headers(actor),
+        json={"status": "active"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["status"] == "active"
+
+
+def test_user_list_filters_by_text_role_and_status(
+    client: TestClient,
+    user_factory: Any,
+    auth_headers: Any,
+) -> None:
+    admin = user_factory(role=UserRole.ADMIN, username="list_admin")
+    snake = user_factory(username="snake_case", display_name="Snake")
+    lookalike = user_factory(username="snakeXcase")
+    percent = user_factory(display_name="100% real")
+    user_factory(display_name="1000 real")
+    banned = user_factory(email="banned.person@corp.example.com", status=UserStatus.BANNED)
+    headers = auth_headers(admin)
+
+    def listed(query: str) -> tuple[set[str], int]:
+        response = client.get(f"/api/users?{query}", headers=headers)
+        assert response.status_code == 200, response.text
+        data = response.json()["data"]
+        return {user["id"] for user in data["users"]}, data["total"]
+
+    assert listed("q=e_c") == ({str(snake.id)}, 1)
+    assert listed("q=100%25") == ({str(percent.id)}, 1)
+    assert listed("q=SNAKE") == ({str(snake.id), str(lookalike.id)}, 2)
+    assert listed("q=CORP.EXAMPLE") == ({str(banned.id)}, 1)
+    assert listed("role=admin") == ({str(admin.id)}, 1)
+    assert listed("status=banned") == ({str(banned.id)}, 1)
+    assert listed("role=user&status=active&q=snake") == (
+        {str(snake.id), str(lookalike.id)},
+        2,
+    )
+    assert listed("q=%20%20")[1] == 6
+    one_page, total = listed("q=snake&limit=1")
+    assert len(one_page) == 1
+    assert total == 2
+    for query in ("role=superuser", "status=gone", f"q={'x' * 256}"):
+        assert client.get(f"/api/users?{query}", headers=headers).status_code == 422
