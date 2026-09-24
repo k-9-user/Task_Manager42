@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import { googleOAuthUrl, login } from '../services/authService';
-import { isvalididentifier } from '../utils/validation';
+import { isValidIdentifier } from '../utils/validation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const FIELD_INPUT = "w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-3 py-2.5 text-[15px] text-[#2c1a4d] transition-shadow focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary-soft";
@@ -34,7 +34,7 @@ function Login()
 			setError(t("login.passwordRequired"));
 			return ;
 		}
-		if (!isvalididentifier(trimmedIdentifier))
+		if (!isValidIdentifier(trimmedIdentifier))
 		{
 			setError(t("login.invalidIdentifier"));
 			return ;
@@ -67,11 +67,11 @@ function Login()
 					)}
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1.5">
-							<label htmlFor='identifier' className="text-[13px] font-semibold text-[#4c1d95]">{t("login.identifier")}</label>
+							<label htmlFor='identifier' className="text-[13px] font-semibold text-brand-primary-dark">{t("login.identifier")}</label>
 							<input id='identifier' type="text" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={FIELD_INPUT} />
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<label htmlFor='password' className="text-[13px] font-semibold text-[#4c1d95]">{t("login.password")}</label>
+							<label htmlFor='password' className="text-[13px] font-semibold text-brand-primary-dark">{t("login.password")}</label>
 							<input id='password' type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={FIELD_INPUT} />
 						</div>
 					</div>
@@ -86,7 +86,7 @@ function Login()
 					</div>
 					<a
 						href={googleOAuthUrl}
-						className="w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-4 py-2.5 text-center text-sm font-semibold text-[#4c1d95] no-underline transition-colors hover:bg-brand-primary hover:text-white hover:border-brand-primary"
+						className="w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-4 py-2.5 text-center text-sm font-semibold text-brand-primary-dark no-underline transition-colors hover:bg-brand-primary hover:text-white hover:border-brand-primary"
 					>
 						{t("login.google")}
 					</a>

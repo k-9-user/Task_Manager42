@@ -5,8 +5,7 @@
 	flex-direction: column;
 	gap: 1.5rem;
 	align-items: center;
-	background: var(--surface-alt);
-	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background: var(--color-brand-surface-alt);
 	padding: 2rem;
 	box-sizing: border-box;
 	min-height: 100%;
@@ -14,7 +13,7 @@
 
 .profile-page h1 {
 	font-size: 1.6rem;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 }
 
 .profile-page p {
@@ -80,7 +79,7 @@
 
 .profile-edit h2 {
 	font-size: 1.2rem;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 	margin: 0;
 }
 

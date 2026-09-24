@@ -14,15 +14,10 @@ function GamificationWidget()
 {
 	const { t } = useTranslation();
 	const [data, setData] = useState(null);
-	const [toasts, setToasts] = useState([]);
+	const [toast, setToast] = useState(null);
 	const previous = useRef(null);
 	const latestRequest = useRef(0);
 	const toastTimer = useRef(null);
-
-	const dismiss = useCallback((id) =>
-	{
-		setToasts((current) => current.filter((toast) => toast.id !== id));
-	}, []);
 
 	const refresh = useCallback(() =>
 	{
@@ -36,14 +31,12 @@ function GamificationWidget()
 				setData(next);
 				if (unlocks.length === 0)
 					return ;
-				const unlock = unlocks.at(-1);
-				const stamped = { ...unlock, id: `${unlock.type}-${unlock.key}` };
 				clearTimeout(toastTimer.current);
-				setToasts([stamped]);
-				toastTimer.current = setTimeout(() => dismiss(stamped.id), TOAST_DURATION_MS);
+				setToast(unlocks.at(-1));
+				toastTimer.current = setTimeout(() => setToast(null), TOAST_DURATION_MS);
 			})
 			.catch(() => {});
-	}, [dismiss]);
+	}, []);
 
 	useEffect(() =>
 	{
@@ -108,13 +101,13 @@ function GamificationWidget()
 				</Link>
 			)}
 			<div className="gamification-toasts" role="status" aria-live="polite">
-				{toasts.map((toast) => (
-					<div key={toast.id} className="gamification-toast">
+				{toast && (
+					<div key={`${toast.type}-${toast.key}`} className="gamification-toast">
 						{toastMark(toast)}
 						<p>{toastText(toast)}</p>
-						<button type="button" onClick={() => dismiss(toast.id)} aria-label={t("gamification.toast.close")}>✕</button>
+						<button type="button" onClick={() => setToast(null)} aria-label={t("gamification.toast.close")}>✕</button>
 					</div>
-				))}
+				)}
 			</div>
 		</>
 	);

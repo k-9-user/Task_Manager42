@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { getUser, getMe, userrole, userstatus, deleteuser, updateuser } from "../services/userservice.js";
-import { isvalidusername } from "../utils/validation";
+import { getUsers, getMe, setUserRole, setUserStatus, deleteUser, updateUser } from "../services/userservice.js";
+import { isValidUsername } from "../utils/validation";
 import { useTranslation } from "react-i18next";
 import './AdminUsers.css';
 
@@ -16,7 +16,7 @@ const ERROR_KEYS = {
 
 function AdminUsers ()
 {
-	const [Users, setUsers] = useState([]);
+	const [users, setUsers] = useState([]);
 	const [total, setTotal] = useState(0);
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
@@ -26,7 +26,7 @@ function AdminUsers ()
 	const [reloadKey, setReloadKey] = useState(0);
 	const [meId, setMeId] = useState(null);
 	const [editing, setEditing] = useState(null);
-	const [ loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const { t } = useTranslation();
 
@@ -41,7 +41,7 @@ function AdminUsers ()
 	{
 		let cancelled = false;
 		setLoading(true);
-		getUser({ page, limit: PAGE_SIZE, q: query, role, status })
+		getUsers({ page, limit: PAGE_SIZE, q: query, role, status })
 			.then((data) =>
 			{
 				if (cancelled)
@@ -71,15 +71,15 @@ function AdminUsers ()
 		setPage(1);
 	}
 
-	async function handleRolechange(iduser, newrole)
+	async function handleRoleChange(userId, newRole)
 	{
-		const previous = Users;
+		const previous = users;
 		setError("");
-		setUsers(Users.map((u) => (u.id === iduser ? { ...u, role: newrole } : u)));
+		setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
 
 		try
 		{
-			await userrole(iduser, newrole);
+			await setUserRole(userId, newRole);
 		}
 		catch (err)
 		{
@@ -88,17 +88,17 @@ function AdminUsers ()
 		}
 	}
 
-	async function handleStatusChange(user, newstatus)
+	async function handleStatusChange(user, newStatus)
 	{
-		if (newstatus === "banned" && !confirm(t("admin.confirmBan", { username: user.username })))
+		if (newStatus === "banned" && !confirm(t("admin.confirmBan", { username: user.username })))
 			return ;
-		const previous = Users;
+		const previous = users;
 		setError("");
-		setUsers(Users.map((u) => (u.id === user.id ? { ...u, status: newstatus } : u)));
+		setUsers(users.map((u) => (u.id === user.id ? { ...u, status: newStatus } : u)));
 
 		try
 		{
-			await userstatus(user.id, newstatus);
+			await setUserStatus(user.id, newStatus);
 		}
 		catch (err)
 		{
@@ -107,17 +107,17 @@ function AdminUsers ()
 		}
 	}
 
-	async function handledelete(user)
+	async function handleDelete(user)
 	{
 		if (!confirm(t("admin.rmuser", { username: user.username })))
 			return ;
-		const previous = Users;
+		const previous = users;
 		setError("");
-		setUsers(Users.filter((u) => u.id !== user.id));
+		setUsers(users.filter((u) => u.id !== user.id));
 
 		try
 		{
-			await deleteuser(user.id);
+			await deleteUser(user.id);
 			setReloadKey((key) => key + 1);
 		}
 		catch (err)
@@ -137,7 +137,7 @@ function AdminUsers ()
 	{
 		const username = editing.username.trim();
 		const displayName = editing.display_name.trim() || null;
-		if (!isvalidusername(username))
+		if (!isValidUsername(username))
 		{
 			setError(t("gdpr.usernameInvalid"));
 			return ;
@@ -156,8 +156,8 @@ function AdminUsers ()
 
 		try
 		{
-			const data = await updateuser(user.id, fields);
-			setUsers(Users.map((u) => (u.id === user.id ? data.user : u)));
+			const data = await updateUser(user.id, fields);
+			setUsers(users.map((u) => (u.id === user.id ? data.user : u)));
 			setEditing(null);
 		}
 		catch (err)
@@ -207,7 +207,7 @@ function AdminUsers ()
 					</tr>
 				</thead>
 				<tbody>
-					{Users.map((user) =>
+					{users.map((user) =>
 					{
 						const isSelf = user.id === meId;
 						const isEditing = editing?.id === user.id;
@@ -246,7 +246,7 @@ function AdminUsers ()
 										disabled={isSelf}
 										title={selfTitle}
 										aria-label={t("admin.role")}
-										onChange={(e) => handleRolechange(user.id, e.target.value)}
+										onChange={(e) => handleRoleChange(user.id, e.target.value)}
 									>
 										<option value="user">{t("admin.user")}</option>
 										<option value="admin">{t("admin.admin")}</option>
@@ -271,14 +271,14 @@ function AdminUsers ()
 											) : (
 												<button disabled={isSelf} title={selfTitle} onClick={() => handleStatusChange(user, "banned")}>{t("admin.ban")}</button>
 											)}
-											<button className="danger" disabled={isSelf} title={selfTitle} onClick={() => handledelete(user)}>{t("admin.delete")}</button>
+											<button className="danger" disabled={isSelf} title={selfTitle} onClick={() => handleDelete(user)}>{t("admin.delete")}</button>
 										</>
 									)}
 								</td>
 							</tr>
 						);
 					})}
-					{!loading && Users.length === 0 && (
+					{!loading && users.length === 0 && (
 						<tr>
 							<td colSpan={5}>{t("admin.empty")}</td>
 						</tr>

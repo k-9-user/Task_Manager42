@@ -10,7 +10,6 @@
 	border-radius: 0.75rem;
 	background: var(--color-brand-surface);
 	color: #2c1a4d;
-	text-align: left;
 }
 
 .progress-card-icon {
@@ -20,12 +19,12 @@
 	height: 4rem;
 	flex-shrink: 0;
 	border-radius: 50%;
-	background: var(--primary-soft);
+	background: var(--color-brand-primary-soft);
 	font-size: 2rem;
 }
 
 .progress-card-icon-level {
-	color: var(--primary-dark);
+	color: var(--color-brand-primary-dark);
 	font-size: 1.5rem;
 	font-weight: 700;
 }
@@ -40,7 +39,7 @@
 
 .progress-card h2 {
 	margin: 0;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 	font-size: 1.2rem;
 }
 
@@ -57,7 +56,7 @@
 
 .progress-card-link {
 	align-self: flex-start;
-	color: var(--primary);
+	color: var(--color-brand-primary);
 	font-size: 0.85rem;
 	font-weight: 600;
 }

@@ -1,9 +1,7 @@
 import { apiFetch } from "./api";
 import { uploadWithProgress } from "./upload";
 
-export function getProjectTasks(projectID) {
-	return apiFetch(`/api/projects/${projectID}/tasks`);
-}
+export const TASK_STATUSES = ["todo", "in_progress", "done"];
 
 export function createTask(projectID, title, description) {
 	return apiFetch(`/api/projects/${projectID}/tasks`,
@@ -44,7 +42,7 @@ export function deleteTask(taskID)
 	);
 }
 
-export function searchtask (query, status="", sort="created_at", direction="desc")
+export function searchTasks (query, status="", sort="created_at", direction="desc")
 {
 	const params = new URLSearchParams({q : query, sort, direction});
 	if (status)
@@ -53,10 +51,9 @@ export function searchtask (query, status="", sort="created_at", direction="desc
 }
 
 
-export async function uploadAttachement(taskID, file, onProgress)
+export function uploadAttachment(taskID, file, onProgress)
 {
-	const data = await uploadWithProgress(`/api/tasks/${taskID}/attachments`, file, onProgress);
-	return data.attachment;
+	return uploadWithProgress(`/api/tasks/${taskID}/attachments`, file, onProgress);
 }
 
 export function getTaskAttachments(taskID)
@@ -76,15 +73,6 @@ export function deleteAttachment(attachmentId)
 export function uploadTaskBanner(taskID, file, onProgress)
 {
 	return uploadWithProgress(`/api/tasks/${taskID}/banner`, file, onProgress);
-}
-
-export function deleteTaskBanner(taskID)
-{
-	return apiFetch(`/api/tasks/${taskID}/banner`,
-		{
-			method: "DELETE",
-		}
-	);
 }
 
 export function getTaskComments(taskID)

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { apiFetch } from "../services/api";
-import { updateMyProfile } from "../services/gdprService";
-import { isvalidusername } from "../utils/validation";
+import { getMe, updateMe } from "../services/userservice";
+import { isValidUsername } from "../utils/validation";
 import { useTranslation } from "react-i18next";
 import GdprPanel from "../components/GdprPanel";
 import ProgressCard from "../components/ProgressCard";
@@ -22,22 +21,22 @@ function Profile() {
 	const { t } = useTranslation();
 
 	useEffect(() => {
-	  async function fetchProfile() {
-	    try
-		{
-          const data = await apiFetch("/api/users/me");
-          setUser(data.user);
-          setUsername(data.user.username);
-          setDisplayName(data.user.display_name ?? "");
-	    }
-		catch (err) {
-	      setError(err.message);
-	    }
-		finally
-		{
-	      setLoading(false);
-	    }
-	  }
+		async function fetchProfile() {
+			try
+			{
+				const data = await getMe();
+				setUser(data.user);
+				setUsername(data.user.username);
+				setDisplayName(data.user.display_name ?? "");
+			}
+			catch (err) {
+				setError(err.message);
+			}
+			finally
+			{
+				setLoading(false);
+			}
+		}
 
 	fetchProfile();
 	getMyProgress()
@@ -50,7 +49,7 @@ function Profile() {
 		e.preventDefault();
 		setSaved(false);
 		setSaveError("");
-		if (!isvalidusername(username))
+		if (!isValidUsername(username))
 		{
 			setSaveError(t("gdpr.usernameInvalid"));
 			return ;
@@ -58,7 +57,7 @@ function Profile() {
 		setSaving(true);
 		try
 		{
-			const updated = await updateMyProfile({
+			const updated = await updateMe({
 				username,
 				display_name: displayName.trim() || null,
 			});
@@ -83,7 +82,7 @@ function Profile() {
 	return (
 		<div className="profile-page">
 			<header className="profile-header">
-				<h1>{t("random.myprofile")}</h1>
+				<h1>{t("profile.title")}</h1>
 				<div className="profile-identity">
 					<img className="profile-avatar" src={user.avatar_url} alt="" />
 					<div>

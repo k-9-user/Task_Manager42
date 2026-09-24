@@ -1,7 +1,5 @@
 import i18n from "../i18n";
-import { notifyActivity } from "./api";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { API_URL, authHeaders, notifyActivity } from "./api";
 
 export const MAX_UPLOAD_SIZE_MB = Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
@@ -44,12 +42,11 @@ export function uploadWithProgress(endpoint, file, onProgress)
 	{
 		const xhr = new XMLHttpRequest();
 		const formData = new FormData();
-		const token = localStorage.getItem("token");
 
 		formData.append("file", file);
 		xhr.open("POST", `${API_URL}${endpoint}`);
-		if (token)
-			xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+		for (const [name, value] of Object.entries(authHeaders()))
+			xhr.setRequestHeader(name, value);
 
 		xhr.upload.onprogress = (e) =>
 		{
@@ -75,10 +72,10 @@ export function uploadWithProgress(endpoint, file, onProgress)
 			}
 			if (xhr.status === 413)
 				return reject(new Error(i18n.t("attachments.errors.size", { max: MAX_UPLOAD_SIZE_MB })));
-			reject(new Error(result?.error || i18n.t("random.erupload")));
+			reject(new Error(result?.error || i18n.t("attachments.errors.upload")));
 		};
-		xhr.onerror = () => reject(new Error(i18n.t("random.erupload")));
-		xhr.onabort = () => reject(new Error(i18n.t("random.erupload")));
+		xhr.onerror = () => reject(new Error(i18n.t("attachments.errors.upload")));
+		xhr.onabort = () => reject(new Error(i18n.t("attachments.errors.upload")));
 
 		xhr.send(formData);
 	});

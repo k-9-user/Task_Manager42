@@ -1,13 +1,13 @@
 import "./ProgressBar.css";
 
-function ProgressBar({ value, max, label, valueText, className = "" })
+function ProgressBar({ value, max, label, valueText })
 {
 	const clamped = Math.min(Math.max(value, 0), max);
 	const percent = max > 0 ? Math.round((clamped / max) * 100) : 100;
 
 	return (
 		<div
-			className={`progress-bar ${className}`.trim()}
+			className="progress-bar"
 			role="progressbar"
 			aria-label={label}
 			aria-valuemin={0}

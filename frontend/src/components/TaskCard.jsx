@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import AttachmentUpload from "./AttachmentUpload";
-import BannerUpload from "./BannerUpload";
 import CommentSection from "./CommentSection";
-import { deleteAttachment, getTaskAttachments, updateTaskDescription } from "../services/taskService";
-import { fetchAuthenticatedBlobUrl } from "../services/api";
+import FileUpload from "./FileUpload";
+import { TASK_STATUSES, deleteAttachment, getTaskAttachments, updateTaskDescription, uploadAttachment, uploadTaskBanner } from "../services/taskService";
+import { downloadFile, fetchAuthenticatedBlobUrl } from "../services/api";
+import { ATTACHMENT_TYPES, BANNER_TYPES } from "../services/upload";
 import { useTranslation } from "react-i18next";
 import './TaskCard.css';
 
@@ -15,7 +15,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 	const [hasBanner, setHasBanner] = useState(!!task.banner_url);
 	const [bannerBlobUrl, setBannerBlobUrl] = useState(null);
 	const [bannerVersion, setBannerVersion] = useState(0);
-	const [showcomments, setshowcomments] = useState(false);
+	const [showComments, setShowComments] = useState(false);
 	const [editingDescription, setEditingDescription] = useState(false);
 	const [descriptionDraft, setDescriptionDraft] = useState("");
 	const [savingDescription, setSavingDescription] = useState(false);
@@ -64,7 +64,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 		};
 	}, [hasBanner, bannerVersion, task.id]);
 
-	async function uploadsuccess()
+	async function refreshAttachments()
 	{
 		const loadId = ++attachmentLoadId.current;
 		const data = await getTaskAttachments(task.id);
@@ -100,14 +100,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 	{
 		try
 		{
-			const url = await fetchAuthenticatedBlobUrl(`/api/attachments/${attachment.id}`);
-			const link = document.createElement("a");
-			link.href = url;
-			link.download = attachment.filename;
-			document.body.appendChild(link);
-			link.click();
-			link.remove();
-			setTimeout(() => URL.revokeObjectURL(url), 1000);
+			await downloadFile(`/api/attachments/${attachment.id}`, attachment.filename);
 			setAttachmentError("");
 		}
 		catch (err)
@@ -196,13 +189,13 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 				</form>
 			)}
 			<select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)}>
-				<option value="todo">{t("random.afaire")}</option>
-				<option value="in_progress">{t("random.encours")}</option>
-				<option value="done">{t("random.termine")}</option>
+				{TASK_STATUSES.map((status) => (
+					<option key={status} value={status}>{t(`tasks.status.${status}`)}</option>
+				))}
 			</select>
 			{attachmentError && <p className="error" role="alert">{attachmentError}</p>}
 			{attachments.length > 0 && (
-				<ul className="task-atachments">
+				<ul className="task-attachments">
 					{
 						attachments.map((att) =>
 							(	
@@ -219,12 +212,28 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 					}
 				</ul>
 			)}
-			{canEdit && <AttachmentUpload taskId={task.id} uploadsuccess={uploadsuccess} />}
-			{canEdit && <BannerUpload taskId={task.id} uploadsuccess={bannerUploadSuccess} />}
-			<button onClick={() => setshowcomments(!showcomments)}>
-				{showcomments ? t("random.masquercommentaires") : t("random.voircommentaires")}
+			{canEdit && (
+				<FileUpload
+					types={ATTACHMENT_TYPES}
+					upload={(file, onProgress) => uploadAttachment(task.id, file, onProgress)}
+					onUploaded={refreshAttachments}
+					pickLabel={t("attachments.pick")}
+					sendLabel={t("attachments.upload")}
+				/>
+			)}
+			{canEdit && (
+				<FileUpload
+					types={BANNER_TYPES}
+					upload={(file, onProgress) => uploadTaskBanner(task.id, file, onProgress)}
+					onUploaded={bannerUploadSuccess}
+					pickLabel={t("attachments.pickBanner")}
+					sendLabel={t("attachments.uploadBanner")}
+				/>
+			)}
+			<button onClick={() => setShowComments(!showComments)}>
+				{showComments ? t("comments.hide") : t("comments.show")}
 			</button>
-			{showcomments && <CommentSection taskId={task.id} />}
+			{showComments && <CommentSection taskId={task.id} />}
 			{canDelete && (
 				<button type="button" className="task-delete" onClick={() => onDeleteTask(task)}>{t("tasks.delete")}</button>
 			)}

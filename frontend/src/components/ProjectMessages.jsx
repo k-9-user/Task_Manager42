@@ -98,7 +98,7 @@ function ProjectMessages({ projectId, currentUserId, isOwner })
 					placeholder={t("messages.placeholder")}
 				/>
 				<button type="submit" disabled={posting}>
-					{posting ? t("random.envoi") : t("messages.send")}
+					{posting ? t("loading.sending") : t("messages.send")}
 				</button>
 			</form>
 			{error && <p className="error">{error}</p>}

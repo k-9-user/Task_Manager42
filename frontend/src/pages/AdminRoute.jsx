@@ -1,35 +1,30 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../hooks/useAuth";
-import { apiFetch } from "../services/api";
+import { isLoggedIn } from "../services/authService";
+import { getMe } from "../services/userservice";
 
 function AdminRoute ({ children })
 {
-	const { isAuthen, loading: authLoading } = useAuth();
+	const loggedIn = isLoggedIn();
 	const { t } = useTranslation();
 	const [isAdmin, setIsAdmin] = useState(null);
 
 	useEffect(() =>
 	{
-		if (authLoading)
+		if (!loggedIn)
 			return ;
-		if (!isAuthen)
-		{
-			setIsAdmin(false);
-			return ;
-		}
 		let cancelled = false;
-		apiFetch("/api/users/me")
+		getMe()
 			.then((data) => { if (!cancelled) setIsAdmin(data.user.role === "admin"); })
 			.catch(() => { if (!cancelled) setIsAdmin(false); });
 		return () => { cancelled = true; };
-	}, [authLoading, isAuthen]);
+	}, [loggedIn]);
 
-	if (authLoading || (isAuthen && isAdmin === null))
-		return (<p>{t("loading.load")}</p>);
-	if (!isAuthen)
+	if (!loggedIn)
 		return (<Navigate to="/login"/>);
+	if (isAdmin === null)
+		return (<p>{t("loading.load")}</p>);
 	if (!isAdmin)
 		return (<Navigate to="/projects"/>);
 	return (children);

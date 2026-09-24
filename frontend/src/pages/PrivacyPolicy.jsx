@@ -1,7 +1,7 @@
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import './PrivacyPolicy.css';
+import './Legal.css';
 
 const SECTIONS = ["collect", "use", "sharing", "security", "retention"];
 const RIGHTS = ["access", "rectification", "erasure", "objection"];

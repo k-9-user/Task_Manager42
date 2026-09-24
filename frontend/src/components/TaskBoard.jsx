@@ -1,24 +1,26 @@
 import { useTranslation } from "react-i18next";
+import { TASK_STATUSES } from "../services/taskService";
 import TaskCard from "./TaskCard";
 import './TaskBoard.css';
 
 function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
 {
-	const { t } = useTranslation()
-	const colonne = [{ key: "todo", label: t("random.afaire")}, { key: "in_progress", label: t("random.encours")}, { key: "done", label: t("random.termine") }];
+	const { t } = useTranslation();
 
-	return ( <div className="task-board">
-		{colonne.map((col) => (<div key={col.key} className="task-colonne">
-			<h3>
-				{col.label}	
-			</h3>
-			{tasks
-				.filter((task) => task.status === col.key)
-				.map((task) => (<TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} canDelete={canDelete} />
+	return (
+		<div className="task-board">
+			{TASK_STATUSES.map((status) => (
+				<div key={status} className="task-column">
+					<h3>{t(`tasks.status.${status}`)}</h3>
+					{tasks
+						.filter((task) => task.status === status)
+						.map((task) => (
+							<TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} canDelete={canDelete} />
+						))}
+				</div>
 			))}
-			</div>	
-			))}
-	</div>);
+		</div>
+	);
 }
 
 export default TaskBoard;

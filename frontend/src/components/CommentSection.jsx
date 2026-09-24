@@ -70,27 +70,27 @@ function CommentSection({ taskId })
 	}
 
 	return (
-		<div className="comment-section">
+		<div>
 			{loading ? (
 				<p>{t("loading.load")}</p>
 			) : (
-				<ul className="comment-list">
+				<ul>
 					{comments.map((comment) => (
 						<li key={comment.id}>
 							<p>{comment.content}</p>
-							<button onClick={() => handleDelete(comment.id)}>{t("random.suppcommentaire")}</button>
+							<button onClick={() => handleDelete(comment.id)}>{t("comments.delete")}</button>
 						</li>
 					))}
 				</ul>
 			)}
-			<form onSubmit={handleSubmit} className="comment-form">
+			<form onSubmit={handleSubmit}>
 				<textarea
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
-					placeholder={t("random.ecrirecommentaire")}
+					placeholder={t("comments.placeholder")}
 				/>
 				<button type="submit" disabled={posting}>
-					{posting ? t("random.envoi") : t("random.commenter")}
+					{posting ? t("loading.sending") : t("comments.submit")}
 				</button>
 			</form>
 			{error && <p className="error">{error}</p>}

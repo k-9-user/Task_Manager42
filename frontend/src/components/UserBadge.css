@@ -3,17 +3,17 @@
 	align-items: center;
 	gap: 0.3rem;
 	padding: 0.1rem 0.5rem;
-	border: 1px solid var(--surface-border);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 999px;
-	background: var(--surface-alt);
-	color: var(--primary-dark);
+	background: var(--color-brand-surface-alt);
+	color: var(--color-brand-primary-dark);
 	font-size: 0.72rem;
 	font-weight: 600;
 	white-space: nowrap;
 }
 
 .user-badge-earned {
-	background: var(--primary-soft);
+	background: var(--color-brand-primary-soft);
 }
 
 .user-badge-level {

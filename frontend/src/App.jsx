@@ -17,8 +17,6 @@ import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
 import "./App.css";
 
-//:id url dynamique, toute valeurs ajoute apres /projects/ sera prise en compte dans le composant
-
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/login" || location.pathname === "/register" || location.pathname === "/oauth/callback";

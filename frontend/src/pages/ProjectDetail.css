@@ -3,8 +3,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 1.5rem;
-	background: var(--surface-alt);
-	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background: var(--color-brand-surface-alt);
 	padding: 2rem;
 	box-sizing: border-box;
 	min-height: 100%;
@@ -12,7 +11,7 @@
 
 .project-detail-header h1 {
 	margin: 0 0 0.3rem 0;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 }
 
 .project-detail-header p {
@@ -43,8 +42,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.6rem;
-	background: var(--surface);
-	border: 1px solid var(--surface-border);
+	background: var(--color-brand-surface);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 10px;
 	padding: 1rem;
 }
@@ -52,15 +51,14 @@
 .task-form input {
 	flex: 1;
 	min-width: 160px;
-	border: 1px solid var(--surface-border);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 6px;
 	padding: 0.5rem 0.6rem;
 	font-size: 0.9rem;
-	font-family: inherit;
 }
 
 .task-form button {
-	background: var(--primary);
+	background: var(--color-brand-primary);
 	color: #ffffff;
 	border: none;
 	border-radius: 6px;
@@ -71,7 +69,7 @@
 }
 
 .task-form button:hover {
-	background: var(--primary-hover);
+	background: var(--color-brand-primary-hover);
 }
 
 @media (max-width: 900px)

@@ -39,7 +39,7 @@ function Projects()
 		e.preventDefault();
 
 		if (!name.trim()) {
-			setError(t("random.nameproject"));
+			setError(t("projects.nameRequired"));
 			return;
 		}
 		try
@@ -63,7 +63,7 @@ function Projects()
 	return (
 		<div className="flex min-h-full flex-col gap-6 bg-brand-surface-alt p-8 font-sans max-sm:p-4">
 			<div className="flex flex-wrap items-center justify-between gap-4">
-				<h1 className="m-0 text-[#2e1065]">{t("projects.title")}</h1>
+				<h1 className="m-0 text-brand-primary-darker">{t("projects.title")}</h1>
 				<button
 					className="cursor-pointer rounded-lg border-none bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-hover"
 					onClick={() => setShowForm(!showForm)}
@@ -100,7 +100,7 @@ function Projects()
 						key={project.id}
 						className="flex flex-col gap-2 rounded-xl border border-brand-surface-border border-t-4 border-t-brand-primary bg-brand-surface p-5 text-inherit no-underline shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
 					>
-						<h3 className="m-0 text-base text-[#2e1065]">{project.name}</h3>
+						<h3 className="m-0 text-base text-brand-primary-darker">{project.name}</h3>
 						<p className="m-0 text-sm text-[#6b21a8]">{project.description || " "}</p>
 					</Link>
 				))}

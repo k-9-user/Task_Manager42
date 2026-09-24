@@ -1,5 +1,6 @@
 
 .register-page{
+	position: relative;
 	flex: 1;
 	display: flex;
 	flex-direction: column;
@@ -8,7 +9,12 @@
 	align-items: center;
 	justify-content: center;
 	background: var(--page-gradient);
-	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.register-language {
+	position: absolute;
+	top: 1.25rem;
+	right: 1.5rem;
 }
 
 .register-page h1 {
@@ -19,7 +25,7 @@
 .register-titlebar{
 	display: flex;
 	justify-content: flex-start;
-	background: var(--primary-darker);
+	background: var(--color-brand-primary-darker);
 	color: #ffffff;
 	font-size: 0.9rem;
 	font-weight: bold;
@@ -41,13 +47,11 @@
 	width: 100%;
 	box-sizing: border-box;
 	padding: 2rem;
-	background: var(--surface);
+	background: var(--color-brand-surface);
 }
 
 .input-field{
 	display: contents;
-	align-items: center;
-	gap: 0.75rem;
 }
 
 .input-field label{
@@ -55,18 +59,6 @@
 	font-size: 0.85rem;
 	flex-shrink: 0;
 	white-space: nowrap;
-	text-align: left;
-}
-
-.input-field input{
-	width: 100%;
-	box-sizing: border-box;
-	background-color: #ffffff;
-	color: #2c1a4d;
-	border: 1px solid var(--surface-border);
-	border-radius: 6px;
-	padding: 0.45rem 0.6rem;
-	font-size: 0.9rem;
 }
 
 .register-box input {
@@ -74,14 +66,14 @@
 	box-sizing: border-box;
 	background-color: #ffffff;
 	color: #2c1a4d;
-	border: 1px solid var(--surface-border);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 6px;
 	padding: 0.45rem 0.6rem;
 	font-size: 0.9rem;
 }
 
 .register-box button {
-	background: var(--primary);
+	background: var(--color-brand-primary);
 	border: none;
 	color: #ffffff;
 	cursor: pointer;
@@ -92,7 +84,7 @@
 }
 
 .register-box button:hover{
-	background: var(--primary-hover);
+	background: var(--color-brand-primary-hover);
 }
 
 
@@ -113,7 +105,6 @@
 	gap: 0.35rem;
 	color: #6b5a8a;
 	font-size: 0.8rem;
-	text-align: left;
 }
 
 .password-mismatch{
@@ -123,14 +114,13 @@
 .login-link{
 	display: flex;
 	justify-content: flex-start;
-	margin-top: 0 auto;
 }
 
 .btn-link {
 	display: inline-block;
-	background: var(--surface-alt);
-	border: 1px solid var(--surface-border);
-	color: var(--primary-dark);
+	background: var(--color-brand-surface-alt);
+	border: 1px solid var(--color-brand-surface-border);
+	color: var(--color-brand-primary-dark);
 	text-decoration: none;
 	padding: 0.4rem 1rem;
 	font-size: 0.85rem;
@@ -138,9 +128,9 @@
 }
 
 .btn-link:hover{
-	background: var(--primary);
+	background: var(--color-brand-primary);
 	color: #ffffff;
-	border-color: var(--primary);
+	border-color: var(--color-brand-primary);
 }
 
 @media (max-width: 480px)

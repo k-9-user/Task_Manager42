@@ -11,7 +11,6 @@
 	},
 	"login":
 	{
-		"title": "Task Manager",
 		"subtitle": "Connecte-toi pour retrouver tes projets",
 		"username": "Nom d'utilisateur",
 		"identifier": "Email ou nom d'utilisateur",
@@ -47,11 +46,13 @@
 	},
 	"loading":
 	{
-		"load": "Chargement ..."
+		"load": "Chargement ...",
+		"sending": "Envoi ..."
 	},
 	"error":
 	{
-		"err": "Erreur"
+		"err": "Erreur",
+		"generic": "Une erreur est survenue"
 	},
 	"admin":
 	{
@@ -97,47 +98,44 @@
 		"namePlaceholder": "Nom du projet",
 		"create": "Créer",
 		"description": "Description (optionnel)",
-		"empty": "Aucun projet pour le moment. Crée ton premier projet !"
+		"empty": "Aucun projet pour le moment. Crée ton premier projet !",
+		"nameRequired": "Le nom du projet est obligatoire"
 	},
-	"random":
+	"profile":
 	{
-		"myprofile": "Mon profil",
-		"projet": "Projet",
-		"recherche": "Recherche",
-		"mrecherche": "Entrez un mot pour rechercher",
-		"ttstatus": "tout les status",
-		"afaire": "A faire",
-		"encours": "En cours",
-		"termine": "Terminé",
-		"rehercheencours": "Recherche en cours ...",
-		"impossibleserv": "Impossible de contacter le serveur: ",
-		"noreult": "Aucun résultat trouvé",
-		"rechercheencours": "Recherche en cours",
-		"tricreation": "Date de création",
-		"taches": "Tâches",
-		"projets": "Projets",
-		"tritre": "Titre",
-		"triecheance": "Échéance",
-		"tristatut": "Statut",
-		"trinom": "Nom",
-		"tridesc": "Décroissant",
-		"triasc": "Croissant",
-		"nameproject": "Le nom du projet est obligatoire",
-		"addfichier": "+ Ajouter un fichier",
-		"sfichier": "Sélectionner un fichier",
-		"envoi": "Envoi ...",
-		"ajfichier": "Ajouter le fichier",
-		"erupload": "Erreur d'upload",
-		"ersurv": "Une erreur est survenue",
-		"titretache": "Titre de la tâche",
-		"creertache": "Créer la tâche",
-		"addbanniere": "+ Ajouter une bannière",
-		"ajbanniere": "Ajouter la bannière",
-		"voircommentaires": "Voir les commentaires",
-		"masquercommentaires": "Masquer les commentaires",
-		"suppcommentaire": "Supprimer",
-		"ecrirecommentaire": "Écrire un commentaire...",
-		"commenter": "Commenter"
+		"title": "Mon profil"
+	},
+	"search":
+	{
+		"title": "Recherche",
+		"queryRequired": "Entrez un mot pour rechercher",
+		"allStatuses": "tous les statuts",
+		"serverError": "Impossible de contacter le serveur: ",
+		"noResults": "Aucun résultat trouvé",
+		"searching": "Recherche en cours",
+		"tasks": "Tâches",
+		"projects": "Projets",
+		"sort":
+		{
+			"created_at": "Date de création",
+			"title": "Titre",
+			"due_date": "Échéance",
+			"status": "Statut",
+			"name": "Nom"
+		},
+		"direction":
+		{
+			"desc": "Décroissant",
+			"asc": "Croissant"
+		}
+	},
+	"comments":
+	{
+		"show": "Voir les commentaires",
+		"hide": "Masquer les commentaires",
+		"delete": "Supprimer",
+		"placeholder": "Écrire un commentaire...",
+		"submit": "Commenter"
 	},
 	"attachments":
 	{
@@ -147,10 +145,15 @@
 		"hintTypes": "Formats acceptés : {{types}}",
 		"hintSize": "Taille max : {{max}} Mo",
 		"progress": "Progression de l'envoi",
+		"pick": "+ Ajouter un fichier",
+		"upload": "Ajouter le fichier",
+		"pickBanner": "+ Ajouter une bannière",
+		"uploadBanner": "Ajouter la bannière",
 		"errors":
 		{
 			"type": "Type de fichier non autorisé",
-			"size": "Fichier trop volumineux ({{max}} Mo max)"
+			"size": "Fichier trop volumineux ({{max}} Mo max)",
+			"upload": "Erreur d'upload"
 		}
 	},
 	"tasks":
@@ -161,7 +164,16 @@
 		"saving": "Enregistrement...",
 		"cancel": "Annuler",
 		"delete": "Supprimer la tâche",
-		"confirmDelete": "Supprimer la tâche « {{title}} » ? Ses pièces jointes, sa bannière et ses commentaires seront aussi supprimés."
+		"confirmDelete": "Supprimer la tâche « {{title}} » ? Ses pièces jointes, sa bannière et ses commentaires seront aussi supprimés.",
+		"titlePlaceholder": "Titre de la tâche",
+		"titleRequired": "Le titre de la tâche est obligatoire",
+		"create": "Créer la tâche",
+		"status":
+		{
+			"todo": "À faire",
+			"in_progress": "En cours",
+			"done": "Terminé"
+		}
 	},
 	"members":
 	{

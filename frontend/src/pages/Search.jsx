@@ -1,46 +1,51 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { searchtask } from "../services/taskService";
+import { TASK_STATUSES, searchTasks } from "../services/taskService";
 import { searchProjects } from "../services/projectService";
 import { useTranslation } from "react-i18next";
 import './Search.css';
 
+const SORTS = {
+	tasks: ["created_at", "title", "due_date", "status"],
+	projects: ["created_at", "name"],
+};
+
 function Search ()
 {
-	const [query, setquery] = useState("");
-	const [status, setstatus] = useState("");
+	const [query, setQuery] = useState("");
+	const [status, setStatus] = useState("");
 	const [searchType, setSearchType] = useState("tasks");
 	const [sort, setSort] = useState("created_at");
 	const [direction, setDirection] = useState("desc");
-	const [results, setresults] = useState([]);
-	const [loading, setloading] = useState(false);
+	const [results, setResults] = useState([]);
+	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
-	const [searched, setsearched] = useState(false);
+	const [searched, setSearched] = useState(false);
 	const { t } = useTranslation();
 
-	async function handlesearch(e)
+	async function handleSearch(e)
 	{
 		e.preventDefault();
 
 		if (!query.trim())
 		{
-			setError(t("random.mrecherche"));
+			setError(t("search.queryRequired"));
 			return ;
 		}
-		setloading(true);
+		setLoading(true);
 		setError("");
-		setsearched(true);
+		setSearched(true);
 		try
 		{
 			if (searchType === "projects")
 			{
 				const data = await searchProjects(query, sort, direction);
-				setresults(data.projects);
+				setResults(data.projects);
 			}
 			else
 			{
-				const data = await searchtask(query, status, sort, direction);
-				setresults(data.tasks);
+				const data = await searchTasks(query, status, sort, direction);
+				setResults(data.tasks);
 			}
 		}
 		catch (err)
@@ -49,54 +54,47 @@ function Search ()
 		}
 		finally
 		{
-			setloading(false);
+			setLoading(false);
 		}
 	}
 	return (
-		<div className="Search-page">
+		<div className="search-page">
 			<h1>Task Manager</h1>
-			<div className="Search-window">
-				<div className="Search-titlebar">{t("random.recherche")}</div>
-				<form onSubmit={handlesearch} className="search-form">
+			<div className="search-window">
+				<div className="search-titlebar">{t("search.title")}</div>
+				<form onSubmit={handleSearch} className="search-form">
 					<div className="input-group-search">
 						<div className="input-field-search">
-							<label htmlFor='search'>{t("random.recherche")} : </label>
-							<input id="search" type="text" value={query} onChange={(e) => setquery(e.target.value)}/>
+							<label htmlFor='search'>{t("search.title")} : </label>
+							<input id="search" type="text" value={query} onChange={(e) => setQuery(e.target.value)}/>
 						</div>
 						<select value={searchType} onChange={(e) => { setSearchType(e.target.value); setSort("created_at"); }}>
-							<option value="tasks">{t("random.taches")}</option>
-							<option value="projects">{t("random.projets")}</option>
+							<option value="tasks">{t("search.tasks")}</option>
+							<option value="projects">{t("search.projects")}</option>
 						</select>
 						{searchType === "tasks" && (
-							<select value={status} onChange={(e) => setstatus(e.target.value)}>
-								<option value="">{t("random.ttstatus")}</option>
-								<option value="todo">{t("random.afaire")}</option>
-								<option value="in_progress">{t("random.encours")}</option>
-								<option value="done">{t("random.termine")}</option>
+							<select value={status} onChange={(e) => setStatus(e.target.value)}>
+								<option value="">{t("search.allStatuses")}</option>
+								{TASK_STATUSES.map((value) => (
+									<option key={value} value={value}>{t(`tasks.status.${value}`)}</option>
+								))}
 							</select>
 						)}
 						<select value={sort} onChange={(e) => setSort(e.target.value)}>
-							<option value="created_at">{t("random.tricreation")}</option>
-							{searchType === "tasks" ? (
-								<>
-									<option value="title">{t("random.tritre")}</option>
-									<option value="due_date">{t("random.triecheance")}</option>
-									<option value="status">{t("random.tristatut")}</option>
-								</>
-							) : (
-								<option value="name">{t("random.trinom")}</option>
-							)}
+							{SORTS[searchType].map((value) => (
+								<option key={value} value={value}>{t(`search.sort.${value}`)}</option>
+							))}
 						</select>
 						<select value={direction} onChange={(e) => setDirection(e.target.value)}>
-							<option value="desc">{t("random.tridesc")}</option>
-							<option value="asc">{t("random.triasc")}</option>
+							<option value="desc">{t("search.direction.desc")}</option>
+							<option value="asc">{t("search.direction.asc")}</option>
 						</select>
 						<button type="submit">{t("navbar.search")}</button>
-						{loading && <p>{t("random.rechercheencours")}.</p>}
+						{loading && <p>{t("search.searching")}.</p>}
 
-						{error && <p className="error">{t("random.impossibleserv")}{error}</p>}
+						{error && <p className="error">{t("search.serverError")}{error}</p>}
 
-						{!loading && !error && searched && results.length === 0 && (<p>{t("random.noreult")}</p>)}
+						{!loading && !error && searched && results.length === 0 && (<p>{t("search.noResults")}</p>)}
 						<ul className="search-results">
 							{searchType === "projects" ? (
 								results.map((project) =>
@@ -111,7 +109,7 @@ function Search ()
 								results.map((task) =>
 									<li key={task.id}>
 										<h4>{task.title}</h4>
-										<span className={`status-badge status-${task.status}`}>{task.status}</span>
+										<span className={`status-badge status-${task.status}`}>{t(`tasks.status.${task.status}`)}</span>
 									</li>
 								)
 							)}

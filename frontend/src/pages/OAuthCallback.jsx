@@ -15,10 +15,7 @@ function OAuthCallback() {
 			return;
 		started.current = true;
 		exchangeGoogleOAuth()
-			.then(({ token }) => {
-				localStorage.setItem("token", token);
-				navigate("/projects", { replace: true });
-			})
+			.then(() => navigate("/projects", { replace: true }))
 			.catch(() => navigate("/login?oauth=failed", { replace: true }));
 	}, [navigate]);
 
@@ -29,7 +26,7 @@ function OAuthCallback() {
 					<span className="text-4xl leading-none">📋</span>
 					<h1 className="m-0 mt-1.5 text-xl font-semibold tracking-wide text-white">{t("login.google")}</h1>
 				</div>
-				<div className="bg-brand-surface p-8 text-center text-sm text-[#4c1d95]">{t("login.oauthLoading")}</div>
+				<div className="bg-brand-surface p-8 text-center text-sm text-brand-primary-dark">{t("login.oauthLoading")}</div>
 			</div>
 		</div>
 	);

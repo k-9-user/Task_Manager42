@@ -2,14 +2,14 @@
 	width: 100%;
 	height: 0.5rem;
 	border-radius: 999px;
-	background: var(--surface-border);
+	background: var(--color-brand-surface-border);
 	overflow: hidden;
 }
 
 .progress-bar-fill {
 	height: 100%;
 	border-radius: inherit;
-	background: linear-gradient(90deg, var(--primary-light), var(--primary));
+	background: linear-gradient(90deg, var(--color-brand-primary-light), var(--color-brand-primary));
 	transition: width 0.4s ease;
 }
 

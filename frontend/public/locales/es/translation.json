@@ -11,7 +11,6 @@
 	},
 	"login":
 	{
-		"title": "Task Manager",
 		"subtitle": "Inicia sesión para encontrar tus proyectos",
 		"username": "Nombre de usuario",
 		"identifier": "Correo electrónico o nombre de usuario",
@@ -47,11 +46,13 @@
 	},
 	"loading":
 	{
-		"load": "Carga ..."
+		"load": "Carga ...",
+		"sending": "Enviando ..."
 	},
 	"error":
 	{
-		"err": "Error"
+		"err": "Error",
+		"generic": "Se ha producido un error"
 	},
 	"admin":
 	{
@@ -97,47 +98,44 @@
 		"namePlaceholder": "Nombre del proyecto",
 		"create": "Crear",
 		"description": "Descripción (opcional)",
-		"empty": "Aún no hay proyectos. ¡Crea tu primer proyecto!"
+		"empty": "Aún no hay proyectos. ¡Crea tu primer proyecto!",
+		"nameRequired": "Es obligatorio indicar el nombre del proyecto"
 	},
-	"random":
+	"profile":
 	{
-		"myprofile": "Mi perfil",
-		"projet": "proyecto",
-		"recherche": "Búsqueda",
-		"mrecherche": "Escribe una palabra para buscar",
-		"ttstatus": "todos los estados",
-		"afaire": "Tareas pendientes",
-		"encours": "En curso",
-		"termine": "Terminado",
-		"rehercheencours": "Búsqueda en curso ...",
-		"impossibleserv": "No se puede establecer contacto con el servidor: ",
-		"noreult": "No se han encontrado resultados",
-		"rechercheencours": "Buscando",
-		"tricreation": "Fecha de creación",
-		"taches": "Tareas",
-		"projets": "Proyectos",
-		"tritre": "Título",
-		"triecheance": "Vencimiento",
-		"tristatut": "Estado",
-		"trinom": "Nombre",
-		"tridesc": "Descendente",
-		"triasc": "Ascendente",
-		"nameproject": "Es obligatorio indicar el nombre del proyecto",
-		"addfichier": "+ Añadir un archivo",
-		"sfichier": "Seleccionar un archivo",
-		"envoi": "Enviando ...",
-		"ajfichier": "Añadir el archivo",
-		"erupload": "Error al subir el archivo",
-		"ersurv": "Se ha producido un error",
-		"titretache": "Título de la tarea",
-		"creertache": "Crear tarea",
-		"addbanniere": "+ Añadir una portada",
-		"ajbanniere": "Añadir la portada",
-		"voircommentaires": "Ver comentarios",
-		"masquercommentaires": "Ocultar comentarios",
-		"suppcommentaire": "Eliminar",
-		"ecrirecommentaire": "Escribe un comentario...",
-		"commenter": "Comentar"
+		"title": "Mi perfil"
+	},
+	"search":
+	{
+		"title": "Búsqueda",
+		"queryRequired": "Escribe una palabra para buscar",
+		"allStatuses": "todos los estados",
+		"serverError": "No se puede establecer contacto con el servidor: ",
+		"noResults": "No se han encontrado resultados",
+		"searching": "Buscando",
+		"tasks": "Tareas",
+		"projects": "Proyectos",
+		"sort":
+		{
+			"created_at": "Fecha de creación",
+			"title": "Título",
+			"due_date": "Vencimiento",
+			"status": "Estado",
+			"name": "Nombre"
+		},
+		"direction":
+		{
+			"desc": "Descendente",
+			"asc": "Ascendente"
+		}
+	},
+	"comments":
+	{
+		"show": "Ver comentarios",
+		"hide": "Ocultar comentarios",
+		"delete": "Eliminar",
+		"placeholder": "Escribe un comentario...",
+		"submit": "Comentar"
 	},
 	"attachments":
 	{
@@ -147,10 +145,15 @@
 		"hintTypes": "Formatos permitidos: {{types}}",
 		"hintSize": "Tamaño máx.: {{max}} MB",
 		"progress": "Progreso de la subida",
+		"pick": "+ Añadir un archivo",
+		"upload": "Añadir el archivo",
+		"pickBanner": "+ Añadir una portada",
+		"uploadBanner": "Añadir la portada",
 		"errors":
 		{
 			"type": "Tipo de archivo no permitido",
-			"size": "Archivo demasiado grande (máx. {{max}} MB)"
+			"size": "Archivo demasiado grande (máx. {{max}} MB)",
+			"upload": "Error al subir el archivo"
 		}
 	},
 	"tasks":
@@ -161,7 +164,16 @@
 		"saving": "Guardando...",
 		"cancel": "Cancelar",
 		"delete": "Eliminar la tarea",
-		"confirmDelete": "¿Eliminar la tarea «{{title}}»? También se eliminarán sus archivos adjuntos, su portada y sus comentarios."
+		"confirmDelete": "¿Eliminar la tarea «{{title}}»? También se eliminarán sus archivos adjuntos, su portada y sus comentarios.",
+		"titlePlaceholder": "Título de la tarea",
+		"titleRequired": "El título de la tarea es obligatorio",
+		"create": "Crear tarea",
+		"status":
+		{
+			"todo": "Tareas pendientes",
+			"in_progress": "En curso",
+			"done": "Terminado"
+		}
 	},
 	"members":
 	{

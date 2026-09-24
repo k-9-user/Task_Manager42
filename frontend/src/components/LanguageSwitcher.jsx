@@ -1,14 +1,14 @@
 import { useTranslation } from "react-i18next";
-import './LangageSwitcher.css';
+import './LanguageSwitcher.css';
 
 
 function LanguageSwitcher()
 {
 	const { i18n } = useTranslation();
 
-	function handleChange(langue)
+	function handleChange(e)
 	{
-		i18n.changeLanguage(langue.target.value);
+		i18n.changeLanguage(e.target.value);
 	}
 
 	return (

@@ -1,15 +1,9 @@
-import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { isLoggedIn } from "../services/authService";
 
 function PrivateRoute ({ children })
 {
-	const { isAuthen, loading } = useAuth();
-	const { t } = useTranslation();
-
-	if (loading)
-		return (<p>{t("loading.load")}</p>);
-	if (!isAuthen)
+	if (!isLoggedIn())
 		return (<Navigate to="/login"/>);
 	return (children);
 }

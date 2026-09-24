@@ -11,7 +11,6 @@
 	},
 	"login":
 	{
-		"title": "Task Manager",
 		"subtitle": "Log in to find your projects",
 		"username": "Username",
 		"identifier": "Email or username",
@@ -47,11 +46,13 @@
 	},
 	"loading":
 	{
-		"load": "loading ..."
+		"load": "loading ...",
+		"sending": "Sending ..."
 	},
 	"error":
 	{
-		"err": "Error"
+		"err": "Error",
+		"generic": "An error has occurred"
 	},
 	"admin":
 	{
@@ -97,47 +98,44 @@
 		"namePlaceholder": "Project name",
 		"create": "Create",
 		"description": "Description (optional)",
-		"empty": "No projects yet. Create your first project!"
+		"empty": "No projects yet. Create your first project!",
+		"nameRequired": "The project name is required"
 	},
-	"random":
+	"profile":
 	{
-		"myprofile": "My profile",
-		"projet": "Project",
-		"recherche": "Search",
-		"mrecherche": "Enter a word to search for",
-		"ttstatus": "all statuses",
-		"afaire": "Things to Do",
-		"encours": "In Progress",
-		"termine": "Done",
-		"rehercheencours": "Searching ...",
-		"impossibleserv": "Unable to contact the server: ",
-		"noreult": "No results found",
-		"rechercheencours": "Searching",
-		"tricreation": "Creation date",
-		"taches": "Tasks",
-		"projets": "Projects",
-		"tritre": "Title",
-		"triecheance": "Due date",
-		"tristatut": "Status",
-		"trinom": "Name",
-		"tridesc": "Descending",
-		"triasc": "Ascending",
-		"nameproject": "The project name is required",
-		"addfichier": "+ Add a file",
-		"sfichier": "Select a file",
-		"envoi": "Sending ...",
-		"ajfichier": "Add the file",
-		"erupload": "Upload error",
-		"ersurv": "An error has occurred",
-		"titretache": "Task title",
-		"creertache": "Create task",
-		"addbanniere": "+ Add a banner",
-		"ajbanniere": "Add the banner",
-		"voircommentaires": "View comments",
-		"masquercommentaires": "Hide comments",
-		"suppcommentaire": "Delete",
-		"ecrirecommentaire": "Write a comment...",
-		"commenter": "Comment"
+		"title": "My profile"
+	},
+	"search":
+	{
+		"title": "Search",
+		"queryRequired": "Enter a word to search for",
+		"allStatuses": "all statuses",
+		"serverError": "Unable to contact the server: ",
+		"noResults": "No results found",
+		"searching": "Searching",
+		"tasks": "Tasks",
+		"projects": "Projects",
+		"sort":
+		{
+			"created_at": "Creation date",
+			"title": "Title",
+			"due_date": "Due date",
+			"status": "Status",
+			"name": "Name"
+		},
+		"direction":
+		{
+			"desc": "Descending",
+			"asc": "Ascending"
+		}
+	},
+	"comments":
+	{
+		"show": "View comments",
+		"hide": "Hide comments",
+		"delete": "Delete",
+		"placeholder": "Write a comment...",
+		"submit": "Comment"
 	},
 	"attachments":
 	{
@@ -147,10 +145,15 @@
 		"hintTypes": "Allowed formats: {{types}}",
 		"hintSize": "Max size: {{max}} MB",
 		"progress": "Upload progress",
+		"pick": "+ Add a file",
+		"upload": "Add the file",
+		"pickBanner": "+ Add a banner",
+		"uploadBanner": "Add the banner",
 		"errors":
 		{
 			"type": "File type not allowed",
-			"size": "File too large (max {{max}} MB)"
+			"size": "File too large (max {{max}} MB)",
+			"upload": "Upload error"
 		}
 	},
 	"tasks":
@@ -161,7 +164,16 @@
 		"saving": "Saving...",
 		"cancel": "Cancel",
 		"delete": "Delete task",
-		"confirmDelete": "Delete the task \"{{title}}\"? Its attachments, banner and comments will be deleted too."
+		"confirmDelete": "Delete the task \"{{title}}\"? Its attachments, banner and comments will be deleted too.",
+		"titlePlaceholder": "Task title",
+		"titleRequired": "The task title is required",
+		"create": "Create task",
+		"status":
+		{
+			"todo": "Things to Do",
+			"in_progress": "In Progress",
+			"done": "Done"
+		}
 	},
 	"members":
 	{

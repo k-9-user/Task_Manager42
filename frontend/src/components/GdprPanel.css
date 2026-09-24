@@ -15,7 +15,7 @@
 
 .gdpr-panel h2 {
 	font-size: 1.2rem;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 	margin: 0;
 }
 

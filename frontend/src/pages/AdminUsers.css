@@ -3,8 +3,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 1.25rem;
-	background: var(--surface-alt);
-	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background: var(--color-brand-surface-alt);
 	padding: 2rem;
 	box-sizing: border-box;
 	min-height: 100%;
@@ -12,21 +11,21 @@
 
 .admin-user-page h1 {
 	margin: 0;
-	color: #2e1065;
+	color: var(--color-brand-primary-darker);
 	font-size: 1.5rem;
 }
 
 .admin-user-page table {
 	width: 100%;
 	border-collapse: collapse;
-	background: var(--surface);
-	border: 1px solid var(--surface-border);
+	background: var(--color-brand-surface);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 10px;
 	overflow: hidden;
 }
 
 .admin-user-page th {
-	background: var(--primary);
+	background: var(--color-brand-primary);
 	color: #ffffff;
 	text-align: left;
 	font-size: 0.82rem;
@@ -37,17 +36,16 @@
 
 .admin-user-page td {
 	padding: 0.65rem 1rem;
-	border-top: 1px solid var(--surface-border);
+	border-top: 1px solid var(--color-brand-surface-border);
 	font-size: 0.9rem;
 	color: #2c1a4d;
 }
 
 .admin-user-page select,
 .admin-user-page input {
-	border: 1px solid var(--surface-border);
+	border: 1px solid var(--color-brand-surface-border);
 	border-radius: 6px;
 	padding: 0.3rem 0.5rem;
-	font-family: inherit;
 	font-size: 0.85rem;
 	min-width: 0;
 }
@@ -74,9 +72,9 @@
 	font-size: 0.7rem;
 	padding: 0.1rem 0.5rem;
 	border-radius: 10px;
-	background: var(--surface-alt);
-	border: 1px solid var(--surface-border);
-	color: var(--primary-dark);
+	background: var(--color-brand-surface-alt);
+	border: 1px solid var(--color-brand-surface-border);
+	color: var(--color-brand-primary-dark);
 }
 
 .admin-display-name {
@@ -122,9 +120,9 @@
 .admin-actions button,
 .admin-toolbar button,
 .admin-pagination button {
-	background: var(--surface-alt);
-	border: 1px solid var(--surface-border);
-	color: var(--primary-dark);
+	background: var(--color-brand-surface-alt);
+	border: 1px solid var(--color-brand-surface-border);
+	color: var(--color-brand-primary-dark);
 	border-radius: 6px;
 	padding: 0.3rem 0.7rem;
 	font-size: 0.8rem;
@@ -134,9 +132,9 @@
 .admin-actions button:hover:not(:disabled),
 .admin-toolbar button:hover,
 .admin-pagination button:hover:not(:disabled) {
-	background: var(--primary);
+	background: var(--color-brand-primary);
 	color: #ffffff;
-	border-color: var(--primary);
+	border-color: var(--color-brand-primary);
 }
 
 .admin-actions button.danger {

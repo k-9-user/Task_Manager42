@@ -5,7 +5,7 @@ import MembersPanel from "../components/MembersPanel";
 import ProjectMessages from "../components/ProjectMessages";
 import { getProject } from "../services/projectService";
 import { createTask, deleteTask, updateTaskStatus } from "../services/taskService.js";
-import { apiFetch } from "../services/api";
+import { getMe } from "../services/userservice";
 import { useTranslation } from "react-i18next";
 import './ProjectDetail.css';
 
@@ -28,7 +28,7 @@ function ProjectDetail()
 			try {
 				const [projectData, meData] = await Promise.all([
 					getProject(id),
-					apiFetch("/api/users/me"),
+					getMe(),
 				]);
 				setProject(projectData.project);
 				setMembers(projectData.members);
@@ -49,7 +49,7 @@ function ProjectDetail()
 
 	async function handleStatusChange(taskId, newStatus)
 	{
-		setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+		setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)));
 
 		try
 		{
@@ -90,7 +90,7 @@ function ProjectDetail()
 
 		if (!title.trim())
 		{
-			setError(t("random.titretache"));
+			setError(t("tasks.titleRequired"));
 			return ;
 		}
 		try
@@ -112,8 +112,8 @@ function ProjectDetail()
 	else if (error && !project)
 		return (<p className="error">{t("error.err")} : {error}</p>);
 
-	const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
 	const currentMember = members.find((m) => m.user_id === currentUserId);
+	const isOwner = currentMember?.role === "owner";
 	const canEdit = ["owner", "editor"].includes(currentMember?.role);
 
 	return (<div className="project-detail-page">
@@ -125,9 +125,9 @@ function ProjectDetail()
 		<div className="project-detail-layout">
 			<div className="project-detail-main">
 				<form onSubmit={handleCreateTask} className="task-form">
-					<input type="text" placeholder={t("random.titretache")} value={title} onChange={(e) => setTitle(e.target.value)} />
+					<input type="text" placeholder={t("tasks.titlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
 					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
-					<button type="submit">{t("random.creertache")}</button>
+					<button type="submit">{t("tasks.create")}</button>
 				</form>
 				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} canDelete={isOwner} />
 			</div>
@@ -136,6 +136,7 @@ function ProjectDetail()
 					projectId={id}
 					members={members}
 					currentUserId={currentUserId}
+					isOwner={isOwner}
 					onMembersChange={setMembers}
 				/>
 				<ProjectMessages

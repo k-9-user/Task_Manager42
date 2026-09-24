@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { logout } from "../services/authService";
 import { deleteMyAccount, exportMyData } from "../services/gdprService";
 import "./GdprPanel.css";
 
@@ -52,7 +53,7 @@ function GdprPanel({ user })
 		try
 		{
 			await deleteMyAccount(typedUsername);
-			localStorage.removeItem("token");
+			logout();
 			navigate("/login", { replace: true });
 		}
 		catch (err)
@@ -75,7 +76,7 @@ function GdprPanel({ user })
 				{exportDone && <p className="gdpr-success" role="status">{t("gdpr.exportDone")}</p>}
 			</div>
 
-			<div className="gdpr-block gdpr-danger">
+			<div className="gdpr-block">
 				<p>
 					{t("gdpr.deleteBody")}{" "}
 					<Link to="/PrivacyPolicy#account-deletion">{t("gdpr.learnMore")}</Link>

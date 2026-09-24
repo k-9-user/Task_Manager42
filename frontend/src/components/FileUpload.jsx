@@ -1,11 +1,10 @@
 import { useRef, useState } from "react";
-import { uploadTaskBanner } from "../services/taskService";
 import { useTranslation } from "react-i18next";
-import { BANNER_TYPES, MAX_UPLOAD_SIZE_MB, acceptAttr, typesLabel, validateFile } from "../services/upload";
+import { MAX_UPLOAD_SIZE_MB, acceptAttr, typesLabel, validateFile } from "../services/upload";
 
-function BannerUpload({ taskId, uploadsuccess })
+function FileUpload({ types, upload, onUploaded, pickLabel, sendLabel })
 {
-	const [file, setfile] = useState(null);
+	const [file, setFile] = useState(null);
 	const [uploading, setUploading] = useState(false);
 	const [progress, setProgress] = useState(0);
 	const [error, setError] = useState("");
@@ -14,7 +13,7 @@ function BannerUpload({ taskId, uploadsuccess })
 
 	function resetInput()
 	{
-		setfile(null);
+		setFile(null);
 		if (fileInputRef.current)
 			fileInputRef.current.value = "";
 	}
@@ -22,7 +21,7 @@ function BannerUpload({ taskId, uploadsuccess })
 	function handleFileChange(e)
 	{
 		const selected = e.target.files?.[0] ?? null;
-		const invalid = selected && validateFile(selected, BANNER_TYPES);
+		const invalid = selected && validateFile(selected, types);
 
 		if (invalid)
 		{
@@ -30,32 +29,20 @@ function BannerUpload({ taskId, uploadsuccess })
 			setError(t(invalid, { max: MAX_UPLOAD_SIZE_MB }));
 			return ;
 		}
-		setfile(selected);
+		setFile(selected);
 		setError("");
 	}
 
 	async function handleUpload()
 	{
-		if (!file)
-		{
-			setError(t("random.sfichier"));
-			return ;
-		}
-		const invalid = validateFile(file, BANNER_TYPES);
-		if (invalid)
-		{
-			setError(t(invalid, { max: MAX_UPLOAD_SIZE_MB }));
-			return ;
-		}
-
 		setProgress(0);
 		setUploading(true);
 		setError("");
 
 		try
 		{
-			const data = await uploadTaskBanner(taskId, file, setProgress);
-			uploadsuccess(data.banner_url);
+			await upload(file, setProgress);
+			await onUploaded();
 			resetInput();
 		}
 		catch (err)
@@ -69,15 +56,15 @@ function BannerUpload({ taskId, uploadsuccess })
 		}
 	}
 	return (
-		<div className="banner-upload upload-block">
-			<input ref={fileInputRef} type="file" accept={acceptAttr(BANNER_TYPES)} onChange={handleFileChange} hidden />
+		<div className="upload-block">
+			<input ref={fileInputRef} type="file" accept={acceptAttr(types)} onChange={handleFileChange} hidden />
 			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-				{t("random.addbanniere")}
+				{pickLabel}
 			</button>
 			{file && <span>{file.name}</span>}
 			{file && (
 				<button type="button" onClick={handleUpload} disabled={uploading}>
-					{uploading ? t("random.envoi") : t("random.ajbanniere")}
+					{uploading ? t("loading.sending") : sendLabel}
 				</button>
 			)}
 			{uploading && (
@@ -87,7 +74,7 @@ function BannerUpload({ taskId, uploadsuccess })
 				</div>
 			)}
 			<div className="upload-hint">
-				<small>{t("attachments.hintTypes", { types: typesLabel(BANNER_TYPES) })}</small>
+				<small>{t("attachments.hintTypes", { types: typesLabel(types) })}</small>
 				<small>{t("attachments.hintSize", { max: MAX_UPLOAD_SIZE_MB })}</small>
 			</div>
 			{error && <p className="error">{error}</p>}
@@ -95,4 +82,4 @@ function BannerUpload({ taskId, uploadsuccess })
 	);
 }
 
-export default BannerUpload;
+export default FileUpload;

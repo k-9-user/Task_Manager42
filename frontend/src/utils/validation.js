@@ -1,13 +1,13 @@
 export const PASSWORD_MIN_LENGTH = Number(import.meta.env.VITE_PASSWORD_MIN_LENGTH);
 export const PASSWORD_MAX_LENGTH = Number(import.meta.env.VITE_PASSWORD_MAX_LENGTH);
 
-export function isvalidemail(email)
+export function isValidEmail(email)
 {
 	const adr = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 	return adr.test(email);
 }
 
-export function isvalidusername(username)
+export function isValidUsername(username)
 {
 	const pattern = /^[A-Za-z0-9._-]{3,50}$/;
 	return pattern.test(username);
@@ -26,13 +26,13 @@ export function hasControlCharacters(value)
 	});
 }
 
-export function isvalidpassword(password)
+export function isValidPassword(password)
 {
 	const length = passwordLength(password);
 	return length >= PASSWORD_MIN_LENGTH && length <= PASSWORD_MAX_LENGTH && !hasControlCharacters(password);
 }
 
-export function isvalididentifier(identifier)
+export function isValidIdentifier(identifier)
 {
-	return identifier.includes("@") ? isvalidemail(identifier) : isvalidusername(identifier);
+	return identifier.includes("@") ? isValidEmail(identifier) : isValidUsername(identifier);
 }

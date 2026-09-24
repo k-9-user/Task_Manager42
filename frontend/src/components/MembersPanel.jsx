@@ -4,15 +4,13 @@ import { useTranslation } from "react-i18next";
 import UserBadge from "./UserBadge";
 import "./MembersPanel.css";
 
-function MembersPanel({ projectId, members, currentUserId, onMembersChange })
+function MembersPanel({ projectId, members, currentUserId, isOwner, onMembersChange })
 {
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState("viewer");
 	const [error, setError] = useState("");
 	const [adding, setAdding] = useState(false);
 	const { t } = useTranslation();
-
-	const isOwner = members.some((m) => m.user_id === currentUserId && m.role === "owner");
 
 	async function handleAdd(e)
 	{
@@ -83,7 +81,7 @@ function MembersPanel({ projectId, members, currentUserId, onMembersChange })
 						<option value="owner">{t("members.role.owner")}</option>
 					</select>
 					<button type="submit" disabled={adding}>
-						{adding ? t("random.envoi") : t("members.add")}
+						{adding ? t("loading.sending") : t("members.add")}
 					</button>
 				</form>
 			)}

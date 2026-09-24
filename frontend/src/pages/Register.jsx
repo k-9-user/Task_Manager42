@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import './register.css';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
 	PASSWORD_MAX_LENGTH,
 	PASSWORD_MIN_LENGTH,
 	hasControlCharacters,
-	isvalidemail,
-	isvalidpassword,
-	isvalidusername,
+	isValidEmail,
+	isValidPassword,
+	isValidUsername,
 	passwordLength,
 } from '../utils/validation';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { register } from "../services/authService";
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
@@ -40,12 +39,12 @@ function Register()
 				setError(t("register.cpassword"));
 			return ;
 		}
-		if (!isvalidemail(email))
+		if (!isValidEmail(email))
 		{
 			setError(t("register.invaemail"));
 			return ;
 		}
-		if (!isvalidusername(username))
+		if (!isValidUsername(username))
 		{
 			setError(t("register.invausername"));
 			return ;
@@ -55,7 +54,7 @@ function Register()
 			setError(t("register.invapasswordchars"));
 			return ;
 		}
-		if (!isvalidpassword(password))
+		if (!isValidPassword(password))
 		{
 			setError(passwordLength(password) > PASSWORD_MAX_LENGTH
 				? t("register.invapasswordlong", passwordLimits)
@@ -80,6 +79,9 @@ function Register()
 	}
 	return (
 		<div className='register-page'>
+			<div className='register-language'>
+				<LanguageSwitcher />
+			</div>
 			<h1>Task Manager</h1>
 			<div className='register-window'>
 				<div className='register-titlebar'>{t("login.register")}</div>
