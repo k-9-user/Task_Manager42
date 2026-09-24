@@ -20,6 +20,7 @@ from app.models.task import Task
 from app.models.user import User
 from app.routers.projects import _get_membership_or_404
 from app.services.gamification import Track, record_activity
+from app.services.uploads import UPLOAD_URL_PREFIX, safe_stored_path, upload_root
 from app.utils.validators import has_control_characters
 
 
@@ -49,7 +50,6 @@ DEFAULT_EXTENSION_BY_MIME_TYPE = {
     "text/csv": ".csv",
     "text/plain": ".txt",
 }
-UPLOAD_URL_PREFIX = "/uploads"
 UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 ALLOWED_BANNER_MIME_TYPES = frozenset({"image/jpeg", "image/png"})
@@ -138,7 +138,7 @@ async def upload_attachment(
         original_filename,
         file.content_type,
     )
-    upload_directory = _upload_directory(settings)
+    upload_directory = upload_root(settings)
     upload_directory.mkdir(parents=True, exist_ok=True)
     stored_path = upload_directory / stored_filename
 
@@ -218,7 +218,7 @@ def download_attachment(
         )
     _require_attachment_member(db, project_id, current_user.id, "Attachment not found")
 
-    stored_path = _safe_stored_path(attachment.file_url, _upload_directory(settings))
+    stored_path = safe_stored_path(attachment.file_url, upload_root(settings))
     if stored_path is None or not stored_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment file not found"
@@ -275,7 +275,7 @@ def delete_attachment(
             status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found",
         )
 
-    stored_path = _safe_stored_path(attachment.file_url, _upload_directory(settings))
+    stored_path = safe_stored_path(attachment.file_url, upload_root(settings))
     try:
         db.delete(attachment)
         db.commit()
@@ -341,7 +341,7 @@ async def upload_task_banner(
     original_filename = file.filename or "banner"
     _validate_original_filename(original_filename)
     stored_filename = _generate_stored_filename(original_filename, file.content_type)
-    upload_directory = _upload_directory(settings)
+    upload_directory = upload_root(settings)
     upload_directory.mkdir(parents=True, exist_ok=True)
     stored_path = upload_directory / stored_filename
 
@@ -369,7 +369,7 @@ async def upload_task_banner(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
         previous_banner_path = (
-            _safe_stored_path(task.banner_url, upload_directory)
+            safe_stored_path(task.banner_url, upload_directory)
             if task.banner_url
             else None
         )
@@ -416,7 +416,7 @@ def delete_task_banner(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     stored_path = (
-        _safe_stored_path(task.banner_url, _upload_directory(settings))
+        safe_stored_path(task.banner_url, upload_root(settings))
         if task.banner_url
         else None
     )
@@ -458,7 +458,7 @@ def download_task_banner(
     if task is None or not task.banner_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found")
 
-    stored_path = _safe_stored_path(task.banner_url, _upload_directory(settings))
+    stored_path = safe_stored_path(task.banner_url, upload_root(settings))
     if stored_path is None or not stored_path.is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Banner not found")
 
@@ -521,21 +521,6 @@ async def _write_uploaded_file(
         raise
     finally:
         await file.close()
-
-
-def _upload_directory(settings: Settings) -> Path:
-    return Path(settings.upload_dir).expanduser().resolve()
-
-
-def _safe_stored_path(file_url: str, upload_directory: Path) -> Path | None:
-    url_path = PurePosixPath(file_url)
-    if url_path.parent != PurePosixPath(UPLOAD_URL_PREFIX):
-        return None
-
-    candidate = (upload_directory / url_path.name).resolve()
-    if candidate.parent != upload_directory:
-        return None
-    return candidate
 
 
 def _require_attachment_member(

@@ -9,12 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.auth.api_key_auth import get_current_api_user
 from app.auth.project_permissions import lock_project_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.schemas.common import StrictRequest
+from app.services.uploads import remove_files, task_files
 from app.utils.rate_limiter import ApiKeyRateLimiter
 
 
@@ -26,6 +28,7 @@ rate_limiter = ApiKeyRateLimiter()
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
 AuthenticatedApiUser = Annotated[User, Depends(get_current_api_user)]
+ApplicationSettings = Annotated[Settings, Depends(get_settings)]
 RawApiKey = Annotated[
     str,
     Header(
@@ -162,24 +165,29 @@ def update_public_task(
     "/tasks/{task_id}",
     summary="Delete a task",
     description=(
-        "Delete an accessible task. Only project owners and members with the owner "
-        "or editor role may delete it."
+        "Delete an accessible task together with its attachments, banner and "
+        "comments. Only project owners may delete it."
     ),
-    responses=WRITE_RESPONSES,
+    responses={
+        **WRITE_RESPONSES,
+        status.HTTP_403_FORBIDDEN: {"description": "Account is banned or not the project owner."},
+    },
 )
 def delete_public_task(
     task_id: UUID,
     db: DatabaseSession,
     current_user: AuthenticatedApiUser,
     x_api_key: RawApiKey,
+    settings: ApplicationSettings,
 ) -> dict[str, Any]:
     rate_limiter.check(x_api_key)
     project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
     if project_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        db, project_id, current_user.id, ProjectRole.OWNER,
         not_found_detail="Task not found",
+        forbidden_detail="Only the project owner can delete tasks",
     )
     task = db.scalar(
         select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
@@ -187,8 +195,10 @@ def delete_public_task(
     if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
+    files = task_files(db, settings, Task.id == task.id)
     db.delete(task)
     db.commit()
+    remove_files(files)
 
     return _success_response()
 

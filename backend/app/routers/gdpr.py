@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth.project_permissions import lock_user_projects_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.models.api_key import ApiKey
@@ -20,6 +21,7 @@ from app.models.user import User, UserRole, UserStatus
 from app.models.user_activity import UserActivity
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
 from app.services.gamification import build_summary
+from app.services.uploads import remove_files, task_files
 from app.utils.locks import lock_admin_invariants
 from app.utils.mailer import send_mail
 
@@ -291,6 +293,7 @@ def delete_my_account(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ):
     """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD).
 
@@ -346,6 +349,7 @@ def delete_my_account(
     owned_projects = [
         project for project in locked_projects if project.owner_id == current_user.id
     ]
+    files = []
     for project in owned_projects:
         other_members = (
             db.query(ProjectMember)
@@ -358,6 +362,7 @@ def delete_my_account(
         )
 
         if not other_members:
+            files += task_files(db, settings, Task.project_id == project.id)
             db.delete(project)
             continue
 
@@ -373,6 +378,7 @@ def delete_my_account(
     email, username = current_user.email, current_user.username
     db.delete(current_user)
     db.commit()
+    remove_files(files)
 
     background_tasks.add_task(
         send_mail,

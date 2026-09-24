@@ -4,7 +4,7 @@ import TaskBoard from "../components/TaskBoard";
 import MembersPanel from "../components/MembersPanel";
 import ProjectMessages from "../components/ProjectMessages";
 import { getProject } from "../services/projectService";
-import { createTask, updateTaskStatus } from "../services/taskService.js";
+import { createTask, deleteTask, updateTaskStatus } from "../services/taskService.js";
 import { apiFetch } from "../services/api";
 import { useTranslation } from "react-i18next";
 import './ProjectDetail.css';
@@ -68,6 +68,22 @@ function ProjectDetail()
 			: task)));
 	}
 
+	async function handleDeleteTask(task)
+	{
+		if (!window.confirm(t("tasks.confirmDelete", { title: task.title })))
+			return ;
+		try
+		{
+			await deleteTask(task.id);
+			setTasks((current) => current.filter((item) => item.id !== task.id));
+			setError("");
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+	}
+
 	async function handleCreateTask(e)
 	{
 		e.preventDefault();
@@ -113,7 +129,7 @@ function ProjectDetail()
 					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
 					<button type="submit">{t("random.creertache")}</button>
 				</form>
-				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} canEdit={canEdit} />
+				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} canDelete={isOwner} />
 			</div>
 			<div className="project-detail-side">
 				<MembersPanel

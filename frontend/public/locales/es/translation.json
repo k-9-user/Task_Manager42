@@ -137,7 +137,9 @@
 		"descriptionLabel": "Descripción de la tarea",
 		"save": "Guardar",
 		"saving": "Guardando...",
-		"cancel": "Cancelar"
+		"cancel": "Cancelar",
+		"delete": "Eliminar la tarea",
+		"confirmDelete": "¿Eliminar la tarea «{{title}}»? También se eliminarán sus archivos adjuntos, su portada y sus comentarios."
 	},
 	"members":
 	{
