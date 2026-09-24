@@ -72,6 +72,10 @@ def normalize_email(value: Any) -> Any:
     return value
 
 
+def escape_like_pattern(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def validate_username(value: Any) -> Any:
     if not isinstance(value, str):
         return value

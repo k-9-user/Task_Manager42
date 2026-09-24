@@ -3,12 +3,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user, require_admin
-from app.auth.project_permissions import lock_user_projects_for_write
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.user import (
@@ -25,8 +25,10 @@ from app.schemas.user import (
     UsersData,
     UsersResponse,
 )
+from app.services.accounts import ensure_not_bootstrap_admin, hand_off_projects
+from app.services.uploads import remove_files
 from app.utils.locks import lock_admin_invariants
-from app.utils.validators import normalize_email
+from app.utils.validators import escape_like_pattern, normalize_email
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -149,6 +151,8 @@ def update_me(
     """Update the current user's public profile fields."""
 
     if payload.username is not None:
+        if payload.username != current_user.username:
+            ensure_not_bootstrap_admin(current_user)
         current_user.username = payload.username
 
     if payload.avatar is not None:
@@ -209,12 +213,41 @@ def list_users(
     db: Annotated[Session, Depends(get_db)],
     page: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    q: Annotated[
+        str | None,
+        Query(
+            max_length=255,
+            description="Case-insensitive text searched in username, email and display name.",
+        ),
+    ] = None,
+    role: Annotated[UserRole | None, Query(description="Filter by role.")] = None,
+    user_status: Annotated[
+        UserStatus | None,
+        Query(alias="status", description="Filter by account status."),
+    ] = None,
 ) -> UsersResponse:
-    """Return one bounded page of users to an administrator."""
+    """Return one bounded page of users, optionally filtered, to an administrator."""
 
-    total = db.scalar(select(func.count()).select_from(User)) or 0
+    filters = []
+    normalized_query = q.strip() if q is not None else ""
+    if normalized_query:
+        search_pattern = f"%{escape_like_pattern(normalized_query)}%"
+        filters.append(
+            or_(
+                User.username.ilike(search_pattern, escape="\\"),
+                User.email.ilike(search_pattern, escape="\\"),
+                User.display_name.ilike(search_pattern, escape="\\"),
+            )
+        )
+    if role is not None:
+        filters.append(User.role == role)
+    if user_status is not None:
+        filters.append(User.status == user_status)
+
+    total = db.scalar(select(func.count()).select_from(User).where(*filters)) or 0
     users = db.scalars(
         select(User)
+        .where(*filters)
         .order_by(User.created_at.desc(), User.id.desc())
         .offset((page - 1) * limit)
         .limit(limit)
@@ -251,6 +284,8 @@ def update_user(
     target = _load_target(db, user_id)
 
     if payload.username is not None:
+        if payload.username != target.username:
+            ensure_not_bootstrap_admin(target)
         target.username = payload.username
     if "display_name" in payload.model_fields_set:
         target.display_name = payload.display_name
@@ -299,6 +334,7 @@ def update_user_role(
 
     if target.role == payload.role:
         return _user_response(target)
+    ensure_not_bootstrap_admin(target)
 
     if (
         target.role == UserRole.ADMIN
@@ -353,6 +389,8 @@ def update_user_status(
     target = _load_target(db, user_id)
     if target.status == payload.status:
         return _user_response(target)
+    if payload.status == UserStatus.BANNED:
+        ensure_not_bootstrap_admin(target)
 
     if (
         target.role == UserRole.ADMIN
@@ -400,11 +438,13 @@ def delete_user(
     user_id: UUID,
     current_admin: Annotated[User, Depends(require_admin)],
     db: Annotated[Session, Depends(get_db)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> DeleteResponse:
-    """Delete an account while preserving at least one administrator."""
+    """Delete an account, handing off its projects, while preserving an administrator."""
 
     current_admin = _lock_and_revalidate_admin(db, current_admin, user_id)
     target = _load_target(db, user_id)
+    ensure_not_bootstrap_admin(target)
     actor_id = current_admin.id
     target_id = target.id
 
@@ -421,7 +461,7 @@ def delete_user(
                 detail="At least one administrator is required",
             )
 
-    lock_user_projects_for_write(db, target_id)
+    files = hand_off_projects(db, target_id, settings)
     db.delete(target)
     try:
         db.commit()
@@ -443,6 +483,7 @@ def delete_user(
                 detail="User has related resources",
             ) from exc
         raise
+    remove_files(files)
 
     logger.info(
         "admin_user_deleted actor_id=%s target_id=%s",

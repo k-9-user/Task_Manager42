@@ -187,6 +187,14 @@ def test_cors_origins_parse_from_a_comma_separated_string() -> None:
     assert single.cors_origins == ["https://localhost"]
 
 
+def test_bootstrap_admin_email_is_optional_and_normalized() -> None:
+    assert _settings(_env_file=None).bootstrap_admin_email is None
+    assert (
+        _settings(bootstrap_admin_email="  Admin@Example.COM ").bootstrap_admin_email
+        == "admin@example.com"
+    )
+
+
 def test_cors_origins_reject_an_empty_declaration() -> None:
     for value in ("", "   ", ",", " , "):
         with pytest.raises(ValidationError):

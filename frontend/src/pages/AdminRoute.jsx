@@ -12,6 +12,8 @@ function AdminRoute ({ children })
 
 	useEffect(() =>
 	{
+		if (authLoading)
+			return ;
 		if (!isAuthen)
 		{
 			setIsAdmin(false);
@@ -22,7 +24,7 @@ function AdminRoute ({ children })
 			.then((data) => { if (!cancelled) setIsAdmin(data.user.role === "admin"); })
 			.catch(() => { if (!cancelled) setIsAdmin(false); });
 		return () => { cancelled = true; };
-	}, [isAuthen]);
+	}, [authLoading, isAuthen]);
 
 	if (authLoading || (isAuthen && isAdmin === null))
 		return (<p>{t("loading.load")}</p>);

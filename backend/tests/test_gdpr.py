@@ -329,3 +329,16 @@ def test_delete_account_prefers_existing_owner_as_successor(client, make_user, d
 
     project_row = db_session.query(Project).filter(Project.id == project_id).first()
     assert project_row.owner_id == co_owner.id, "un owner existant est préféré au plus ancien membre"
+
+
+def test_bootstrap_admin_cannot_delete_their_account(
+    client, db_session, sent_mails, monkeypatch,
+):
+    monkeypatch.setattr(get_settings(), "bootstrap_admin_email", client.current_user.email)
+
+    response = _delete_account(client)
+
+    assert response.status_code == 409
+    assert response.json()["error"] == "The bootstrap administrator is protected"
+    assert db_session.get(User, client.current_user.id) is not None
+    assert sent_mails == []

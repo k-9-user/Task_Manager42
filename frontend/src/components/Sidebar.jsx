@@ -6,7 +6,7 @@ import { apiFetch } from "../services/api";
 import LanguageSwitcher from "./LanguageSwitcher";
 import GamificationWidget from "./GamificationWidget";
 
-const LINK_BASE = "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-brand-sidebar-text transition-colors hover:bg-white/10 hover:text-white";
+const LINK_BASE = "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-brand-sidebar-text transition-colors hover:bg-white/10 hover:text-white";
 const LINK_ACTIVE = "bg-brand-primary text-white";
 
 function Sidebar()
@@ -53,7 +53,7 @@ function Sidebar()
 					</NavLink>
 					{isAdmin && (
 						<NavLink to="/admin/users" className={({ isActive }) => `${LINK_BASE} ${isActive ? LINK_ACTIVE : ""}`}>
-							<span>🛡️</span> {t("admin.usermanag")}
+							<span>🛡️</span> {t("navbar.users")}
 						</NavLink>
 					)}
 				</nav>

@@ -4,9 +4,10 @@
 		"projects": "Proyectos",
 		"login": "Iniciar sesión",
 		"logout": "Cerrar sesión",
-		"search": "Bucar",
+		"search": "Buscar",
 		"profile": "Perfil",
-		"achievements": "Logros"
+		"achievements": "Logros",
+		"users": "Gestión de usuarios"
 	},
 	"login":
 	{
@@ -54,20 +55,41 @@
 	},
 	"admin":
 	{
-		"usermanag": "gestión de usuarios",
-		"role": "función",
+		"usermanag": "Gestión de usuarios",
+		"role": "Rol",
 		"email": "Correo electrónico",
-		"action": "acción",
-		"user": "usuario",
-		"admin": "administrador",
-		"rmuser": "¿Quieres eliminar a este usuario?",
+		"action": "Acciones",
+		"user": "Usuario",
+		"admin": "Administrador",
+		"rmuser": "¿Eliminar a {{username}}? Sus proyectos sin otros miembros se eliminan; los proyectos compartidos pasan a otro miembro.",
 		"delete": "Eliminar",
 		"status": "Estado",
 		"active": "Activo",
 		"banned": "Baneado",
 		"ban": "Banear",
 		"restore": "Reactivar",
-		"empty": "No se encontraron usuarios"
+		"empty": "No se encontraron usuarios",
+		"search": "Buscar por nombre o correo",
+		"searchButton": "Buscar",
+		"allRoles": "Todos los roles",
+		"allStatuses": "Todos los estados",
+		"prev": "Anterior",
+		"next": "Siguiente",
+		"page": "Página {{page}} de {{pages}}",
+		"you": "Tú",
+		"selfLocked": "No puedes cambiar tu propio rol, banearte ni eliminarte aquí",
+		"edit": "Editar",
+		"save": "Guardar",
+		"cancel": "Cancelar",
+		"displayName": "Nombre visible",
+		"confirmBan": "¿Banear a {{username}}? Pierde el acceso de inmediato hasta que se le reactive.",
+		"errors":
+		{
+			"lastAdmin": "Debe quedar al menos un administrador activo.",
+			"bootstrap": "El administrador inicial está protegido: no se puede degradar, banear, renombrar ni eliminar.",
+			"usernameTaken": "Este nombre de usuario ya está en uso.",
+			"notFound": "Este usuario ya no existe."
+		}
 	},
 	"projects":
 	{

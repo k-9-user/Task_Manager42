@@ -5,8 +5,9 @@
 		"login": "Se connecter",
 		"logout": "Déconnexion",
 		"search": "Rechercher",
-		"profile": "Profile",
-		"achievements": "Succès"
+		"profile": "Profil",
+		"achievements": "Succès",
+		"users": "Gestion utilisateurs"
 	},
 	"login":
 	{
@@ -57,17 +58,38 @@
 		"usermanag": "Gestion des utilisateurs",
 		"role": "Rôle",
 		"email": "E-mail",
-		"action": "Action",
+		"action": "Actions",
 		"user": "Utilisateur",
 		"admin": "Administrateur",
-		"rmuser": "Supprimer cet utilisateur ?",
+		"rmuser": "Supprimer {{username}} ? Ses projets sans autre membre sont supprimés ; les projets partagés passent à un autre membre.",
 		"delete": "Supprimer",
 		"status": "Statut",
 		"active": "Actif",
 		"banned": "Banni",
 		"ban": "Bannir",
 		"restore": "Réactiver",
-		"empty": "Aucun utilisateur trouvé"
+		"empty": "Aucun utilisateur trouvé",
+		"search": "Rechercher par nom ou e-mail",
+		"searchButton": "Rechercher",
+		"allRoles": "Tous les rôles",
+		"allStatuses": "Tous les statuts",
+		"prev": "Précédent",
+		"next": "Suivant",
+		"page": "Page {{page}} sur {{pages}}",
+		"you": "Vous",
+		"selfLocked": "Vous ne pouvez pas changer votre propre rôle, ni vous bannir ou vous supprimer ici",
+		"edit": "Modifier",
+		"save": "Enregistrer",
+		"cancel": "Annuler",
+		"displayName": "Nom affiché",
+		"confirmBan": "Bannir {{username}} ? Son accès est coupé immédiatement, jusqu'à sa réactivation.",
+		"errors":
+		{
+			"lastAdmin": "Il doit rester au moins un administrateur actif.",
+			"bootstrap": "L'administrateur initial est protégé : impossible de le rétrograder, le bannir, le renommer ou le supprimer.",
+			"usernameTaken": "Ce nom d'utilisateur est déjà pris.",
+			"notFound": "Cet utilisateur n'existe plus."
+		}
 	},
 	"projects":
 	{

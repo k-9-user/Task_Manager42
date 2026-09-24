@@ -12,6 +12,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.utils.validators import escape_like_pattern
 
 
 router = APIRouter(
@@ -91,7 +92,7 @@ def search_tasks(
 
     normalized_query = q.strip() if q is not None else ""
     if normalized_query:
-        search_pattern = f"%{_escape_like_pattern(normalized_query)}%"
+        search_pattern = f"%{escape_like_pattern(normalized_query)}%"
         filters.append(
             or_(
                 Task.title.ilike(search_pattern, escape="\\"),
@@ -169,7 +170,7 @@ def search_projects(
 
     normalized_query = q.strip() if q is not None else ""
     if normalized_query:
-        search_pattern = f"%{_escape_like_pattern(normalized_query)}%"
+        search_pattern = f"%{escape_like_pattern(normalized_query)}%"
         filters.append(Project.name.ilike(search_pattern, escape="\\"))
 
     filtered_projects = select(Project).where(*filters)
@@ -198,10 +199,6 @@ def _project_access_filter(user_id: UUID):
         ProjectMember.user_id == user_id
     )
     return Project.id.in_(member_project_ids)
-
-
-def _escape_like_pattern(value: str) -> str:
-    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _serialize_project(project: Project) -> dict[str, Any]:

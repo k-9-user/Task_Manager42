@@ -63,6 +63,11 @@ class Settings(PasswordSettings):
     smtp_port: int = Field(default=1025, gt=0, le=65535)
     mail_from: str = "no-reply@taskmanager.local"
     backup_status_file: str = "/run/backup-status/status.json"
+    bootstrap_admin_email: str | None = None
+
+    _bootstrap_email_normalizer = field_validator(
+        "bootstrap_admin_email", mode="before"
+    )(normalize_email)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
