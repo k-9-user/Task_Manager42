@@ -163,6 +163,11 @@ class UserStatusUpdate(StrictRequest):
     _reason_validator = field_validator("reason", mode="before")(clean_text)
 
 
+class GDPRDeleteRequest(StrictRequest):
+    confirm: bool
+    confirm_username: str
+
+
 class UsersData(BaseModel):
     users: list[UserResponse]
     total: int = Field(ge=0)

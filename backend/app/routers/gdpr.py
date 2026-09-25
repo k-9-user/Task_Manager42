@@ -19,7 +19,8 @@ from app.models.project_message import ProjectMessage
 from app.models.task import Task
 from app.models.user import User, UserStatus
 from app.models.user_activity import UserActivity
-from app.schemas.common import SimpleSuccessResponse, StrictRequest
+from app.schemas.common import SimpleSuccessResponse
+from app.schemas.user import GDPRDeleteRequest
 from app.services.accounts import (
     ensure_another_active_admin,
     ensure_not_bootstrap_admin,
@@ -263,11 +264,6 @@ def export_my_data(
             "Cache-Control": "no-store",
         },
     )
-
-
-class GDPRDeleteRequest(StrictRequest):
-    confirm: bool
-    confirm_username: str
 
 
 @router.delete("/account", response_model=SimpleSuccessResponse)

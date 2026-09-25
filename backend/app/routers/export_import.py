@@ -24,7 +24,7 @@ from app.auth.project_permissions import lock_project_for_write, visible_project
 from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.models.user import User
 from app.schemas.common import SuccessEnvelope
 from app.schemas.project import ProjectResponse
@@ -153,18 +153,14 @@ async def import_data(
     raw_content = await _read_import_file(file)
     records = _parse_import_records(raw_content, import_format)
 
-    try:
-        validated_records = _validate_task_import_records(records)
-        for project_id in sorted({record.project_id for record in validated_records}):
-            lock_project_for_write(
-                db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
-            )
-        validated_tasks = [_build_imported_task(db, record) for record in validated_records]
-        db.add_all(validated_tasks)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+    validated_records = _validate_task_import_records(records)
+    for project_id in sorted({record.project_id for record in validated_records}):
+        lock_project_for_write(
+            db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+        )
+    validated_tasks = [_build_imported_task(db, record) for record in validated_records]
+    db.add_all(validated_tasks)
+    db.commit()
 
     return SuccessEnvelope(data={"imported_count": len(validated_tasks)})
 
@@ -345,30 +341,11 @@ def _validate_task_import_records(
 ) -> list[TaskImportRecord]:
     try:
         return [
-            TaskImportRecord.model_validate(_normalize_csv_empty_values(record))
+            TaskImportRecord.model_validate(record)
             for record in records
         ]
     except ValidationError as error:
         raise _invalid_import("Invalid task import data") from error
-
-
-def _normalize_csv_empty_values(record: dict[str, Any]) -> dict[str, Any]:
-    normalized = dict(record)
-    for field_name in (
-        "description",
-        "assignee_id",
-        "due_date",
-        "id",
-        "task_id",
-        "project_name",
-        "created_at",
-        "updated_at",
-    ):
-        if normalized.get(field_name) == "":
-            normalized[field_name] = None
-    if normalized.get("status") == "":
-        normalized["status"] = TaskStatus.TODO
-    return normalized
 
 
 def _build_imported_task(db: Session, record: TaskImportRecord) -> Task:

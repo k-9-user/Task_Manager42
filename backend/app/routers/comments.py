@@ -9,7 +9,7 @@ from app.auth.dependencies import get_current_user
 from app.auth.project_permissions import get_membership_or_404
 from app.database import get_db
 from app.models.comment import Comment
-from app.models.project_member import ProjectMember, ProjectRole
+from app.models.project_member import ProjectRole
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentData, CommentListResponse, CommentResponse

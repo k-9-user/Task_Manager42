@@ -2,47 +2,20 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import AwareDatetime, BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
 from app.config import get_settings
 from app.database import get_db
+from app.schemas.health import BackupStatus, BackupStatusFile, HealthResponse, StatusResponse
 
 
 router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
-
-
-class HealthResponse(BaseModel):
-    status: Literal["ok"] = "ok"
-    db: Literal["ok"] = "ok"
-
-
-class BackupStatusFile(BaseModel):
-    """What the backup service writes after every run (backup/backup.sh)."""
-
-    last_success_at: AwareDatetime | None
-    count: int = Field(ge=0)
-    interval_minutes: int = Field(gt=0)
-    last_failure_at: AwareDatetime | None
-
-
-class BackupStatus(BaseModel):
-    state: Literal["ok", "stale", "failing", "missing"]
-    last_success_at: datetime | None = None
-    count: int = 0
-    interval_minutes: int | None = None
-
-
-class StatusResponse(BaseModel):
-    status: Literal["ok", "degraded"]
-    api: Literal["ok"] = "ok"
-    database: Literal["ok", "down"]
-    backups: BackupStatus
-    checked_at: datetime
 
 
 def _database_ok(db: Session) -> bool:

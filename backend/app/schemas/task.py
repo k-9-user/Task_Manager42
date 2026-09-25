@@ -1,7 +1,8 @@
 import uuid
 from datetime import date, datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.task import TaskStatus
 from app.schemas.common import StrictRequest
@@ -61,6 +62,15 @@ class TaskImportRecord(StrictRequest):
     project_name: str | None = Field(default=None, max_length=255)
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def drop_empty_cells(cls, data: Any) -> Any:
+        """An empty CSV cell means the field was not given, so its default applies."""
+
+        if isinstance(data, dict):
+            return {key: value for key, value in data.items() if value != ""}
+        return data
 
     @field_validator("title")
     @classmethod

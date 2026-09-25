@@ -159,12 +159,8 @@ def delete_attachment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
 
     stored_path = safe_stored_path(attachment.file_url, upload_root(settings))
-    try:
-        db.delete(attachment)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+    db.delete(attachment)
+    db.commit()
 
     if stored_path is not None:
         try:
