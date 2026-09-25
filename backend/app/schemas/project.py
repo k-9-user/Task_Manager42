@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -9,34 +8,26 @@ from app.schemas.common import StrictRequest
 
 
 class ProjectCreate(StrictRequest):
-    """Body attendu pour POST /api/projects."""
-
-    name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
 
 
 class ProjectUpdate(StrictRequest):
-    """Body attendu pour PUT /api/projects/{id}."""
-
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
 
 
 class ProjectResponse(BaseModel):
-    """Représentation d'un projet renvoyée par l'API (clé "project" dans les réponses)."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     owner_id: uuid.UUID
     created_at: datetime
 
 
 class ProjectListResponse(BaseModel):
-    """Réponse de GET /api/projects → `{"success": true, "data": {"projects": [...]}}`."""
-
     projects: list[ProjectResponse]
 
 
@@ -45,15 +36,11 @@ class ProjectData(BaseModel):
 
 
 class ProjectMemberCreate(StrictRequest):
-    """Body attendu pour POST /api/projects/{id}/members."""
-
     user_id: uuid.UUID
     role: ProjectRole
 
 
 class ProjectMemberResponse(BaseModel):
-    """Représentation d'un membre de projet renvoyée par l'API (clé "member")."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -63,7 +50,7 @@ class ProjectMemberResponse(BaseModel):
     username: str
     email: EmailStr
     level: int
-    badge: Optional[str] = None
+    badge: str | None = None
 
 
 class ProjectMemberData(BaseModel):

@@ -9,7 +9,7 @@ from app.database import Base
 
 
 class ProjectRole(str, enum.Enum):
-    """Rôle d'un membre au sein d'un projet précis (pas le rôle global user/admin)."""
+    """A member's role inside one project, distinct from the global user/admin role."""
 
     OWNER = "owner"
     EDITOR = "editor"
@@ -17,11 +17,7 @@ class ProjectRole(str, enum.Enum):
 
 
 class ProjectMember(Base):
-    """
-    Table `project_members`.
-    Table de liaison project <-> user avec un rôle par membre.
-    Utilisée pour vérifier les permissions.
-    """
+    """Project/user link with a role: the source of every project permission check."""
 
     __tablename__ = "project_members"
     __table_args__ = (

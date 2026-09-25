@@ -18,6 +18,7 @@ class SuccessEnvelope(BaseModel, Generic[T]):
 
 
 class SimpleSuccessResponse(BaseModel):
-    """Pour les routes qui renvoient juste `{"success": true}` sans "data" (ex: DELETE /api/projects/{id})"""
+    """`{"success": true, "data": {}}`, for routes such as deletions that return nothing."""
+
     success: Literal[True] = True
     data: dict[str, object] = Field(default_factory=dict)

@@ -15,12 +15,6 @@ class NotificationType(str, enum.Enum):
 
 
 class Notification(Base):
-    """
-    Table `notifications`.
-    Une notification appartient à son destinataire (`user_id`) et référence
-    optionnellement la tâche/le projet concerné.
-    """
-
     __tablename__ = "notifications"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -37,7 +31,6 @@ class Notification(Base):
         DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
     )
 
-    # Relations
     user = relationship("User", foreign_keys=[user_id])
     related_task = relationship("Task", foreign_keys=[related_task_id])
     related_project = relationship("Project", foreign_keys=[related_project_id])

@@ -19,7 +19,7 @@ def get_membership_or_404(
     db: Session,
     project_id: UUID,
     user_id: UUID,
-    not_found_detail: str = "Projet introuvable",
+    not_found_detail: str = "Project not found",
 ) -> ProjectMember:
     membership = db.scalar(
         select(ProjectMember).where(

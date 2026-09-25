@@ -15,12 +15,6 @@ class TaskStatus(str, enum.Enum):
 
 
 class Task(Base):
-    """
-    Table `tasks`.
-    Une tâche appartient à un projet, peut être assignée à un user,
-    et peut avoir des attachments.
-    """
-
     __tablename__ = "tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import Settings
@@ -43,24 +43,18 @@ def hand_off_projects(db: Session, user_id: UUID, settings: Settings) -> list[Pa
 
     locked_projects = lock_user_projects_for_write(db, user_id)
 
-    db.query(Task).filter(Task.assignee_id == user_id).update(
-        {"assignee_id": None}
-    )
+    db.execute(update(Task).where(Task.assignee_id == user_id).values(assignee_id=None))
 
     owned_projects = [
         project for project in locked_projects if project.owner_id == user_id
     ]
     files = []
     for project in owned_projects:
-        other_members = (
-            db.query(ProjectMember)
-            .filter(
-                ProjectMember.project_id == project.id,
-                ProjectMember.user_id != user_id,
-            )
+        other_members = db.scalars(
+            select(ProjectMember)
+            .where(ProjectMember.project_id == project.id, ProjectMember.user_id != user_id)
             .order_by(ProjectMember.joined_at, ProjectMember.id)
-            .all()
-        )
+        ).all()
 
         if not other_members:
             files += task_files(db, settings, Task.project_id == project.id)
@@ -74,5 +68,5 @@ def hand_off_projects(db: Session, user_id: UUID, settings: Settings) -> list[Pa
         project.owner_id = successor.user_id
 
     db.flush()
-    db.query(ProjectMember).filter(ProjectMember.user_id == user_id).delete()
+    db.execute(delete(ProjectMember).where(ProjectMember.user_id == user_id))
     return files

@@ -1,13 +1,14 @@
 import json
 from datetime import date, datetime, timezone
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.auth.dependencies import get_current_user
 from app.config import Settings, get_settings
 from app.database import get_db
-from app.auth.dependencies import get_current_user
 from app.models.api_key import ApiKey
 from app.models.attachment import Attachment
 from app.models.comment import Comment
@@ -16,7 +17,7 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.project_message import ProjectMessage
 from app.models.task import Task
-from app.models.user import UserStatus
+from app.models.user import User, UserStatus
 from app.models.user_activity import UserActivity
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
 from app.services.accounts import (
@@ -30,6 +31,9 @@ from app.services.uploads import remove_files
 from app.utils.mailer import send_mail
 
 router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])
+
+DatabaseSession = Annotated[Session, Depends(get_db)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def _fmt_dt(value: datetime | None) -> str | None:
@@ -45,7 +49,7 @@ def _fmt_date(value: date | None) -> str | None:
 
 
 def _compact(row: dict) -> dict:
-    """Retire les champs vides pour garder un export lisible."""
+    """Drop empty fields so the export stays readable."""
 
     return {key: value for key, value in row.items() if value not in (None, "", [])}
 
@@ -87,77 +91,66 @@ def _gamification_export(summary: dict, history: list[UserActivity]) -> dict | N
 @router.get("/export")
 def export_my_data(
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DatabaseSession,
+    current_user: CurrentUser,
 ):
-    """Exporte toutes les données personnelles de l'utilisateur connecté en
-    un fichier JSON téléchargeable (droit à la portabilité RGPD).
-    """
+    """Download every piece of personal data linked to the account (GDPR portability)."""
 
     user_id = current_user.id
     exported_at = datetime.now(timezone.utc)
 
-    memberships = (
-        db.query(ProjectMember)
+    memberships = db.scalars(
+        select(ProjectMember)
         .options(joinedload(ProjectMember.project))
-        .filter(ProjectMember.user_id == user_id)
+        .where(ProjectMember.user_id == user_id)
         .order_by(ProjectMember.joined_at)
-        .all()
-    )
+    ).all()
     member_project_ids = {m.project_id for m in memberships}
     owned_without_membership = [
         project
-        for project in db.query(Project)
-        .filter(Project.owner_id == user_id)
-        .order_by(Project.created_at)
-        .all()
+        for project in db.scalars(
+            select(Project).where(Project.owner_id == user_id).order_by(Project.created_at)
+        )
         if project.id not in member_project_ids
     ]
-    assigned_tasks = (
-        db.query(Task)
+    assigned_tasks = db.scalars(
+        select(Task)
         .options(joinedload(Task.project))
-        .filter(Task.assignee_id == user_id, Task.project_id.in_(member_project_ids))
+        .where(Task.assignee_id == user_id, Task.project_id.in_(member_project_ids))
         .order_by(Task.created_at)
-        .all()
-    )
-    comments = (
-        db.query(Comment)
+    ).all()
+    comments = db.scalars(
+        select(Comment)
         .options(joinedload(Comment.task).joinedload(Task.project))
-        .filter(Comment.author_id == user_id)
+        .where(Comment.author_id == user_id)
         .order_by(Comment.created_at)
-        .all()
-    )
-    messages = (
-        db.query(ProjectMessage)
+    ).all()
+    messages = db.scalars(
+        select(ProjectMessage)
         .options(joinedload(ProjectMessage.project))
-        .filter(ProjectMessage.author_id == user_id)
+        .where(ProjectMessage.author_id == user_id)
         .order_by(ProjectMessage.created_at)
-        .all()
-    )
-    uploads = (
-        db.query(Attachment, Task.title, Project.name)
+    ).all()
+    uploads = db.execute(
+        select(Attachment, Task.title, Project.name)
         .join(Task, Attachment.task_id == Task.id)
         .join(Project, Task.project_id == Project.id)
-        .filter(Attachment.uploaded_by == user_id)
+        .where(Attachment.uploaded_by == user_id)
         .order_by(Attachment.created_at)
-        .all()
-    )
-    notifications = (
-        db.query(Notification)
-        .filter(Notification.user_id == user_id)
+    ).all()
+    notifications = db.scalars(
+        select(Notification)
+        .where(Notification.user_id == user_id)
         .order_by(Notification.created_at)
-        .all()
-    )
-    api_keys = (
-        db.query(ApiKey).filter(ApiKey.user_id == user_id).order_by(ApiKey.created_at).all()
-    )
-    gamification_history = list(
-        db.scalars(
-            select(UserActivity)
-            .where(UserActivity.user_id == user_id)
-            .order_by(UserActivity.created_at, UserActivity.id)
-        )
-    )
+    ).all()
+    api_keys = db.scalars(
+        select(ApiKey).where(ApiKey.user_id == user_id).order_by(ApiKey.created_at)
+    ).all()
+    gamification_history = db.scalars(
+        select(UserActivity)
+        .where(UserActivity.user_id == user_id)
+        .order_by(UserActivity.created_at, UserActivity.id)
+    ).all()
 
     export_data = {
         "about": {
@@ -281,21 +274,16 @@ class GDPRDeleteRequest(StrictRequest):
 def delete_my_account(
     payload: GDPRDeleteRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-    settings: Settings = Depends(get_settings),
+    db: DatabaseSession,
+    current_user: CurrentUser,
+    settings: Annotated[Settings, Depends(get_settings)],
 ):
-    """Supprime le compte de l'utilisateur connecté (droit à l'effacement RGPD).
-
-    Les projets sans autre membre sont supprimés; sinon leur propriété est
-    transférée. Les appartenances sont retirées et les tâches assignées sont
-    conservées avec ``assignee_id`` remis à ``NULL``.
-    """
+    """Delete the account (GDPR erasure); shared projects change owner, assigned tasks stay."""
 
     if not payload.confirm:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Confirmation requise (confirm: true) pour supprimer le compte",
+            detail="Account deletion requires confirm: true",
         )
 
     current_user = lock_and_reload(db, current_user)

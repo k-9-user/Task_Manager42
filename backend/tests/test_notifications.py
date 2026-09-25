@@ -225,7 +225,7 @@ def test_mark_all_read(client, db_session):
 # ---------------------------------------------------------------------------
 
 
-def test_notification_content_escapes_html(client, make_user, login_as):
+def test_notification_content_stores_names_as_plain_text(client, make_user, login_as):
     project = _create_project_via_api(client, name="<script>alert(1)</script>")
     member = make_user()
 
@@ -238,5 +238,5 @@ def test_notification_content_escapes_html(client, make_user, login_as):
     response = client.get("/api/notifications")
     content = response.json()["data"]["notifications"][0]["content"]
 
-    assert "<script>" not in content
-    assert "&lt;script&gt;" in content
+    assert content == 'You were added to the project "<script>alert(1)</script>"'
+    assert "&lt;" not in content

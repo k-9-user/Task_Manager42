@@ -1,9 +1,10 @@
-import html
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.auth.dependencies import get_current_user
 from app.auth.project_permissions import get_membership_or_404, lock_project_for_write
@@ -13,6 +14,7 @@ from app.models.notification import Notification, NotificationType
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
+from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project import (
     ProjectCreate,
@@ -30,12 +32,12 @@ from app.services.uploads import remove_files, task_files
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
+DatabaseSession = Annotated[Session, Depends(get_db)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
+ApplicationSettings = Annotated[Settings, Depends(get_settings)]
+
 
 def _serialize_member(member: ProjectMember, rank: Rank) -> ProjectMemberResponse:
-    """`ProjectMemberResponse` inclut username/email (pas juste user_id) pour que
-    le frontend puisse afficher qui participe au projet sans appel supplémentaire
-    — `member.user` est chargé via la relation SQLAlchemy."""
-
     return ProjectMemberResponse(
         id=member.id,
         project_id=member.project_id,
@@ -48,70 +50,51 @@ def _serialize_member(member: ProjectMember, rank: Rank) -> ProjectMemberRespons
     )
 
 
-@router.get("", response_model=SuccessEnvelope[ProjectListResponse])
-def list_projects(
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """Liste les projets dont l'utilisateur connecté est membre (peu importe
-    son rôle owner/editor/viewer) — pas tous les projets de la base.
-    """
-
-    projects = (
-        db.query(Project)
-        .join(ProjectMember, ProjectMember.project_id == Project.id)
-        .filter(ProjectMember.user_id == current_user.id)
-        .all()
+def _lock_as_owner(db: Session, project_id: uuid.UUID, user: User) -> Project:
+    return lock_project_for_write(
+        db, project_id, user.id, ProjectRole.OWNER, forbidden_detail="Permission denied",
     )
+
+
+@router.get("", response_model=SuccessEnvelope[ProjectListResponse])
+def list_projects(db: DatabaseSession, current_user: CurrentUser):
+    projects = db.scalars(
+        select(Project)
+        .join(ProjectMember, ProjectMember.project_id == Project.id)
+        .where(ProjectMember.user_id == current_user.id)
+    ).all()
     return SuccessEnvelope(data=ProjectListResponse(projects=projects))
 
 
 @router.post(
     "", response_model=SuccessEnvelope[ProjectData], status_code=status.HTTP_201_CREATED
 )
-def create_project(
-    payload: ProjectCreate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """Crée un projet et ajoute automatiquement son créateur comme membre
-    avec le rôle `owner`.
-    """
+def create_project(payload: ProjectCreate, db: DatabaseSession, current_user: CurrentUser):
+    """Create a project; its creator becomes its first owner member."""
 
     project = Project(name=payload.name, description=payload.description, owner_id=current_user.id)
     db.add(project)
     db.flush()
-
-    owner_membership = ProjectMember(
-        project_id=project.id, user_id=current_user.id, role=ProjectRole.OWNER
-    )
-    db.add(owner_membership)
+    db.add(ProjectMember(project_id=project.id, user_id=current_user.id, role=ProjectRole.OWNER))
     record_activity(db, current_user.id, Track.PROJECTS, project.id)
     db.commit()
     db.refresh(project)
-
     return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
 @router.get("/{project_id}", response_model=SuccessEnvelope[ProjectDetailResponse])
-def get_project(
-    project_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+def get_project(project_id: uuid.UUID, db: DatabaseSession, current_user: CurrentUser):
     get_membership_or_404(db, project_id, current_user.id)
-
-    project = (
-        db.query(Project)
-        .options(
-            joinedload(Project.members).joinedload(ProjectMember.user),
-            joinedload(Project.tasks),
-        )
-        .filter(Project.id == project_id)
-        .first()
+    project = db.get(
+        Project,
+        project_id,
+        options=[
+            selectinload(Project.members).joinedload(ProjectMember.user),
+            selectinload(Project.tasks),
+        ],
     )
     if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     ranks = ranks_for(db, [m.user_id for m in project.members])
     return SuccessEnvelope(
@@ -127,41 +110,29 @@ def get_project(
 def update_project(
     project_id: uuid.UUID,
     payload: ProjectUpdate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DatabaseSession,
+    current_user: CurrentUser,
 ):
-    project = lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER,
-        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
-    )
-
-    updates = payload.model_dump(exclude_unset=True)
-    for field, value in updates.items():
+    project = _lock_as_owner(db, project_id, current_user)
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(project, field, value)
-
     db.commit()
     db.refresh(project)
-
     return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
 @router.delete("/{project_id}", response_model=SimpleSuccessResponse)
 def delete_project(
     project_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-    settings: Settings = Depends(get_settings),
+    db: DatabaseSession,
+    current_user: CurrentUser,
+    settings: ApplicationSettings,
 ):
-    project = lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER,
-        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
-    )
-
+    project = _lock_as_owner(db, project_id, current_user)
     files = task_files(db, settings, Task.project_id == project.id)
     db.delete(project)
     db.commit()
     remove_files(files)
-
     return SimpleSuccessResponse()
 
 
@@ -173,17 +144,11 @@ def delete_project(
 def add_member(
     project_id: uuid.UUID,
     payload: ProjectMemberCreate,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DatabaseSession,
+    current_user: CurrentUser,
 ):
-    project = lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER,
-        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
-    )
-
-    new_member = ProjectMember(
-        project_id=project_id, user_id=payload.user_id, role=payload.role
-    )
+    project = _lock_as_owner(db, project_id, current_user)
+    new_member = ProjectMember(project_id=project_id, user_id=payload.user_id, role=payload.role)
     db.add(new_member)
     try:
         db.flush()
@@ -191,15 +156,14 @@ def add_member(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Utilisateur introuvable ou déjà membre de ce projet",
+            detail="User not found or already a project member",
         )
 
     db.add(
         Notification(
             user_id=payload.user_id,
             type=NotificationType.PROJECT_INVITE,
-            content=f"Tu as été ajouté au projet « {html.escape(project.name)} »",
-            related_task_id=None,
+            content=f'You were added to the project "{project.name}"',
             related_project_id=project_id,
         )
     )
@@ -215,45 +179,41 @@ def add_member(
 def remove_member(
     project_id: uuid.UUID,
     user_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: DatabaseSession,
+    current_user: CurrentUser,
 ):
-    project = lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER,
-        not_found_detail="Projet introuvable", forbidden_detail="Permission refusée",
-    )
-
-    target = (
-        db.query(ProjectMember)
-        .filter(ProjectMember.project_id == project_id, ProjectMember.user_id == user_id)
-        .first()
+    project = _lock_as_owner(db, project_id, current_user)
+    target = db.scalar(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == user_id
+        )
     )
     if target is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membre introuvable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
     if target.role == ProjectRole.OWNER:
-        successor = (
-            db.query(ProjectMember)
-            .filter(
+        successor = db.scalar(
+            select(ProjectMember)
+            .where(
                 ProjectMember.project_id == project_id,
                 ProjectMember.role == ProjectRole.OWNER,
                 ProjectMember.user_id != user_id,
             )
             .order_by(ProjectMember.id)
-            .first()
         )
         if successor is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Impossible de retirer le dernier owner du projet",
+                detail="Cannot remove the last project owner",
             )
         if project.owner_id == user_id:
             project.owner_id = successor.user_id
 
-    db.query(Task).filter(Task.project_id == project_id, Task.assignee_id == user_id).update(
-        {"assignee_id": None}
+    db.execute(
+        update(Task)
+        .where(Task.project_id == project_id, Task.assignee_id == user_id)
+        .values(assignee_id=None)
     )
     db.delete(target)
     db.commit()
-
     return SimpleSuccessResponse()

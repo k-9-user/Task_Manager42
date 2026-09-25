@@ -268,7 +268,7 @@ def test_gdpr_transfer_blocks_successor_removing_own_membership(
     assert blocked, "Member removal bypassed the in-flight GDPR ownership transfer"
     assert transferred.status_code == 200, transferred.text
     assert removed.status_code == 400, removed.text
-    assert "dernier owner" in removed.json()["error"]
+    assert removed.json()["error"] == "Cannot remove the last project owner"
     assert db_session.get(User, owner.id) is None
     assert db_session.get(Project, project_id).owner_id == successor.id
     members = db_session.scalars(

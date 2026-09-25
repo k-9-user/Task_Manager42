@@ -1,5 +1,3 @@
-"""Schémas Pydantic pour les commentaires de tâche."""
-
 import uuid
 from datetime import datetime
 

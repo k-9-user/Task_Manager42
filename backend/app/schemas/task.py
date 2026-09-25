@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -10,28 +9,22 @@ from app.schemas.project import ProjectMemberResponse, ProjectResponse
 
 
 class TaskCreate(StrictRequest):
-    """Body attendu pour POST /api/projects/{id}/tasks.
+    """The project comes from the URL, never from the body, so a client cannot target another."""
 
-    `project_id` n'apparaît pas ici : il vient de l'URL (`{id}`), pas du body
-    — sinon un client pourrait créer une tâche dans un projet où il n'a même
-    pas accès en écrivant un autre `project_id` dans le JSON.
-    """
-
-    title: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
-    assignee_id: Optional[uuid.UUID] = None
-    due_date: Optional[date] = None
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    assignee_id: uuid.UUID | None = None
+    due_date: date | None = None
 
 
 class TaskUpdate(StrictRequest):
-    """Body attendu pour PUT /api/tasks/{id}. Tous les champs sont optionnels :
-    seuls ceux fournis par le client seront mis à jour côté routeur."""
+    """Only the fields present in the body are updated."""
 
-    title: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
-    status: Optional[TaskStatus] = None
-    assignee_id: Optional[uuid.UUID] = None
-    due_date: Optional[date] = None
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    status: TaskStatus | None = None
+    assignee_id: uuid.UUID | None = None
+    due_date: date | None = None
 
 
 class PublicTaskCreate(StrictRequest):
@@ -103,8 +96,6 @@ class TaskData(BaseModel):
 
 
 class ProjectDetailResponse(BaseModel):
-    """Réponse complète de GET /api/projects/{id} → `{project, members, tasks}`."""
-
     project: ProjectResponse
     members: list[ProjectMemberResponse]
     tasks: list[TaskResponse]

@@ -8,11 +8,7 @@ from app.database import Base, utc_now
 
 
 class Project(Base):
-    """
-    Table `projects`.
-    Un projet a un owner (celui qui l'a créé) et plusieurs membres
-    (via project_members, avec un rôle chacun).
-    """
+    """A project: one owner user plus members, each with a role in `project_members`."""
 
     __tablename__ = "projects"
 
