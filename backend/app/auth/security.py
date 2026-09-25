@@ -38,25 +38,15 @@ def verify_password_and_update(
     return is_valid, updated_hash
 
 
-def create_access_token(
-    subject: UUID | str,
-    *,
-    expires_delta: timedelta | None = None,
-) -> str:
+def create_access_token(subject: UUID | str) -> str:
     """Create a signed bearer token for one user UUID."""
 
     settings = get_settings()
-    user_id = UUID(str(subject))
     issued_at = datetime.now(timezone.utc)
-    expires_at = issued_at + (
-        expires_delta
-        if expires_delta is not None
-        else timedelta(seconds=settings.jwt_expiration)
-    )
     payload = {
-        "sub": str(user_id),
+        "sub": str(UUID(str(subject))),
         "iat": issued_at,
-        "exp": expires_at,
+        "exp": issued_at + timedelta(seconds=settings.jwt_expiration),
     }
     return jwt.encode(
         payload,

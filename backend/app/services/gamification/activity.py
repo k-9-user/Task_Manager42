@@ -31,14 +31,9 @@ def record_activity(db: Session, user_id: UUID, track: Track, subject_id: UUID) 
 
 
 def _lock_user_progress(db: Session, user_id: UUID) -> None:
-    if db.get_bind().dialect.name == "postgresql":
-        db.execute(
-            select(
-                func.pg_advisory_xact_lock(
-                    func.hashtextextended(f"gamification:{user_id}", 0)
-                )
-            )
-        )
+    db.execute(
+        select(func.pg_advisory_xact_lock(func.hashtextextended(f"gamification:{user_id}", 0)))
+    )
 
 
 def _already_counted(db: Session, user_id: UUID, track: Track, subject_id: UUID) -> bool:

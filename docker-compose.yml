@@ -238,13 +238,12 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: taskmanager_test
-      POSTGRES_USER: taskmanager_test
-      POSTGRES_PASSWORD: test-only-database-password
+      POSTGRES_HOST_AUTH_METHOD: trust
     tmpfs:
       - /var/lib/postgresql/data
     networks: [test]
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U taskmanager_test -d taskmanager_test"]
+      test: [CMD-SHELL, "pg_isready -U postgres -d taskmanager_test"]
       interval: 2s
       timeout: 5s
       retries: 20
@@ -253,18 +252,8 @@ services:
     <<: *backend-image
     profiles: [test]
     environment:
-      DATABASE_URL: postgresql://taskmanager_test:test-only-database-password@test-db:5432/taskmanager_test
-      TEST_DATABASE_URL: postgresql://taskmanager_test:test-only-database-password@test-db:5432/taskmanager_test
-      JWT_SECRET: test-jwt-signing-secret-not-for-deployment-42
-      OAUTH_SESSION_SECRET: test-oauth-signing-secret-not-for-deployment-42
-      JWT_EXPIRATION: "3600"
-      CORS_ORIGINS: https://localhost
-      OAUTH_GOOGLE_CLIENT_ID: test-google-client
-      OAUTH_GOOGLE_CLIENT_SECRET: test-google-secret
-      OAUTH_GOOGLE_REDIRECT_URI: https://testserver/api/auth/oauth/google/callback
-      UPLOAD_DIR: /tmp/test-uploads
-      PYTEST_ADDOPTS: '-o cache_dir=/tmp/pytest-cache'
-    command: [python, -m, pytest, -q]
+      DATABASE_URL: postgresql://postgres@test-db:5432/taskmanager_test
+    command: [python, -m, pytest, -q, -p, no:cacheprovider]
     networks: [test]
     depends_on:
       test-db:

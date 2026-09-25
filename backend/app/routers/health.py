@@ -45,10 +45,6 @@ class StatusResponse(BaseModel):
     checked_at: datetime
 
 
-def get_backup_status_file() -> Path:
-    return Path(get_settings().backup_status_file)
-
-
 def _database_ok(db: Session) -> bool:
     try:
         db.execute(text("SELECT 1"))
@@ -100,15 +96,12 @@ def health_check(
     summary="Report component status for the status page",
     response_model=StatusResponse,
 )
-def component_status(
-    db: Annotated[Session, Depends(get_db)],
-    backup_status_file: Annotated[Path, Depends(get_backup_status_file)],
-) -> StatusResponse:
+def component_status(db: Annotated[Session, Depends(get_db)]) -> StatusResponse:
     """Always 200: a failing component is reported in the body, not as an error."""
 
     now = datetime.now(UTC)
     database = "ok" if _database_ok(db) else "down"
-    backups = _backup_status(backup_status_file, now)
+    backups = _backup_status(Path(get_settings().backup_status_file), now)
     healthy = database == "ok" and backups.state == "ok"
     return StatusResponse(
         status="ok" if healthy else "degraded",

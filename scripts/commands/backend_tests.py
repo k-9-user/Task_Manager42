@@ -10,6 +10,6 @@ from ..lib.process import run
 def run_backend_tests(env, _context):
     run(COMPOSE + ["--profile", "test", "build", "test"], env=env)
     try:
-        run(COMPOSE + ["--profile", "test", "run", "--rm", "test", "python", "-m", "pytest", "-q"] + shlex.split(os.environ.get("TESTS", "")), env=env)
+        run(COMPOSE + ["--profile", "test", "run", "--rm", "test", "python", "-m", "pytest", "-q", "-p", "no:cacheprovider"] + shlex.split(os.environ.get("TESTS", "")), env=env)
     finally:
         run(COMPOSE + ["--profile", "test", "rm", "--stop", "--force", "test-db"], env=env)
