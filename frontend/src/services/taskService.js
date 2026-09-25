@@ -1,6 +1,8 @@
 import { apiFetch } from "./api";
 import { uploadWithProgress } from "./upload";
 
+export const SEARCH_PAGE_SIZE = 20;
+
 export const TASK_STATUSES = ["todo", "in_progress", "done"];
 
 export function createTask(projectID, title, description) {
@@ -42,9 +44,9 @@ export function deleteTask(taskID)
 	);
 }
 
-export function searchTasks (query, status="", sort="created_at", direction="desc")
+export function searchTasks (query, status="", sort="created_at", direction="desc", page=1, limit=SEARCH_PAGE_SIZE)
 {
-	const params = new URLSearchParams({q : query, sort, direction});
+	const params = new URLSearchParams({q : query, sort, direction, page, limit});
 	if (status)
 		params.append("status", status);
 	return apiFetch(`/api/search/tasks?${params.toString()}`);

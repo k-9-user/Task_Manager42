@@ -1,4 +1,5 @@
 import { apiFetch } from "./api";
+import { SEARCH_PAGE_SIZE } from "./taskService";
 
 export function getProjects() {
 	return apiFetch("/api/projects");
@@ -15,9 +16,15 @@ export function getProject(projectId) {
 	return apiFetch(`/api/projects/${projectId}`);
 }
 
-export function searchProjects(query, sort="created_at", direction="desc") {
-	const params = new URLSearchParams({ q: query, sort, direction });
+export function searchProjects(query, sort="created_at", direction="desc", page=1, limit=SEARCH_PAGE_SIZE) {
+	const params = new URLSearchParams({ q: query, sort, direction, page, limit });
 	return apiFetch(`/api/search/projects?${params.toString()}`);
+}
+
+export function deleteProject(projectId) {
+	return apiFetch(`/api/projects/${projectId}`, {
+		method: "DELETE",
+	});
 }
 
 export function addProjectMember(projectId, userId, role) {

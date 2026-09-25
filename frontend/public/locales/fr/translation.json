@@ -24,6 +24,7 @@
 		"register": "S'inscrire",
 		"or": "ou",
 		"google": "Continuer avec Google",
+		"googleUnavailable": "La connexion Google n'est pas configurée sur cette copie",
 		"oauthLoading": "Connexion Google en cours...",
 		"oauthCancelled": "La connexion Google a été annulée.",
 		"oauthFailed": "La connexion Google a échoué. Veuillez réessayer."
@@ -111,7 +112,9 @@
 		"create": "Créer",
 		"description": "Description (optionnel)",
 		"empty": "Aucun projet pour le moment. Crée ton premier projet !",
-		"nameRequired": "Le nom du projet est obligatoire"
+		"nameRequired": "Le nom du projet est obligatoire",
+		"delete": "Supprimer le projet",
+		"confirmDelete": "Supprimer le projet « {{name}} » ? Ses tâches, fichiers, commentaires et messages seront aussi supprimés."
 	},
 	"profile":
 	{
@@ -120,7 +123,9 @@
 	"search":
 	{
 		"title": "Recherche",
-		"queryRequired": "Entrez un mot pour rechercher",
+		"range": "{{from}}–{{to}} sur {{total}}",
+		"previous": "Précédent",
+		"next": "Suivant",
 		"allStatuses": "tous les statuts",
 		"noResults": "Aucun résultat trouvé",
 		"searching": "Recherche en cours",
@@ -169,6 +174,28 @@
 			"type": "Type de fichier non autorisé",
 			"size": "Fichier trop volumineux ({{max}} Mo max)",
 			"upload": "Erreur d'upload"
+		}
+	},
+	"data":
+	{
+		"title": "Export / Import",
+		"export": "Exporter",
+		"import": "Importer",
+		"pick": "Choisir un fichier",
+		"importing": "Import en cours…",
+		"imported": "Tâches importées : {{count}}",
+		"createdProjects": "Projets créés : {{count}}",
+		"hint": "JSON ou CSV exporté depuis cette application. {{max}} Mo max.",
+		"errors":
+		{
+			"type": "Le fichier doit être en .json ou .csv",
+			"size": "Fichier trop volumineux ({{max}} Mo max)",
+			"empty": "Le fichier ne contient aucune tâche",
+			"encoding": "Le fichier doit être un texte UTF-8",
+			"tooMany": "Trop de tâches dans un seul import (1000 max)",
+			"columns": "Le CSV doit contenir les colonnes project_id et title",
+			"assignee": "Une personne assignée n'est pas membre du projet visé",
+			"invalid": "Contenu du fichier invalide ; exportez-le d'abord depuis cette application"
 		}
 	},
 	"tasks":
@@ -269,7 +296,7 @@
 			"google": "« Continuer avec Google » ne fonctionne que si cette copie a reçu ses propres identifiants Google.",
 			"email": "Les emails (confirmations de téléchargement des données et de suppression du compte) arrivent dans une boîte de test locale et ne sont jamais envoyés.",
 			"refresh": "Les pages de projet se rafraîchissent toutes les 15 secondes : les changements des autres membres ne sont pas instantanés.",
-			"api": "Les clés API et l'import/export des données se gèrent via la documentation de l'API (/docs), sans écran dédié.",
+			"api": "Les clés API se gèrent via la documentation de l'API (/docs), sans écran dédié.",
 			"reset": "Les données de démo peuvent être réinitialisées à tout moment : n'y stockez rien d'important."
 		}
 	},

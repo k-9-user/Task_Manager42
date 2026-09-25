@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import TaskBoard from "../components/TaskBoard";
 import MembersPanel from "../components/MembersPanel";
 import ProjectMessages from "../components/ProjectMessages";
-import { getProject } from "../services/projectService";
+import { deleteProject, getProject } from "../services/projectService";
+import { exportData } from "../services/dataService";
 import { createTask, deleteTask, updateTaskStatus } from "../services/taskService.js";
 import { getMe } from "../services/userservice";
 import { useTranslation } from "react-i18next";
@@ -14,6 +15,7 @@ const REFRESH_INTERVAL_MS = 15000;
 function ProjectDetail()
 {
 	const { id } = useParams();
+	const navigate = useNavigate();
 	const [project, setProject] = useState(null);
 	const [members, setMembers] = useState([]);
 	const [tasks, setTasks] = useState([]);
@@ -123,6 +125,34 @@ function ProjectDetail()
 		}
 	}
 
+	async function handleExport(format)
+	{
+		try
+		{
+			await exportData(format, id);
+			setError("");
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+	}
+
+	async function handleDeleteProject()
+	{
+		if (!window.confirm(t("projects.confirmDelete", { name: project.name })))
+			return ;
+		try
+		{
+			await deleteProject(id);
+			navigate("/projects");
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+	}
+
 	if (loading)
 		return (<p>{t("loading.load")}</p>);
 	else if (error && !project)
@@ -134,7 +164,19 @@ function ProjectDetail()
 
 	return (<div className="project-detail-page">
 		<div className="project-detail-header">
-			<h1>{project.name}</h1>
+			<div className="project-detail-heading">
+				<h1>{project.name}</h1>
+				<div className="project-detail-actions">
+					<span>{t("data.export")}</span>
+					<button type="button" className="project-export" onClick={() => handleExport("json")}>JSON</button>
+					<button type="button" className="project-export" onClick={() => handleExport("csv")}>CSV</button>
+					{isOwner && (
+						<button type="button" className="project-delete" onClick={handleDeleteProject}>
+							{t("projects.delete")}
+						</button>
+					)}
+				</div>
+			</div>
 			{project.description && <p>{project.description}</p>}
 		</div>
 		{error && <p className="error">{error}</p>}

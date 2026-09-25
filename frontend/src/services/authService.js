@@ -2,6 +2,8 @@ import { API_URL, TOKEN_KEY, apiFetch } from "./api";
 
 export const googleOAuthUrl = `${API_URL}/api/auth/oauth/google`;
 
+export const googleOAuthEnabled = Boolean(import.meta.env.VITE_GOOGLE_OAUTH);
+
 export async function login(identifier, password) {
 	const data = await apiFetch("/api/auth/login",
 		{

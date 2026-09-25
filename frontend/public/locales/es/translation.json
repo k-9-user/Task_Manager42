@@ -24,6 +24,7 @@
 		"register": "Registrarse",
 		"or": "o",
 		"google": "Continuar con Google",
+		"googleUnavailable": "El inicio de sesión con Google no está configurado en esta copia",
 		"oauthLoading": "Completando el inicio de sesión con Google...",
 		"oauthCancelled": "Se canceló el inicio de sesión con Google.",
 		"oauthFailed": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
@@ -111,7 +112,9 @@
 		"create": "Crear",
 		"description": "Descripción (opcional)",
 		"empty": "Aún no hay proyectos. ¡Crea tu primer proyecto!",
-		"nameRequired": "Es obligatorio indicar el nombre del proyecto"
+		"nameRequired": "Es obligatorio indicar el nombre del proyecto",
+		"delete": "Eliminar el proyecto",
+		"confirmDelete": "¿Eliminar el proyecto «{{name}}»? También se eliminarán sus tareas, archivos, comentarios y mensajes."
 	},
 	"profile":
 	{
@@ -120,7 +123,9 @@
 	"search":
 	{
 		"title": "Búsqueda",
-		"queryRequired": "Escribe una palabra para buscar",
+		"range": "{{from}}–{{to}} de {{total}}",
+		"previous": "Anterior",
+		"next": "Siguiente",
 		"allStatuses": "todos los estados",
 		"noResults": "No se han encontrado resultados",
 		"searching": "Buscando",
@@ -169,6 +174,28 @@
 			"type": "Tipo de archivo no permitido",
 			"size": "Archivo demasiado grande (máx. {{max}} MB)",
 			"upload": "Error al subir el archivo"
+		}
+	},
+	"data":
+	{
+		"title": "Exportar / Importar",
+		"export": "Exportar",
+		"import": "Importar",
+		"pick": "Elegir un archivo",
+		"importing": "Importando…",
+		"imported": "Tareas importadas: {{count}}",
+		"createdProjects": "Proyectos creados: {{count}}",
+		"hint": "JSON o CSV exportado desde esta aplicación. Máx. {{max}} MB.",
+		"errors":
+		{
+			"type": "El archivo debe ser .json o .csv",
+			"size": "Archivo demasiado grande (máx. {{max}} MB)",
+			"empty": "El archivo no contiene ninguna tarea",
+			"encoding": "El archivo debe ser texto UTF-8",
+			"tooMany": "Demasiadas tareas en una sola importación (máx. 1000)",
+			"columns": "El CSV debe incluir las columnas project_id y title",
+			"assignee": "Una persona asignada no es miembro del proyecto de destino",
+			"invalid": "Contenido del archivo no válido; expórtalo primero desde esta aplicación"
 		}
 	},
 	"tasks":
@@ -269,7 +296,7 @@
 			"google": "«Continuar con Google» solo funciona si esta copia tiene sus propias credenciales de Google.",
 			"email": "Los correos (confirmaciones de descarga de datos y de eliminación de la cuenta) llegan a un buzón de prueba local y nunca se envían.",
 			"refresh": "Las páginas de proyecto se actualizan cada 15 segundos, así que los cambios de otros miembros no son instantáneos.",
-			"api": "Las claves API y la importación/exportación de datos se gestionan desde la documentación de la API (/docs), sin pantalla propia.",
+			"api": "Las claves API se gestionan desde la documentación de la API (/docs), sin pantalla propia.",
 			"reset": "Los datos de la demo pueden restablecerse en cualquier momento: no guardes nada importante."
 		}
 	},

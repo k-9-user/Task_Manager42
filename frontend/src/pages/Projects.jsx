@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { getProjects, createProject } from "../services/projectService";
+import { MAX_IMPORT_SIZE_MB, exportData, importAcceptAttr, importData, validateImportFile } from "../services/dataService";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const CREATE_BUTTON = "cursor-pointer rounded-lg border-none bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-hover";
+const DATA_BUTTON = "cursor-pointer rounded-md border border-brand-surface-border bg-brand-surface px-4 py-2 text-sm font-semibold text-brand-primary-darker hover:bg-brand-surface-alt disabled:cursor-not-allowed disabled:opacity-60";
 
 function Projects()
 {
@@ -13,6 +15,10 @@ function Projects()
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [showForm, setShowForm] = useState(false);
+	const [showData, setShowData] = useState(false);
+	const [importing, setImporting] = useState(false);
+	const [notice, setNotice] = useState("");
+	const importInputRef = useRef(null);
 	const { t } = useTranslation();
 
 	useEffect(() =>
@@ -58,6 +64,59 @@ function Projects()
 		}
 	}
 
+	async function handleExport(format)
+	{
+		setError("");
+		setNotice("");
+		try
+		{
+			await exportData(format);
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+	}
+
+	async function handleImport(e)
+	{
+		const file = e.target.files?.[0];
+
+		e.target.value = "";
+		if (!file)
+			return;
+
+		const invalid = validateImportFile(file);
+
+		if (invalid)
+		{
+			setNotice("");
+			setError(t(invalid, { max: MAX_IMPORT_SIZE_MB }));
+			return;
+		}
+		setImporting(true);
+		setError("");
+		setNotice("");
+		try
+		{
+			const data = await importData(file);
+			const messages = [t("data.imported", { count: data.imported_count })];
+
+			if (data.created_projects)
+				messages.push(t("data.createdProjects", { count: data.created_projects }));
+			setNotice(messages.join(" · "));
+			setProjects((await getProjects()).projects);
+		}
+		catch (err)
+		{
+			setError(err.message);
+		}
+		finally
+		{
+			setImporting(false);
+		}
+	}
+
 	if (loading)
 		return <p>{t("loading.load")}</p>;
 
@@ -67,13 +126,48 @@ function Projects()
 		<div className="flex min-h-full flex-1 flex-col gap-6 bg-brand-surface-alt p-8 font-sans max-sm:p-4">
 			<div className="flex flex-wrap items-center justify-between gap-4">
 				<h1 className="m-0 text-brand-primary-darker">{t("projects.title")}</h1>
-				{!isEmpty && (
-					<button className={CREATE_BUTTON} onClick={() => setShowForm(!showForm)}>
-						{showForm ? t("register.return") : `+ ${t("projects.create")}`}
+				<div className="flex flex-wrap items-center gap-2.5">
+					<button className={DATA_BUTTON} onClick={() => setShowData(!showData)}>
+						{t("data.title")}
 					</button>
-				)}
+					{!isEmpty && (
+						<button className={CREATE_BUTTON} onClick={() => setShowForm(!showForm)}>
+							{showForm ? t("register.return") : `+ ${t("projects.create")}`}
+						</button>
+					)}
+				</div>
 			</div>
 			{error && <p className="m-0 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p>}
+			{notice && <p className="m-0 rounded-lg bg-green-100 px-3 py-2 text-sm text-green-800" role="status">{notice}</p>}
+			{showData && (
+				<section className="flex flex-col gap-3 rounded-xl border border-brand-surface-border bg-brand-surface p-4">
+					<div className="flex flex-wrap items-center gap-2.5">
+						<span className="text-sm font-semibold text-brand-primary-darker">{t("data.export")}</span>
+						<button className={DATA_BUTTON} onClick={() => handleExport("json")}>JSON</button>
+						<button className={DATA_BUTTON} onClick={() => handleExport("csv")}>CSV</button>
+					</div>
+					<div className="flex flex-wrap items-center gap-2.5">
+						<span className="text-sm font-semibold text-brand-primary-darker">{t("data.import")}</span>
+						<input
+							ref={importInputRef}
+							type="file"
+							accept={importAcceptAttr()}
+							onChange={handleImport}
+							hidden
+						/>
+						<button
+							type="button"
+							className={DATA_BUTTON}
+							disabled={importing}
+							onClick={() => importInputRef.current?.click()}
+						>
+							{t("data.pick")}
+						</button>
+						{importing && <span className="text-sm text-[#6b21a8]">{t("data.importing")}</span>}
+					</div>
+					<p className="m-0 text-sm text-[#6b21a8]">{t("data.hint", { max: MAX_IMPORT_SIZE_MB })}</p>
+				</section>
+			)}
 			{showForm && (
 				<form onSubmit={handleCreate} className="flex flex-wrap gap-2.5 rounded-xl border border-brand-surface-border bg-brand-surface p-4">
 					<input

@@ -69,10 +69,12 @@ AuthenticatedUser = Annotated[User, Depends(get_current_user)]
     summary="Export visible projects and tasks",
     description=(
         "Download visible project and task data as deterministic JSON or flat CSV. "
-        "Only projects where the authenticated user is a member are exported."
+        "Only projects where the authenticated user is a member are exported; "
+        "pass project_id to export a single one."
     ),
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Unsupported export format."},
+        status.HTTP_404_NOT_FOUND: {"description": "Project not found or not visible."},
     },
 )
 def export_data(
@@ -82,6 +84,10 @@ def export_data(
         str,
         Query(alias="format", description="Download format: json or csv."),
     ],
+    project_id: Annotated[
+        UUID | None,
+        Query(description="Export a single visible project instead of every one."),
+    ] = None,
 ) -> Response:
     if export_format not in SUPPORTED_EXPORT_FORMATS:
         raise HTTPException(
@@ -89,7 +95,9 @@ def export_data(
             detail="Export format must be json or csv",
         )
 
-    projects, tasks_by_project = _load_visible_export_data(db, current_user.id)
+    projects, tasks_by_project = _load_visible_export_data(
+        db, current_user.id, project_id
+    )
     if export_format == "json":
         content = json.dumps(
             {
@@ -124,8 +132,10 @@ def export_data(
     "/api/import",
     summary="Import tasks into existing projects",
     description=(
-        "Import JSON or CSV task data into existing writable projects. The entire "
-        "file is validated before all tasks are committed in one transaction."
+        "Import JSON or CSV task data. A project referenced by the file is reused "
+        "when it exists and the caller may write to it, and created otherwise, so an "
+        "export can be imported into another account. The entire file is validated "
+        "before everything is committed in one transaction."
     ),
     responses={
         status.HTTP_400_BAD_REQUEST: {
@@ -154,28 +164,42 @@ async def import_data(
     records = _parse_import_records(raw_content, import_format)
 
     validated_records = _validate_task_import_records(records)
-    for project_id in sorted({record.project_id for record in validated_records}):
-        lock_project_for_write(
-            db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+    targets, created = _resolve_import_projects(db, validated_records, current_user)
+    validated_tasks = [
+        _build_imported_task(
+            db, record, targets[record.project_id], created, current_user.id
         )
-    validated_tasks = [_build_imported_task(db, record) for record in validated_records]
+        for record in validated_records
+    ]
     db.add_all(validated_tasks)
     db.commit()
 
-    return SuccessEnvelope(data={"imported_count": len(validated_tasks)})
+    return SuccessEnvelope(
+        data={"imported_count": len(validated_tasks), "created_projects": len(created)}
+    )
 
 
 def _load_visible_export_data(
     db: Session,
     user_id: UUID,
+    project_id: UUID | None = None,
 ) -> tuple[list[Project], dict[UUID, list[Task]]]:
+    filters = [Project.id.in_(visible_project_ids(user_id))]
+    if project_id is not None:
+        filters.append(Project.id == project_id)
+
     projects = list(
         db.scalars(
             select(Project)
-            .where(Project.id.in_(visible_project_ids(user_id)))
+            .where(*filters)
             .order_by(Project.created_at.asc(), Project.id.asc())
         ).all()
     )
+    if project_id is not None and not projects:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found",
+        )
     tasks_by_project: dict[UUID, list[Task]] = {project.id: [] for project in projects}
     if not projects:
         return projects, tasks_by_project
@@ -316,6 +340,8 @@ def _parse_json_records(text: str) -> list[dict[str, Any]]:
             if task_project_id and str(task_project_id) != str(project["id"]):
                 raise _invalid_import("Task project_id does not match its project")
             record["project_id"] = project["id"]
+            if project.get("name"):
+                record.setdefault("project_name", project["name"])
             records.append(record)
     return records
 
@@ -348,12 +374,72 @@ def _validate_task_import_records(
         raise _invalid_import("Invalid task import data") from error
 
 
-def _build_imported_task(db: Session, record: TaskImportRecord) -> Task:
-    project_id = record.project_id
-    if record.assignee_id is not None and db.scalar(
+def _may_write(db: Session, project_id: UUID, user_id: UUID) -> bool:
+    return db.scalar(
         select(ProjectMember.id).where(
             ProjectMember.project_id == project_id,
-            ProjectMember.user_id == record.assignee_id,
+            ProjectMember.user_id == user_id,
+            ProjectMember.role.in_((ProjectRole.OWNER, ProjectRole.EDITOR)),
+        )
+    ) is not None
+
+
+def _resolve_import_projects(
+    db: Session,
+    records: list[TaskImportRecord],
+    user: User,
+) -> tuple[dict[UUID, UUID], set[UUID]]:
+    """Map every referenced project to a writable one, creating it when there is none.
+
+    A project the caller cannot write to — absent here, or owned by somebody else — is
+    recreated from the exported name, so an export stays importable across accounts.
+    """
+
+    names: dict[UUID, str] = {}
+    for record in records:
+        if record.project_name and record.project_id not in names:
+            names[record.project_id] = record.project_name
+
+    targets: dict[UUID, UUID] = {}
+    created: set[UUID] = set()
+    for project_id in sorted({record.project_id for record in records}):
+        if _may_write(db, project_id, user.id):
+            lock_project_for_write(
+                db, project_id, user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+            )
+            targets[project_id] = project_id
+            continue
+
+        name = names.get(project_id)
+        if not name:
+            raise _invalid_import("Imported project name is required to create it")
+        project = Project(name=name, owner_id=user.id)
+        db.add(project)
+        db.flush()
+        db.add(
+            ProjectMember(project_id=project.id, user_id=user.id, role=ProjectRole.OWNER)
+        )
+        targets[project_id] = project.id
+        created.add(project.id)
+    return targets, created
+
+
+def _build_imported_task(
+    db: Session,
+    record: TaskImportRecord,
+    project_id: UUID,
+    created: set[UUID],
+    importer_id: UUID,
+) -> Task:
+    """A project created by this import has one member, so only they can be assigned."""
+
+    assignee_id = record.assignee_id
+    if project_id in created:
+        assignee_id = assignee_id if assignee_id == importer_id else None
+    elif assignee_id is not None and db.scalar(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == assignee_id,
         )
     ) is None:
         raise _invalid_import("Task assignee must be a project member")
@@ -363,7 +449,7 @@ def _build_imported_task(db: Session, record: TaskImportRecord) -> Task:
         title=record.title,
         description=record.description,
         status=record.status,
-        assignee_id=record.assignee_id,
+        assignee_id=assignee_id,
         due_date=record.due_date,
     )
 

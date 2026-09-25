@@ -24,6 +24,7 @@
 		"register": "Sign up",
 		"or": "or",
 		"google": "Continue with Google",
+		"googleUnavailable": "Google sign-in is not configured on this copy",
 		"oauthLoading": "Completing Google sign-in...",
 		"oauthCancelled": "Google sign-in was cancelled.",
 		"oauthFailed": "Google sign-in failed. Please try again."
@@ -111,7 +112,9 @@
 		"create": "Create",
 		"description": "Description (optional)",
 		"empty": "No projects yet. Create your first project!",
-		"nameRequired": "The project name is required"
+		"nameRequired": "The project name is required",
+		"delete": "Delete the project",
+		"confirmDelete": "Delete the project \"{{name}}\"? Its tasks, files, comments and messages will be deleted too."
 	},
 	"profile":
 	{
@@ -120,7 +123,9 @@
 	"search":
 	{
 		"title": "Search",
-		"queryRequired": "Enter a word to search for",
+		"range": "{{from}}–{{to}} of {{total}}",
+		"previous": "Previous",
+		"next": "Next",
 		"allStatuses": "all statuses",
 		"noResults": "No results found",
 		"searching": "Searching",
@@ -169,6 +174,28 @@
 			"type": "File type not allowed",
 			"size": "File too large (max {{max}} MB)",
 			"upload": "Upload error"
+		}
+	},
+	"data":
+	{
+		"title": "Export / Import",
+		"export": "Export",
+		"import": "Import",
+		"pick": "Choose a file",
+		"importing": "Importing…",
+		"imported": "Imported tasks: {{count}}",
+		"createdProjects": "Projects created: {{count}}",
+		"hint": "JSON or CSV exported from this app. {{max}} MB max.",
+		"errors":
+		{
+			"type": "The file must be .json or .csv",
+			"size": "File too large ({{max}} MB max)",
+			"empty": "The file contains no task",
+			"encoding": "The file must be UTF-8 text",
+			"tooMany": "Too many tasks in one import (1000 max)",
+			"columns": "The CSV must have the project_id and title columns",
+			"assignee": "An assigned user is not a member of the target project",
+			"invalid": "Invalid file content; export it from this app first"
 		}
 	},
 	"tasks":
@@ -269,7 +296,7 @@
 			"google": "“Continue with Google” works only if this copy has been given its own Google credentials.",
 			"email": "Emails (data download and account deletion confirmations) land in a local test inbox and are never delivered.",
 			"refresh": "Project pages refresh every 15 seconds, so other members' changes are not instant.",
-			"api": "API keys and data import/export are managed through the API documentation (/docs), without a screen of their own.",
+			"api": "API keys are managed through the API documentation (/docs), without a screen of their own.",
 			"reset": "Demo data can be reset at any time: do not store anything important."
 		}
 	},

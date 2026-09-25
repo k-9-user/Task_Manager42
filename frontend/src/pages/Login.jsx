@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
-import { googleOAuthUrl, login } from '../services/authService';
+import { googleOAuthEnabled, googleOAuthUrl, login } from '../services/authService';
 import { isValidIdentifier } from '../utils/validation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
@@ -91,12 +91,16 @@ function Login()
 					<div className="flex items-center gap-3 text-[11px] uppercase text-brand-primary-light before:h-px before:flex-1 before:bg-brand-surface-border after:h-px after:flex-1 after:bg-brand-surface-border">
 						<span>{t("login.or")}</span>
 					</div>
-					<a
-						href={googleOAuthUrl}
-						className="w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-4 py-2.5 text-center text-sm font-semibold text-brand-primary-dark no-underline transition-colors hover:bg-brand-primary hover:text-white hover:border-brand-primary"
-					>
-						{t("login.google")}
-					</a>
+					{googleOAuthEnabled ? (
+						<a
+							href={googleOAuthUrl}
+							className="w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-4 py-2.5 text-center text-sm font-semibold text-brand-primary-dark no-underline transition-colors hover:bg-brand-primary hover:text-white hover:border-brand-primary"
+						>
+							{t("login.google")}
+						</a>
+					) : (
+						<p className="m-0 text-center text-sm text-[#6b21a8]">{t("login.googleUnavailable")}</p>
+					)}
 					<p className="m-0 text-center text-sm text-[#6b21a8]">
 						{t("login.noAccount")} <Link to="/register" className="font-bold text-brand-primary no-underline hover:underline">{t("login.register")}</Link>
 					</p>
