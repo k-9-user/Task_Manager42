@@ -70,7 +70,7 @@ function Register()
 		try
 		{
 			await register(username, email, password);
-			navigate("/login");
+			navigate("/projects");
 		}
 		catch (err)
 		{
@@ -85,16 +85,16 @@ function Register()
 			<h1>Task Manager</h1>
 			<div className='register-window'>
 				<div className='register-titlebar'>{t("login.register")}</div>
-				<form className='register-box' onSubmit={handleSubmit}>
+				<form className='register-box' onSubmit={handleSubmit} noValidate>
 					{error && <p className='error'>{error}</p>}
 					<div className='input-group'>
 						<div className='input-field'>
 							<label htmlFor='username'>{t("login.username")} : </label>
-							<input id='username' type="text" required value={username} onChange={(e) => setUsername(e.target.value)} />
+							<input id='username' type="text" required maxLength={50} value={username} onChange={(e) => setUsername(e.target.value)} />
 						</div>
 						<div className='input-field'>
-							<label htmlFor='email'>Email : </label>
-							<input id='email' type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+							<label htmlFor='email'>{t("register.emailLabel")} : </label>
+							<input id='email' type="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
 						</div>
 						<div className='input-field'>
 							<label htmlFor='password'>{t("login.password")} : </label>

@@ -7,7 +7,8 @@
 		"search": "Buscar",
 		"profile": "Perfil",
 		"achievements": "Logros",
-		"users": "Gestión de usuarios"
+		"users": "Gestión de usuarios",
+		"language": "Idioma"
 	},
 	"login":
 	{
@@ -42,7 +43,8 @@
 		"invapassword": "La contraseña debe tener al menos {{min}} caracteres",
 		"invapasswordlong": "La contraseña debe tener como máximo {{max}} caracteres",
 		"invapasswordchars": "La contraseña no puede contener caracteres invisibles (tabulación, salto de línea…)",
-		"passwordRules": "Usa {{min}} caracteres o más. Se aceptan símbolos como ! @ # $ %."
+		"passwordRules": "Usa {{min}} caracteres o más. Se aceptan símbolos como ! @ # $ %.",
+		"emailLabel": "Correo electrónico"
 	},
 	"loading":
 	{
@@ -52,7 +54,25 @@
 	"error":
 	{
 		"err": "Error",
-		"generic": "Se ha producido un error"
+		"generic": "Se ha producido un error",
+		"network": "No se puede contactar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+		"sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+		"invalidCredentials": "Correo electrónico, nombre de usuario o contraseña incorrectos.",
+		"banned": "Esta cuenta está baneada.",
+		"tooManyRequests": "Demasiados intentos. Espera un momento e inténtalo de nuevo.",
+		"invalidRequest": "Algunos campos no son válidos.",
+		"usernameTaken": "Este nombre de usuario ya está en uso.",
+		"accountExists": "Ya existe una cuenta con este correo electrónico o nombre de usuario.",
+		"userNotFound": "Este usuario ya no existe.",
+		"memberUnavailable": "No hay ningún usuario con este correo electrónico o ya es miembro de este proyecto.",
+		"lastOwner": "Un proyecto debe conservar al menos un propietario.",
+		"lastAdmin": "Debe quedar al menos un administrador activo.",
+		"bootstrapAdmin": "El administrador inicial está protegido: no se puede degradar, banear, renombrar ni eliminar.",
+		"notFound": "Este elemento ya no existe.",
+		"forbidden": "No tienes permiso para hacer esto.",
+		"fileTooLarge": "Archivo demasiado grande.",
+		"required": "Este campo es obligatorio.",
+		"invalidEmail": "Introduce una dirección de correo electrónico válida."
 	},
 	"admin":
 	{
@@ -83,14 +103,7 @@
 		"save": "Guardar",
 		"cancel": "Cancelar",
 		"displayName": "Nombre visible",
-		"confirmBan": "¿Banear a {{username}}? Pierde el acceso de inmediato hasta que se le reactive.",
-		"errors":
-		{
-			"lastAdmin": "Debe quedar al menos un administrador activo.",
-			"bootstrap": "El administrador inicial está protegido: no se puede degradar, banear, renombrar ni eliminar.",
-			"usernameTaken": "Este nombre de usuario ya está en uso.",
-			"notFound": "Este usuario ya no existe."
-		}
+		"confirmBan": "¿Banear a {{username}}? Pierde el acceso de inmediato hasta que se le reactive."
 	},
 	"projects":
 	{
@@ -110,7 +123,6 @@
 		"title": "Búsqueda",
 		"queryRequired": "Escribe una palabra para buscar",
 		"allStatuses": "todos los estados",
-		"serverError": "No se puede establecer contacto con el servidor: ",
 		"noResults": "No se han encontrado resultados",
 		"searching": "Buscando",
 		"tasks": "Tareas",
@@ -127,7 +139,10 @@
 		{
 			"desc": "Descendente",
 			"asc": "Ascendente"
-		}
+		},
+		"typeLabel": "Buscar en",
+		"sortLabel": "Ordenar por",
+		"directionLabel": "Orden"
 	},
 	"comments":
 	{
@@ -173,7 +188,8 @@
 			"todo": "Tareas pendientes",
 			"in_progress": "En curso",
 			"done": "Terminado"
-		}
+		},
+		"statusLabel": "Estado de la tarea"
 	},
 	"members":
 	{
@@ -186,14 +202,16 @@
 			"viewer": "Lector",
 			"editor": "Editor",
 			"owner": "Propietario"
-		}
+		},
+		"roleLabel": "Rol"
 	},
 	"messages":
 	{
 		"title": "Mensajes del equipo",
 		"empty": "Aún no hay mensajes",
 		"placeholder": "Escribe un mensaje al equipo...",
-		"send": "Enviar"
+		"send": "Enviar",
+		"delete": "Eliminar mensaje"
 	},
 	"footer":
 	{
@@ -403,5 +421,17 @@
 			"level": "Nivel {{level}} alcanzado",
 			"close": "Cerrar notificación"
 		}
+	},
+	"notFound":
+	{
+		"title": "Página no encontrada",
+		"body": "Esta página no existe o se ha movido.",
+		"back": "Volver a la aplicación"
+	},
+	"crash":
+	{
+		"title": "Algo ha salido mal",
+		"body": "No se ha podido mostrar esta página.",
+		"reload": "Recargar la página"
 	}
 }

@@ -3,6 +3,7 @@ import AdminRoute from "./pages/AdminRoute";
 import AdminUsers from "./pages/AdminUsers";
 import Achievements from "./pages/Achievements";
 import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
 import OAuthCallback from "./pages/OAuthCallback";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import PrivateRoute from "./pages/PrivateRoute";
@@ -15,6 +16,8 @@ import Status from "./pages/Status";
 import TermsOfService from "./pages/TermsOfService";
 import Sidebar from "./components/Sidebar";
 import Footer from "./components/Footer";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { isLoggedIn } from "./services/authService";
 import "./App.css";
 
 function AppContent() {
@@ -26,21 +29,24 @@ function AppContent() {
       {!hideNavbar && <Sidebar />}
       <div className="app-body">
       <main className="app-content">
+       <ErrorBoundary key={location.pathname}>
        <Routes>
-         <Route path="/" element={<Navigate to="/login" />} />
+         <Route path="/" element={<Navigate to={isLoggedIn() ? "/projects" : "/login"} replace />} />
          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
          <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
          <Route path="/login" element={<Login />} />
          <Route path="/oauth/callback" element={<OAuthCallback />} />
-         <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
-         <Route path="/Profile" element={<Profile />} />
-         <Route path="/projects/:id" element={<ProjectDetail />} />
+         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+         <Route path="/projects/:id" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
          <Route path="/projects" element={<PrivateRoute><Projects /></PrivateRoute>} />
          <Route path="/register" element={<Register />} />
-         <Route path="/Search" element={<Search />} />
+         <Route path="/search" element={<PrivateRoute><Search /></PrivateRoute>} />
          <Route path="/status" element={<Status />} />
-         <Route path="/TermsOfService" element={<TermsOfService />} />
+         <Route path="/terms-of-service" element={<TermsOfService />} />
+         <Route path="*" element={<NotFound />} />
        </Routes>
+       </ErrorBoundary>
       </main>
       <Footer />
       </div>

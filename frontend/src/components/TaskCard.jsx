@@ -7,7 +7,7 @@ import { ATTACHMENT_TYPES, BANNER_TYPES } from "../services/upload";
 import { useTranslation } from "react-i18next";
 import './TaskCard.css';
 
-function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
+function TaskCard ({ task, currentUserId, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
 {
 	const [attachments, setAttachments] = useState([]);
 	const [attachmentError, setAttachmentError] = useState("");
@@ -188,7 +188,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 					{descriptionError && <p className="error" role="alert">{descriptionError}</p>}
 				</form>
 			)}
-			<select value={task.status} onChange={(e) => onStatusChange(task.id, e.target.value)}>
+			<select value={task.status} disabled={!canEdit} aria-label={t("tasks.statusLabel")} onChange={(e) => onStatusChange(task.id, e.target.value)}>
 				{TASK_STATUSES.map((status) => (
 					<option key={status} value={status}>{t(`tasks.status.${status}`)}</option>
 				))}
@@ -233,7 +233,7 @@ function TaskCard ({ task, onStatusChange, onTaskUpdated, onDeleteTask, canEdit,
 			<button onClick={() => setShowComments(!showComments)}>
 				{showComments ? t("comments.hide") : t("comments.show")}
 			</button>
-			{showComments && <CommentSection taskId={task.id} />}
+			{showComments && <CommentSection taskId={task.id} currentUserId={currentUserId} isOwner={canDelete} />}
 			{canDelete && (
 				<button type="button" className="task-delete" onClick={() => onDeleteTask(task)}>{t("tasks.delete")}</button>
 			)}

@@ -5,6 +5,17 @@ import { googleOAuthUrl, login } from '../services/authService';
 import { isValidIdentifier } from '../utils/validation';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
+function loginNotice(searchParams)
+{
+	if (searchParams.get("session") === "expired")
+		return "error.sessionExpired";
+	if (searchParams.get("oauth") === "cancelled")
+		return "login.oauthCancelled";
+	if (searchParams.get("oauth") === "failed")
+		return "login.oauthFailed";
+	return "";
+}
+
 const FIELD_INPUT = "w-full rounded-lg border border-brand-surface-border bg-brand-surface-alt px-3 py-2.5 text-[15px] text-[#2c1a4d] transition-shadow focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary-soft";
 
 function Login()
@@ -15,10 +26,7 @@ function Login()
 	const navigate = useNavigate();
 	const [error, setError] = useState("");
 	const [searchParams] = useSearchParams();
-	const oauthStatus = searchParams.get("oauth");
-	const oauthError = oauthStatus === "cancelled"
-		? t("login.oauthCancelled")
-		: oauthStatus === "failed" ? t("login.oauthFailed") : "";
+	const notice = loginNotice(searchParams);
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -62,13 +70,13 @@ function Login()
 					<p className="m-0 text-sm text-brand-primary-light">{t("login.subtitle")}</p>
 				</div>
 				<form className="flex flex-col gap-5 bg-brand-surface p-8" onSubmit={handleSubmit}>
-					{(error || oauthError) && (
-						<p className="m-0 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">{error || oauthError}</p>
+					{(error || notice) && (
+						<p className="m-0 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">{error || t(notice)}</p>
 					)}
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1.5">
 							<label htmlFor='identifier' className="text-[13px] font-semibold text-brand-primary-dark">{t("login.identifier")}</label>
-							<input id='identifier' type="text" autoComplete="username" value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={FIELD_INPUT} />
+							<input id='identifier' type="text" autoComplete="username" maxLength={254} value={identifier} onChange={(e) => setIdentifier(e.target.value)} className={FIELD_INPUT} />
 						</div>
 						<div className="flex flex-col gap-1.5">
 							<label htmlFor='password' className="text-[13px] font-semibold text-brand-primary-dark">{t("login.password")}</label>

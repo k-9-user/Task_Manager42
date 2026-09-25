@@ -3,7 +3,7 @@ import { TASK_STATUSES } from "../services/taskService";
 import TaskCard from "./TaskCard";
 import './TaskBoard.css';
 
-function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
+function TaskBoard({ tasks, currentUserId, onStatusChange, onTaskUpdated, onDeleteTask, canEdit, canDelete })
 {
 	const { t } = useTranslation();
 
@@ -15,7 +15,7 @@ function TaskBoard({ tasks, onStatusChange, onTaskUpdated, onDeleteTask, canEdit
 					{tasks
 						.filter((task) => task.status === status)
 						.map((task) => (
-							<TaskCard key={task.id} task={task} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} canDelete={canDelete} />
+							<TaskCard key={task.id} task={task} currentUserId={currentUserId} onStatusChange={onStatusChange} onTaskUpdated={onTaskUpdated} onDeleteTask={onDeleteTask} canEdit={canEdit} canDelete={canDelete} />
 						))}
 				</div>
 			))}

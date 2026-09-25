@@ -92,11 +92,12 @@ function Profile() {
 				</div>
 			</header>
 			{progress && <ProgressCard data={progress} />}
-			<form className="profile-edit" onSubmit={handleSave}>
+			<form className="profile-edit" onSubmit={handleSave} noValidate>
 				<h2>{t("gdpr.editTitle")}</h2>
 				<label htmlFor="profile-username">{t("login.username")}</label>
 				<input
 					id="profile-username"
+					maxLength={50}
 					value={username}
 					onChange={(e) => setUsername(e.target.value)}
 					required
@@ -104,6 +105,7 @@ function Profile() {
 				<label htmlFor="profile-display-name">{t("gdpr.displayName")}</label>
 				<input
 					id="profile-display-name"
+					maxLength={100}
 					value={displayName}
 					onChange={(e) => setDisplayName(e.target.value)}
 				/>

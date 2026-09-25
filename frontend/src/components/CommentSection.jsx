@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getTaskComments, addComment, deleteComment } from "../services/taskService";
 import { useTranslation } from "react-i18next";
 
-function CommentSection({ taskId })
+function CommentSection({ taskId, currentUserId, isOwner })
 {
 	const [comments, setComments] = useState([]);
 	const [content, setContent] = useState("");
@@ -36,7 +36,10 @@ function CommentSection({ taskId })
 	{
 		e.preventDefault();
 		if (!content.trim())
+		{
+			setError(t("error.required"));
 			return ;
+		}
 
 		setPosting(true);
 		setError("");
@@ -78,7 +81,9 @@ function CommentSection({ taskId })
 					{comments.map((comment) => (
 						<li key={comment.id}>
 							<p>{comment.content}</p>
-							<button onClick={() => handleDelete(comment.id)}>{t("comments.delete")}</button>
+							{(comment.author_id === currentUserId || isOwner) && (
+								<button onClick={() => handleDelete(comment.id)}>{t("comments.delete")}</button>
+							)}
 						</li>
 					))}
 				</ul>
@@ -88,6 +93,8 @@ function CommentSection({ taskId })
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
 					placeholder={t("comments.placeholder")}
+					aria-label={t("comments.placeholder")}
+					maxLength={5000}
 				/>
 				<button type="submit" disabled={posting}>
 					{posting ? t("loading.sending") : t("comments.submit")}

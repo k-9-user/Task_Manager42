@@ -23,7 +23,7 @@ x-backup-service: &backup-service
     - postgres_password
 
 x-backend-environment: &backend-environment
-  JWT_EXPIRATION: ${JWT_EXPIRATION:-3600}
+  JWT_EXPIRATION: ${JWT_EXPIRATION:-7200}
   OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
   OAUTH_GOOGLE_REDIRECT_URI: ${OAUTH_GOOGLE_REDIRECT_URI:-}
   CORS_ORIGINS: ${CORS_ORIGINS:-https://localhost}

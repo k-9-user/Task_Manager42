@@ -3,6 +3,8 @@ import { getProjectMessages, sendProjectMessage, deleteProjectMessage } from "..
 import { useTranslation } from "react-i18next";
 import "./ProjectMessages.css";
 
+const REFRESH_INTERVAL_MS = 15000;
+
 function ProjectMessages({ projectId, currentUserId, isOwner })
 {
 	const [messages, setMessages] = useState([]);
@@ -31,13 +33,23 @@ function ProjectMessages({ projectId, currentUserId, isOwner })
 			}
 		}
 		fetchMessages();
+		const interval = setInterval(() =>
+		{
+			getProjectMessages(projectId)
+				.then((data) => setMessages(data.messages))
+				.catch(() => {});
+		}, REFRESH_INTERVAL_MS);
+		return () => clearInterval(interval);
 	}, [projectId]);
 
 	async function handleSubmit(e)
 	{
 		e.preventDefault();
 		if (!content.trim())
+		{
+			setError(t("error.required"));
 			return ;
+		}
 
 		setPosting(true);
 		setError("");
@@ -82,7 +94,7 @@ function ProjectMessages({ projectId, currentUserId, isOwner })
 							<div className="message-meta">
 								<span className="message-author">{message.author_username}</span>
 								{(message.author_id === currentUserId || isOwner) && (
-									<button className="message-delete" onClick={() => handleDelete(message.id)}>✕</button>
+									<button className="message-delete" aria-label={t("messages.delete")} onClick={() => handleDelete(message.id)}>✕</button>
 								)}
 							</div>
 							<p className="message-content">{message.content}</p>
@@ -96,6 +108,8 @@ function ProjectMessages({ projectId, currentUserId, isOwner })
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
 					placeholder={t("messages.placeholder")}
+					aria-label={t("messages.placeholder")}
+					maxLength={2000}
 				/>
 				<button type="submit" disabled={posting}>
 					{posting ? t("loading.sending") : t("messages.send")}

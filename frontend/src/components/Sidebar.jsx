@@ -47,10 +47,10 @@ function Sidebar()
 					<NavLink to="/projects" className={navClass}>
 						<span>📁</span> {t("navbar.projects")}
 					</NavLink>
-					<NavLink to="/Search" className={navClass}>
+					<NavLink to="/search" className={navClass}>
 						<span>🔍</span> {t("navbar.search")}
 					</NavLink>
-					<NavLink to="/Profile" className={navClass}>
+					<NavLink to="/profile" className={navClass}>
 						<span>👤</span> {t("navbar.profile")}
 					</NavLink>
 					<NavLink to="/achievements" className={navClass}>

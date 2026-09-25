@@ -66,7 +66,7 @@ function GdprPanel({ user })
 	return (
 		<section className="gdpr-panel" aria-labelledby="gdpr-title">
 			<h2 id="gdpr-title">{t("gdpr.title")}</h2>
-			<p><Link to="/PrivacyPolicy#your-rights">{t("gdpr.rightsLink")}</Link></p>
+			<p><Link to="/privacy-policy#your-rights">{t("gdpr.rightsLink")}</Link></p>
 
 			<div className="gdpr-block">
 				<p>{t("gdpr.exportBody")}</p>
@@ -79,7 +79,7 @@ function GdprPanel({ user })
 			<div className="gdpr-block">
 				<p>
 					{t("gdpr.deleteBody")}{" "}
-					<Link to="/PrivacyPolicy#account-deletion">{t("gdpr.learnMore")}</Link>
+					<Link to="/privacy-policy#account-deletion">{t("gdpr.learnMore")}</Link>
 				</p>
 				{!confirming ? (
 					<button type="button" className="gdpr-danger-button" onClick={() => setConfirming(true)}>
@@ -92,6 +92,7 @@ function GdprPanel({ user })
 						</label>
 						<input
 							id="gdpr-confirm-username"
+							maxLength={50}
 							value={typedUsername}
 							onChange={(e) => setTypedUsername(e.target.value)}
 							autoComplete="off"

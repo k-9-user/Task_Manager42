@@ -66,33 +66,33 @@ function Search ()
 					<div className="input-group-search">
 						<div className="input-field-search">
 							<label htmlFor='search'>{t("search.title")} : </label>
-							<input id="search" type="text" value={query} onChange={(e) => setQuery(e.target.value)}/>
+							<input id="search" type="text" maxLength={255} value={query} onChange={(e) => setQuery(e.target.value)}/>
 						</div>
-						<select value={searchType} onChange={(e) => { setSearchType(e.target.value); setSort("created_at"); }}>
+						<select value={searchType} aria-label={t("search.typeLabel")} onChange={(e) => { setSearchType(e.target.value); setSort("created_at"); }}>
 							<option value="tasks">{t("search.tasks")}</option>
 							<option value="projects">{t("search.projects")}</option>
 						</select>
 						{searchType === "tasks" && (
-							<select value={status} onChange={(e) => setStatus(e.target.value)}>
+							<select value={status} aria-label={t("tasks.statusLabel")} onChange={(e) => setStatus(e.target.value)}>
 								<option value="">{t("search.allStatuses")}</option>
 								{TASK_STATUSES.map((value) => (
 									<option key={value} value={value}>{t(`tasks.status.${value}`)}</option>
 								))}
 							</select>
 						)}
-						<select value={sort} onChange={(e) => setSort(e.target.value)}>
+						<select value={sort} aria-label={t("search.sortLabel")} onChange={(e) => setSort(e.target.value)}>
 							{SORTS[searchType].map((value) => (
 								<option key={value} value={value}>{t(`search.sort.${value}`)}</option>
 							))}
 						</select>
-						<select value={direction} onChange={(e) => setDirection(e.target.value)}>
+						<select value={direction} aria-label={t("search.directionLabel")} onChange={(e) => setDirection(e.target.value)}>
 							<option value="desc">{t("search.direction.desc")}</option>
 							<option value="asc">{t("search.direction.asc")}</option>
 						</select>
 						<button type="submit">{t("navbar.search")}</button>
 						{loading && <p>{t("search.searching")}.</p>}
 
-						{error && <p className="error">{t("search.serverError")}{error}</p>}
+						{error && <p className="error">{error}</p>}
 
 						{!loading && !error && searched && results.length === 0 && (<p>{t("search.noResults")}</p>)}
 						<ul className="search-results">

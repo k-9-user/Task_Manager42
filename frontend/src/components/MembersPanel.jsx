@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { addProjectMember, lookupUserByEmail, removeProjectMember } from "../services/projectService";
 import { useTranslation } from "react-i18next";
+import { isValidEmail } from "../utils/validation";
 import UserBadge from "./UserBadge";
 import "./MembersPanel.css";
 
@@ -16,7 +17,15 @@ function MembersPanel({ projectId, members, currentUserId, isOwner, onMembersCha
 	{
 		e.preventDefault();
 		if (!email.trim())
+		{
+			setError(t("error.required"));
 			return ;
+		}
+		if (!isValidEmail(email.trim()))
+		{
+			setError(t("error.invalidEmail"));
+			return ;
+		}
 
 		setAdding(true);
 		setError("");
@@ -68,14 +77,16 @@ function MembersPanel({ projectId, members, currentUserId, isOwner, onMembersCha
 				))}
 			</ul>
 			{isOwner && (
-				<form onSubmit={handleAdd} className="members-add-form">
+				<form onSubmit={handleAdd} className="members-add-form" noValidate>
 					<input
 						type="email"
 						placeholder={t("members.emailPlaceholder")}
+						aria-label={t("members.emailPlaceholder")}
+						maxLength={254}
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 					/>
-					<select value={role} onChange={(e) => setRole(e.target.value)}>
+					<select value={role} aria-label={t("members.roleLabel")} onChange={(e) => setRole(e.target.value)}>
 						<option value="viewer">{t("members.role.viewer")}</option>
 						<option value="editor">{t("members.role.editor")}</option>
 						<option value="owner">{t("members.role.owner")}</option>

@@ -49,7 +49,7 @@ class PasswordSettings(DatabaseSettings):
 
 class Settings(PasswordSettings):
     jwt_secret: SecretStr = Field(min_length=32)
-    jwt_expiration: int = Field(default=3600, gt=0)
+    jwt_expiration: int = Field(default=7200, gt=0)
     oauth_google_client_id: str = ""
     oauth_google_client_secret: SecretStr = SecretStr("")
     oauth_google_redirect_uri: str = ""

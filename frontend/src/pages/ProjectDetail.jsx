@@ -9,6 +9,8 @@ import { getMe } from "../services/userservice";
 import { useTranslation } from "react-i18next";
 import './ProjectDetail.css';
 
+const REFRESH_INTERVAL_MS = 15000;
+
 function ProjectDetail()
 {
 	const { id } = useParams();
@@ -45,10 +47,23 @@ function ProjectDetail()
 			}
 		}
 		fetchProject();
+		const interval = setInterval(() =>
+		{
+			getProject(id)
+				.then((data) =>
+				{
+					setProject(data.project);
+					setMembers(data.members);
+					setTasks(data.tasks);
+				})
+				.catch(() => {});
+		}, REFRESH_INTERVAL_MS);
+		return () => clearInterval(interval);
 	}, [id]);
 
 	async function handleStatusChange(taskId, newStatus)
 	{
+		const previous = tasks;
 		setTasks(tasks.map((task) => (task.id === taskId ? { ...task, status: newStatus } : task)));
 
 		try
@@ -57,6 +72,7 @@ function ProjectDetail()
 		}
 		catch (err)
 		{
+			setTasks(previous);
 			setError(err.message);
 		}
 	}
@@ -125,11 +141,11 @@ function ProjectDetail()
 		<div className="project-detail-layout">
 			<div className="project-detail-main">
 				<form onSubmit={handleCreateTask} className="task-form">
-					<input type="text" placeholder={t("tasks.titlePlaceholder")} value={title} onChange={(e) => setTitle(e.target.value)} />
-					<input type="text" placeholder={t("projects.description")} value={description} onChange={(e) => setDescription(e.target.value)} />
+					<input type="text" placeholder={t("tasks.titlePlaceholder")} aria-label={t("tasks.titlePlaceholder")} maxLength={255} value={title} onChange={(e) => setTitle(e.target.value)} />
+					<input type="text" placeholder={t("projects.description")} aria-label={t("projects.description")} maxLength={5000} value={description} onChange={(e) => setDescription(e.target.value)} />
 					<button type="submit">{t("tasks.create")}</button>
 				</form>
-				<TaskBoard tasks={tasks} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} canDelete={isOwner} />
+				<TaskBoard tasks={tasks} currentUserId={currentUserId} onStatusChange={handleStatusChange} onTaskUpdated={handleTaskUpdated} onDeleteTask={handleDeleteTask} canEdit={canEdit} canDelete={isOwner} />
 			</div>
 			<div className="project-detail-side">
 				<MembersPanel

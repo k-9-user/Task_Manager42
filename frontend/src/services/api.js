@@ -2,19 +2,83 @@ import i18n from "../i18n";
 
 export const API_URL = import.meta.env.VITE_API_URL;
 
+export const TOKEN_KEY = "taskmanager.token";
+
 export const ACTIVITY_EVENT = "taskmanager:activity";
+
+const ERROR_KEYS = {
+	"Invalid email, username or password": "error.invalidCredentials",
+	"Account is banned": "error.banned",
+	"Too many requests": "error.tooManyRequests",
+	"Rate limit exceeded": "error.tooManyRequests",
+	"Invalid request": "error.invalidRequest",
+	"Username already taken": "error.usernameTaken",
+	"Email already registered": "error.accountExists",
+	"An account with this email already exists": "error.accountExists",
+	"Email or username already exists": "error.accountExists",
+	"User not found": "error.userNotFound",
+	"Utilisateur introuvable ou déjà membre de ce projet": "error.memberUnavailable",
+	"Impossible de retirer le dernier owner du projet": "error.lastOwner",
+	"At least one administrator is required": "error.lastAdmin",
+	"At least one active administrator is required": "error.lastAdmin",
+	"The bootstrap administrator is protected": "error.bootstrapAdmin",
+	"Projet introuvable": "error.notFound",
+	"Task not found": "error.notFound",
+	"Tâche introuvable": "error.notFound",
+	"Comment not found": "error.notFound",
+	"Message not found": "error.notFound",
+	"Attachment not found": "error.notFound",
+	"Attachment file not found": "error.notFound",
+	"Banner not found": "error.notFound",
+	"Membre introuvable": "error.notFound",
+	"Permission refusée": "error.forbidden",
+	"Project membership is read-only": "error.forbidden",
+	"Admin access required": "error.forbidden",
+	"Only the project owner can delete tasks": "error.forbidden",
+	"Only the comment author or the project owner may delete this comment": "error.forbidden",
+	"Only the message author or the project owner may delete this message": "error.forbidden",
+	"Unsupported attachment type": "attachments.errors.type",
+	"Unsupported banner image type": "attachments.errors.type",
+	"Invalid attachment filename": "attachments.errors.type",
+	"Attachment exceeds the configured size limit": "error.fileTooLarge",
+};
+
+export function translateError(message) {
+	return i18n.t(ERROR_KEYS[message] ?? "error.generic");
+}
 
 export function notifyActivity() {
 	window.dispatchEvent(new Event(ACTIVITY_EVENT));
 }
 
 export function authHeaders() {
-	const token = localStorage.getItem("token");
+	const token = localStorage.getItem(TOKEN_KEY);
 	return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export function endSession() {
+	localStorage.removeItem(TOKEN_KEY);
+	window.location.assign("/login?session=expired");
+}
+
+function expireOn401(response) {
+	if (response.status === 401) {
+		endSession();
+		throw new Error(i18n.t("error.sessionExpired"));
+	}
+}
+
+async function request(endpoint, options) {
+	try {
+		return await fetch(`${API_URL}${endpoint}`, options);
+	}
+	catch {
+		throw new Error(i18n.t("error.network"));
+	}
+}
+
 export async function apiFetch(endpoint, options = {}) {
-	const response = await fetch(`${API_URL}${endpoint}`,
+	const response = await request(endpoint,
 		{ ...options, headers: 
 			{
 				"Content-Type": "application/json",
@@ -23,18 +87,22 @@ export async function apiFetch(endpoint, options = {}) {
 			},
 		}
 	);
+	if (!endpoint.startsWith("/api/auth/"))
+		expireOn401(response);
 
-	const result = await response.json();
+	const isJson = response.headers.get("Content-Type")?.includes("application/json");
+	const result = isJson ? await response.json() : null;
 
-	if (!result.success)
-		throw new Error(result.error || i18n.t("error.generic"));
+	if (!result?.success)
+		throw new Error(translateError(result?.error));
 	if (options.method && options.method !== "GET")
 		notifyActivity();
 	return result.data;
 }
 
 export async function fetchAuthenticatedBlobUrl(endpoint) {
-	const response = await fetch(`${API_URL}${endpoint}`, { headers: authHeaders() });
+	const response = await request(endpoint, { headers: authHeaders() });
+	expireOn401(response);
 	if (!response.ok)
 		throw new Error(i18n.t("error.generic"));
 	const blob = await response.blob();

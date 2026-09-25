@@ -77,6 +77,8 @@ function Projects()
 					<input
 						type="text"
 						placeholder={t("projects.namePlaceholder")}
+						aria-label={t("projects.namePlaceholder")}
+						maxLength={255}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 						className="min-w-40 flex-1 rounded-md border border-brand-surface-border px-2.5 py-2 text-sm"
@@ -84,6 +86,8 @@ function Projects()
 					<input
 						type="text"
 						placeholder={t("projects.description")}
+						aria-label={t("projects.description")}
+						maxLength={5000}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 						className="min-w-40 flex-1 rounded-md border border-brand-surface-border px-2.5 py-2 text-sm"

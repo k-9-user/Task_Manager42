@@ -4,7 +4,7 @@ import './LanguageSwitcher.css';
 
 function LanguageSwitcher()
 {
-	const { i18n } = useTranslation();
+	const { t, i18n } = useTranslation();
 
 	function handleChange(e)
 	{
@@ -12,7 +12,7 @@ function LanguageSwitcher()
 	}
 
 	return (
-		<select className="language-switcher" value={i18n.language} onChange={handleChange}>
+		<select className="language-switcher" aria-label={t("navbar.language")} value={i18n.language} onChange={handleChange}>
 			<option value="fr">🇫🇷 Français</option>
 			<option value="en">🇬🇧 English</option>
 			<option value="es">🇪🇸 Español</option>

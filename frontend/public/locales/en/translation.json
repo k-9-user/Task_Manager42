@@ -7,7 +7,8 @@
 		"search": "To Search",
 		"profile": "Profile",
 		"achievements": "Achievements",
-		"users": "User management"
+		"users": "User management",
+		"language": "Language"
 	},
 	"login":
 	{
@@ -42,7 +43,8 @@
 		"invapassword": "Password must be at least {{min}} characters long",
 		"invapasswordlong": "Password must be at most {{max}} characters long",
 		"invapasswordchars": "Password cannot contain invisible characters (tab, line break…)",
-		"passwordRules": "Use {{min}} or more characters. Symbols like ! @ # $ % work too."
+		"passwordRules": "Use {{min}} or more characters. Symbols like ! @ # $ % work too.",
+		"emailLabel": "Email"
 	},
 	"loading":
 	{
@@ -52,7 +54,25 @@
 	"error":
 	{
 		"err": "Error",
-		"generic": "An error has occurred"
+		"generic": "An error has occurred",
+		"network": "Unable to contact the server. Check your connection and try again.",
+		"sessionExpired": "Your session has expired. Please log in again.",
+		"invalidCredentials": "Invalid email, username or password.",
+		"banned": "This account is banned.",
+		"tooManyRequests": "Too many attempts. Please wait a moment and try again.",
+		"invalidRequest": "Some fields are invalid.",
+		"usernameTaken": "This username is already taken.",
+		"accountExists": "An account with this email or username already exists.",
+		"userNotFound": "This user no longer exists.",
+		"memberUnavailable": "No user with this email, or they are already a member of this project.",
+		"lastOwner": "A project must keep at least one owner.",
+		"lastAdmin": "At least one active administrator must remain.",
+		"bootstrapAdmin": "The bootstrap administrator is protected: it cannot be demoted, banned, renamed or deleted.",
+		"notFound": "This item no longer exists.",
+		"forbidden": "You don't have permission to do this.",
+		"fileTooLarge": "File too large.",
+		"required": "This field is required.",
+		"invalidEmail": "Enter a valid email address."
 	},
 	"admin":
 	{
@@ -83,14 +103,7 @@
 		"save": "Save",
 		"cancel": "Cancel",
 		"displayName": "Display name",
-		"confirmBan": "Ban {{username}}? They lose access at once and cannot log in until restored.",
-		"errors":
-		{
-			"lastAdmin": "At least one active administrator must remain.",
-			"bootstrap": "The bootstrap administrator is protected: it cannot be demoted, banned, renamed or deleted.",
-			"usernameTaken": "This username is already taken.",
-			"notFound": "This user no longer exists."
-		}
+		"confirmBan": "Ban {{username}}? They lose access at once and cannot log in until restored."
 	},
 	"projects":
 	{
@@ -110,7 +123,6 @@
 		"title": "Search",
 		"queryRequired": "Enter a word to search for",
 		"allStatuses": "all statuses",
-		"serverError": "Unable to contact the server: ",
 		"noResults": "No results found",
 		"searching": "Searching",
 		"tasks": "Tasks",
@@ -127,7 +139,10 @@
 		{
 			"desc": "Descending",
 			"asc": "Ascending"
-		}
+		},
+		"typeLabel": "Search in",
+		"sortLabel": "Sort by",
+		"directionLabel": "Sort order"
 	},
 	"comments":
 	{
@@ -173,7 +188,8 @@
 			"todo": "Things to Do",
 			"in_progress": "In Progress",
 			"done": "Done"
-		}
+		},
+		"statusLabel": "Task status"
 	},
 	"members":
 	{
@@ -186,14 +202,16 @@
 			"viewer": "Viewer",
 			"editor": "Editor",
 			"owner": "Owner"
-		}
+		},
+		"roleLabel": "Role"
 	},
 	"messages":
 	{
 		"title": "Team messages",
 		"empty": "No messages yet",
 		"placeholder": "Write a message to the team...",
-		"send": "Send"
+		"send": "Send",
+		"delete": "Delete message"
 	},
 	"footer":
 	{
@@ -403,5 +421,17 @@
 			"level": "Level {{level}} reached",
 			"close": "Close notification"
 		}
+	},
+	"notFound":
+	{
+		"title": "Page not found",
+		"body": "This page does not exist or has moved.",
+		"back": "Back to the app"
+	},
+	"crash":
+	{
+		"title": "Something went wrong",
+		"body": "This page could not be displayed.",
+		"reload": "Reload the page"
 	}
 }

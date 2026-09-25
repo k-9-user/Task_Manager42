@@ -1,5 +1,5 @@
 import i18n from "../i18n";
-import { API_URL, authHeaders, notifyActivity } from "./api";
+import { API_URL, authHeaders, endSession, notifyActivity, translateError } from "./api";
 
 export const MAX_UPLOAD_SIZE_MB = Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
@@ -70,9 +70,14 @@ export function uploadWithProgress(endpoint, file, onProgress)
 				notifyActivity();
 				return resolve(result.data);
 			}
+			if (xhr.status === 401)
+			{
+				endSession();
+				return reject(new Error(i18n.t("error.sessionExpired")));
+			}
 			if (xhr.status === 413)
 				return reject(new Error(i18n.t("attachments.errors.size", { max: MAX_UPLOAD_SIZE_MB })));
-			reject(new Error(result?.error || i18n.t("attachments.errors.upload")));
+			reject(new Error(result?.error ? translateError(result.error) : i18n.t("attachments.errors.upload")));
 		};
 		xhr.onerror = () => reject(new Error(i18n.t("attachments.errors.upload")));
 		xhr.onabort = () => reject(new Error(i18n.t("attachments.errors.upload")));

@@ -6,14 +6,6 @@ import './AdminUsers.css';
 
 const PAGE_SIZE = 20;
 
-const ERROR_KEYS = {
-	"At least one administrator is required": "admin.errors.lastAdmin",
-	"At least one active administrator is required": "admin.errors.lastAdmin",
-	"The bootstrap administrator is protected": "admin.errors.bootstrap",
-	"Username already taken": "admin.errors.usernameTaken",
-	"User not found": "admin.errors.notFound",
-};
-
 function AdminUsers ()
 {
 	const [users, setUsers] = useState([]);
@@ -58,11 +50,6 @@ function AdminUsers ()
 			.finally(() => { if (!cancelled) setLoading(false); });
 		return () => { cancelled = true; };
 	}, [page, query, role, status, reloadKey]);
-
-	function describe(message)
-	{
-		return (ERROR_KEYS[message] ? t(ERROR_KEYS[message]) : message);
-	}
 
 	function handleSearch(e)
 	{
@@ -194,7 +181,7 @@ function AdminUsers ()
 					<option value="banned">{t("admin.banned")}</option>
 				</select>
 			</div>
-			{error && <p className="error" role="alert">{t("error.err")} : {describe(error)}</p>}
+			{error && <p className="error" role="alert">{t("error.err")} : {error}</p>}
 			{loading && <p role="status">{t("loading.load")}</p>}
 			<table>
 				<thead>

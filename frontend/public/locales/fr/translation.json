@@ -7,7 +7,8 @@
 		"search": "Rechercher",
 		"profile": "Profil",
 		"achievements": "Succès",
-		"users": "Gestion utilisateurs"
+		"users": "Gestion utilisateurs",
+		"language": "Langue"
 	},
 	"login":
 	{
@@ -42,7 +43,8 @@
 		"invapassword": "Le mot de passe doit contenir au moins {{min}} caractères",
 		"invapasswordlong": "Le mot de passe doit contenir au plus {{max}} caractères",
 		"invapasswordchars": "Le mot de passe ne peut pas contenir de caractères invisibles (tabulation, retour à la ligne…)",
-		"passwordRules": "Utilisez au moins {{min}} caractères. Les symboles ! @ # $ % sont acceptés."
+		"passwordRules": "Utilisez au moins {{min}} caractères. Les symboles ! @ # $ % sont acceptés.",
+		"emailLabel": "Email"
 	},
 	"loading":
 	{
@@ -52,7 +54,25 @@
 	"error":
 	{
 		"err": "Erreur",
-		"generic": "Une erreur est survenue"
+		"generic": "Une erreur est survenue",
+		"network": "Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.",
+		"sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+		"invalidCredentials": "Email, nom d'utilisateur ou mot de passe incorrect.",
+		"banned": "Ce compte est banni.",
+		"tooManyRequests": "Trop de tentatives. Patientez un instant puis réessayez.",
+		"invalidRequest": "Certains champs sont invalides.",
+		"usernameTaken": "Ce nom d'utilisateur est déjà pris.",
+		"accountExists": "Un compte existe déjà avec cet email ou ce nom d'utilisateur.",
+		"userNotFound": "Cet utilisateur n'existe plus.",
+		"memberUnavailable": "Aucun utilisateur avec cet email, ou il est déjà membre de ce projet.",
+		"lastOwner": "Un projet doit garder au moins un propriétaire.",
+		"lastAdmin": "Il doit rester au moins un administrateur actif.",
+		"bootstrapAdmin": "L'administrateur initial est protégé : impossible de le rétrograder, le bannir, le renommer ou le supprimer.",
+		"notFound": "Cet élément n'existe plus.",
+		"forbidden": "Vous n'avez pas la permission de faire cela.",
+		"fileTooLarge": "Fichier trop volumineux.",
+		"required": "Ce champ est obligatoire.",
+		"invalidEmail": "Saisissez une adresse email valide."
 	},
 	"admin":
 	{
@@ -83,14 +103,7 @@
 		"save": "Enregistrer",
 		"cancel": "Annuler",
 		"displayName": "Nom affiché",
-		"confirmBan": "Bannir {{username}} ? Son accès est coupé immédiatement, jusqu'à sa réactivation.",
-		"errors":
-		{
-			"lastAdmin": "Il doit rester au moins un administrateur actif.",
-			"bootstrap": "L'administrateur initial est protégé : impossible de le rétrograder, le bannir, le renommer ou le supprimer.",
-			"usernameTaken": "Ce nom d'utilisateur est déjà pris.",
-			"notFound": "Cet utilisateur n'existe plus."
-		}
+		"confirmBan": "Bannir {{username}} ? Son accès est coupé immédiatement, jusqu'à sa réactivation."
 	},
 	"projects":
 	{
@@ -110,7 +123,6 @@
 		"title": "Recherche",
 		"queryRequired": "Entrez un mot pour rechercher",
 		"allStatuses": "tous les statuts",
-		"serverError": "Impossible de contacter le serveur: ",
 		"noResults": "Aucun résultat trouvé",
 		"searching": "Recherche en cours",
 		"tasks": "Tâches",
@@ -127,7 +139,10 @@
 		{
 			"desc": "Décroissant",
 			"asc": "Croissant"
-		}
+		},
+		"typeLabel": "Rechercher dans",
+		"sortLabel": "Trier par",
+		"directionLabel": "Ordre du tri"
 	},
 	"comments":
 	{
@@ -173,7 +188,8 @@
 			"todo": "À faire",
 			"in_progress": "En cours",
 			"done": "Terminé"
-		}
+		},
+		"statusLabel": "Statut de la tâche"
 	},
 	"members":
 	{
@@ -186,14 +202,16 @@
 			"viewer": "Lecteur",
 			"editor": "Éditeur",
 			"owner": "Propriétaire"
-		}
+		},
+		"roleLabel": "Rôle"
 	},
 	"messages":
 	{
 		"title": "Messages de l'équipe",
 		"empty": "Aucun message pour le moment",
 		"placeholder": "Écrire un message à l'équipe...",
-		"send": "Envoyer"
+		"send": "Envoyer",
+		"delete": "Supprimer le message"
 	},
 	"footer":
 	{
@@ -403,5 +421,17 @@
 			"level": "Niveau {{level}} atteint",
 			"close": "Fermer la notification"
 		}
+	},
+	"notFound":
+	{
+		"title": "Page introuvable",
+		"body": "Cette page n'existe pas ou a été déplacée.",
+		"back": "Retour à l'application"
+	},
+	"crash":
+	{
+		"title": "Une erreur est survenue",
+		"body": "Cette page n'a pas pu s'afficher.",
+		"reload": "Recharger la page"
 	}
 }
