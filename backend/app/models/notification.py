@@ -1,12 +1,11 @@
 import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Text
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.database import Base, utc_now
 
 
 class NotificationType(str, enum.Enum):
@@ -34,7 +33,9 @@ class Notification(Base):
     related_task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
     related_project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     read = Column(Boolean, nullable=False, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
 
     # Relations
     user = relationship("User", foreign_keys=[user_id])

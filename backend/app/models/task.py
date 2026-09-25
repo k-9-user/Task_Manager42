@@ -1,12 +1,11 @@
 import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import Column, String, Text, Date, DateTime, Enum, ForeignKey
+from sqlalchemy import Column, String, Text, Date, DateTime, Enum, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.database import Base, utc_now
 
 
 class TaskStatus(str, enum.Enum):
@@ -36,9 +35,15 @@ class Task(Base):
     assignee_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     due_date = Column(Date, nullable=True)
     banner_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
     )
 
     project = relationship("Project", back_populates="tasks")

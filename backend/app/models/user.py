@@ -34,7 +34,7 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint(
-            "oauth_provider IS NULL OR oauth_provider IN ('google', 'github')",
+            "oauth_provider IS NULL OR oauth_provider = 'google'",
             name="ck_users_oauth_provider",
         ),
         CheckConstraint(

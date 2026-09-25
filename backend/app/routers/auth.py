@@ -1,8 +1,7 @@
-import hashlib
 import logging
-import secrets
-from datetime import datetime, timedelta, timezone
+import time
 from typing import Annotated, Any
+from uuid import UUID
 
 import httpx
 from authlib.integrations.base_client.errors import OAuthError
@@ -10,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from pydantic import EmailStr, TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,7 +17,6 @@ from app.auth.oauth import GoogleClaims, get_google_oauth_client, google_usernam
 from app.auth.security import create_access_token, hash_password, verify_password_and_update
 from app.config import get_settings
 from app.database import get_db
-from app.models.oauth_handoff import OAuthHandoff
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.common import SuccessEnvelope
 from app.schemas.user import AuthData, UserLogin, UserRegister, UserResponse
@@ -59,10 +57,6 @@ def _oauth_exchange_error() -> HTTPException:
         detail="OAuth handoff expired or invalid",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
-
-def _hash_oauth_handoff(raw_handoff: str) -> str:
-    return hashlib.sha256(raw_handoff.encode("utf-8")).hexdigest()
 
 
 def _stored_email_form(identifier: str) -> str:
@@ -256,19 +250,10 @@ async def google_oauth_callback(
     except HTTPException:
         return _oauth_redirect("/login?oauth=failed")
 
-    raw_handoff = secrets.token_urlsafe(32)
-    db.execute(delete(OAuthHandoff).where(OAuthHandoff.expires_at < func.now()))
-    db.add(OAuthHandoff(
-        user_id=user.id,
-        token_hash=_hash_oauth_handoff(raw_handoff),
-        expires_at=datetime.now(timezone.utc) + timedelta(seconds=OAUTH_HANDOFF_MAX_AGE_SECONDS),
-    ))
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        return _oauth_redirect("/login?oauth=failed")
-    request.session[OAUTH_HANDOFF_KEY] = raw_handoff
+    request.session[OAUTH_HANDOFF_KEY] = {
+        "user_id": str(user.id),
+        "expires_at": time.time() + OAUTH_HANDOFF_MAX_AGE_SECONDS,
+    }
     return _oauth_redirect("/oauth/callback")
 
 
@@ -281,23 +266,16 @@ def exchange_google_oauth_handoff(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> AuthResponse:
+    """Swap the signed, short-lived handoff kept in the session cookie for a bearer token."""
+
     handoff = request.session.pop(OAUTH_HANDOFF_KEY, None)
     request.session.clear()
-    if not isinstance(handoff, str) or not handoff:
+    if not isinstance(handoff, dict) or handoff.get("expires_at", 0) < time.time():
         raise _oauth_exchange_error()
-    user_id = db.execute(
-        delete(OAuthHandoff)
-        .where(
-            OAuthHandoff.token_hash == _hash_oauth_handoff(handoff),
-            OAuthHandoff.expires_at >= func.now(),
-        )
-        .returning(OAuthHandoff.user_id)
-    ).scalar_one_or_none()
-    db.commit()
-    if user_id is None:
-        raise _oauth_exchange_error()
-
-    user = db.get(User, user_id)
+    try:
+        user = db.get(User, UUID(handoff["user_id"]))
+    except (KeyError, TypeError, ValueError):
+        raise _oauth_exchange_error() from None
     if user is None:
         raise _oauth_exchange_error()
     _ensure_active_user(user)

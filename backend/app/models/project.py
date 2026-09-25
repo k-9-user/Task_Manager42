@@ -1,11 +1,10 @@
 import uuid
-from datetime import datetime
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.database import Base, utc_now
 
 
 class Project(Base):
@@ -21,7 +20,9 @@ class Project(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.now()
+    )
 
     owner = relationship("User", foreign_keys=[owner_id])
 

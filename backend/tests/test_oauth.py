@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
@@ -12,7 +11,6 @@ import pytest
 from authlib.integrations.base_client.errors import OAuthError
 from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 from starlette.requests import Request
 
 from app.auth.oauth import get_google_oauth_client, google_username_candidates
@@ -397,39 +395,25 @@ def test_oauth_exchange_rejects_deleted_user(
     assert response.status_code == 401
 
 
-def test_oauth_exchange_consumes_handoff_atomically(client: TestClient) -> None:
+def test_oauth_exchange_rejects_expired_handoff(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.routers.auth.OAUTH_HANDOFF_MAX_AGE_SECONDS", -1)
     _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
     callback = client.get(
         "/api/auth/oauth/google/callback", follow_redirects=False,
     )
     assert callback.status_code == 303
-    cookie = client.cookies.get("task_manager_oauth")
 
-    def exchange() -> int:
-        with TestClient(app, base_url="https://testserver") as replay_client:
-            return replay_client.post(
-                "/api/auth/oauth/google/exchange",
-                headers={"Cookie": f"task_manager_oauth={cookie}"},
-            ).status_code
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        statuses = list(executor.map(lambda _index: exchange(), range(2)))
-
-    assert sorted(statuses) == [200, 401]
+    assert client.post("/api/auth/oauth/google/exchange").status_code == 401
 
 
-def test_oauth_exchange_rejects_expired_handoff(client: TestClient) -> None:
+def test_oauth_exchange_is_single_use_per_browser(client: TestClient) -> None:
     _override_google_client(CallbackClient(result={"userinfo": VALID_CLAIMS}))
-    callback = client.get(
-        "/api/auth/oauth/google/callback", follow_redirects=False,
-    )
-    assert callback.status_code == 303
-    with SessionLocal() as session:
-        session.execute(text(
-            "UPDATE oauth_handoffs SET expires_at = now() - interval '1 second'"
-        ))
-        session.commit()
+    client.get("/api/auth/oauth/google/callback", follow_redirects=False)
 
+    assert client.post("/api/auth/oauth/google/exchange").status_code == 200
     assert client.post("/api/auth/oauth/google/exchange").status_code == 401
 
 

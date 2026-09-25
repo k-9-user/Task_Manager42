@@ -43,7 +43,6 @@ from app.main import app
 from app.models.api_key import ApiKey
 from app.models.attachment import Attachment
 from app.models.notification import Notification
-from app.models.oauth_handoff import OAuthHandoff
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.models.task import Task

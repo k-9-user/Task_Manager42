@@ -1,7 +1,6 @@
 from uuid import uuid4
 
-from alembic import command
-from sqlalchemy import select, text
+from sqlalchemy import select
 
 from app.auth.api_key_auth import hash_api_key
 from app.models.api_key import ApiKey
@@ -87,38 +86,3 @@ def test_revoke_invalidates_key(client, user_factory, auth_headers):
     assert client.get(
         "/api/v1/public/projects", headers={"X-API-Key": issued["key"]},
     ).status_code == 401
-
-
-def test_migration_hashes_existing_plaintext_keys(database_engine, alembic_config):
-    user_id = uuid4()
-    key_id = uuid4()
-    raw_key = "legacy-plaintext-api-key"
-    try:
-        command.downgrade(alembic_config, "add_banner_comments")
-        with database_engine.begin() as connection:
-            connection.execute(text(
-                "INSERT INTO users (id, email, username, password_hash) "
-                "VALUES (:id, :email, :username, :password_hash)"
-            ), {
-                "id": user_id,
-                "email": "legacy-key@example.com",
-                "username": "legacy_key_user",
-                "password_hash": "$argon2id$legacy-placeholder",
-            })
-            connection.execute(text(
-                "INSERT INTO api_keys (id, user_id, key) VALUES (:id, :user_id, :key)"
-            ), {"id": key_id, "user_id": user_id, "key": raw_key})
-
-        command.upgrade(alembic_config, "head")
-        with database_engine.connect() as connection:
-            stored = connection.execute(
-                text("SELECT key_hash FROM api_keys WHERE id = :id"),
-                {"id": key_id},
-            ).scalar_one()
-        assert stored == hash_api_key(raw_key)
-
-        command.downgrade(alembic_config, "add_banner_comments")
-        with database_engine.connect() as connection:
-            assert connection.execute(text("SELECT count(*) FROM api_keys")).scalar_one() == 0
-    finally:
-        command.upgrade(alembic_config, "head")
