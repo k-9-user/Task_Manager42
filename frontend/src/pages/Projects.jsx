@@ -3,6 +3,7 @@ import { getProjects, createProject } from "../services/projectService";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+const CREATE_BUTTON = "cursor-pointer rounded-lg border-none bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-hover";
 
 function Projects()
 {
@@ -60,16 +61,17 @@ function Projects()
 	if (loading)
 		return <p>{t("loading.load")}</p>;
 
+	const isEmpty = projects.length === 0 && !showForm;
+
 	return (
-		<div className="flex min-h-full flex-col gap-6 bg-brand-surface-alt p-8 font-sans max-sm:p-4">
+		<div className="flex min-h-full flex-1 flex-col gap-6 bg-brand-surface-alt p-8 font-sans max-sm:p-4">
 			<div className="flex flex-wrap items-center justify-between gap-4">
 				<h1 className="m-0 text-brand-primary-darker">{t("projects.title")}</h1>
-				<button
-					className="cursor-pointer rounded-lg border-none bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-hover"
-					onClick={() => setShowForm(!showForm)}
-				>
-					{showForm ? t("register.return") : `+ ${t("projects.create")}`}
-				</button>
+				{!isEmpty && (
+					<button className={CREATE_BUTTON} onClick={() => setShowForm(!showForm)}>
+						{showForm ? t("register.return") : `+ ${t("projects.create")}`}
+					</button>
+				)}
 			</div>
 			{error && <p className="m-0 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p>}
 			{showForm && (
@@ -97,19 +99,27 @@ function Projects()
 					</button>
 				</form>
 			)}
-			<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
-				{projects.map((project) => (
-					<Link
-						to={`/projects/${project.id}`}
-						key={project.id}
-						className="flex flex-col gap-2 rounded-xl border border-brand-surface-border border-t-4 border-t-brand-primary bg-brand-surface p-5 text-inherit no-underline shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
-					>
-						<h3 className="m-0 text-base text-brand-primary-darker">{project.name}</h3>
-						<p className="m-0 text-sm text-[#6b21a8]">{project.description || " "}</p>
-					</Link>
-				))}
-				{projects.length === 0 && <p className="italic text-[#8b7aa8]">{t("projects.empty")}</p>}
-			</div>
+			{isEmpty ? (
+				<div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+					<p className="m-0 text-lg italic text-[#8b7aa8]">{t("projects.empty")}</p>
+					<button className={CREATE_BUTTON} onClick={() => setShowForm(true)}>
+						+ {t("projects.create")}
+					</button>
+				</div>
+			) : (
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+					{projects.map((project) => (
+						<Link
+							to={`/projects/${project.id}`}
+							key={project.id}
+							className="flex flex-col gap-2 rounded-xl border border-brand-surface-border border-t-4 border-t-brand-primary bg-brand-surface p-5 text-inherit no-underline shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+						>
+							<h3 className="m-0 text-base text-brand-primary-darker">{project.name}</h3>
+							<p className="m-0 text-sm text-[#6b21a8]">{project.description || " "}</p>
+						</Link>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

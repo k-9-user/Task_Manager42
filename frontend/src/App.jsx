@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import About from "./pages/About";
 import AdminRoute from "./pages/AdminRoute";
 import AdminUsers from "./pages/AdminUsers";
 import Achievements from "./pages/Achievements";
@@ -32,6 +33,7 @@ function AppContent() {
        <ErrorBoundary key={location.pathname}>
        <Routes>
          <Route path="/" element={<Navigate to={isLoggedIn() ? "/projects" : "/login"} replace />} />
+         <Route path="/about" element={<About />} />
          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
          <Route path="/achievements" element={<PrivateRoute><Achievements /></PrivateRoute>} />
          <Route path="/login" element={<Login />} />

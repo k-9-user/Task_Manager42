@@ -35,9 +35,28 @@
 
 .profile-identity {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 1rem;
 	min-width: 0;
+}
+
+.profile-edit-button {
+	margin-left: auto;
+	cursor: pointer;
+	border: 1px solid var(--color-brand-surface-border);
+	border-radius: 0.5rem;
+	background: var(--color-brand-surface);
+	color: var(--color-brand-primary-dark);
+	padding: 0.45rem 0.9rem;
+	font-size: 0.85rem;
+	font-weight: 600;
+}
+
+.profile-edit-button:hover {
+	background: var(--color-brand-primary);
+	border-color: var(--color-brand-primary);
+	color: #fff;
 }
 
 .profile-avatar {
@@ -77,12 +96,6 @@
 	color: #2c1a4d;
 }
 
-.profile-edit h2 {
-	font-size: 1.2rem;
-	color: var(--color-brand-primary-darker);
-	margin: 0;
-}
-
 .profile-edit input {
 	padding: 0.5rem;
 	border: 1px solid var(--color-brand-surface-border);
@@ -101,11 +114,23 @@
 	font-weight: 600;
 }
 
+.profile-edit .profile-edit-cancel {
+	background: var(--color-brand-surface);
+	border-color: var(--color-brand-surface-border);
+	color: var(--color-brand-primary-dark);
+}
+
+.profile-edit-actions {
+	display: flex;
+	justify-content: center;
+	gap: 0.5rem;
+}
+
 .profile-edit button:disabled {
 	cursor: not-allowed;
 	opacity: 0.5;
 }
 
-.profile-saved {
+.profile-page .profile-saved {
 	color: #15803d;
 }

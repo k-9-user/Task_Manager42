@@ -1,3 +1,20 @@
 .language-switcher {
 	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--color-brand-sidebar-text);
+	background: transparent;
+	border: 1px solid rgb(255 255 255 / 0.2);
+	border-radius: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+}
+
+.language-switcher:hover {
+	background: rgb(255 255 255 / 0.1);
+	color: #ffffff;
+}
+
+.language-switcher option {
+	color: #2c1a4d;
+	background: #ffffff;
 }

@@ -99,6 +99,28 @@
 	gap: 0.5rem;
 }
 
+.track-header {
+	cursor: pointer;
+	list-style: none;
+}
+
+.track-header::-webkit-details-marker {
+	display: none;
+}
+
+.track-header h2::before {
+	content: "▸ ";
+	color: var(--color-brand-primary);
+}
+
+details[open] > .track-header h2::before {
+	content: "▾ ";
+}
+
+details[open] > .track-header {
+	margin-bottom: 0.75rem;
+}
+
 .track-count {
 	font-size: 0.8rem;
 }

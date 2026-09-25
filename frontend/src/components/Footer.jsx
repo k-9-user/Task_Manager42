@@ -8,6 +8,7 @@ function Footer() {
 		<footer className="footer">
 			<p>&copy; 2026 Task Manager</p>
 			<div className="footer-links">
+				<Link className="condition-link" to="/about">{t("about.title")}</Link>
 				<Link className="condition-link" to="/privacy-policy">{t("footer.pc")}</Link>
 				<Link className="condition-link" to="/terms-of-service">{t("footer.cdu")}</Link>
 				<Link className="condition-link" to="/status">{t("status.title")}</Link>

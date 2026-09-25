@@ -4,7 +4,7 @@
 		"projects": "Projects",
 		"login": "Log in",
 		"logout": "Log out",
-		"search": "To Search",
+		"search": "Search",
 		"profile": "Profile",
 		"achievements": "Achievements",
 		"users": "User management",
@@ -102,7 +102,6 @@
 		"edit": "Edit",
 		"save": "Save",
 		"cancel": "Cancel",
-		"displayName": "Display name",
 		"confirmBan": "Ban {{username}}? They lose access at once and cannot log in until restored."
 	},
 	"projects":
@@ -159,6 +158,7 @@
 		"delete": "Delete",
 		"hintTypes": "Allowed formats: {{types}}",
 		"hintSize": "Max size: {{max}} MB",
+		"limits": "Formats & size",
 		"progress": "Upload progress",
 		"pick": "+ Add a file",
 		"upload": "Add the file",
@@ -232,6 +232,7 @@
 		"lastBackup": "Last backup:",
 		"never": "none yet",
 		"backupCount": "{{count}} kept",
+		"backupEvery": "every {{minutes}} min",
 		"backupState":
 		{
 			"ok": "OK",
@@ -240,21 +241,51 @@
 			"missing": "No backup"
 		},
 		"backupTitle": "Backups and disaster recovery",
-		"backupBody": "Your projects, tasks and attached files are backed up automatically at regular intervals, and the most recent copies are kept. If an incident occurs, the service can be restored from the latest backup within minutes."
+		"backupBody": "The database and uploaded files are backed up automatically, and the most recent backups are kept. After an incident, an administrator restores the latest backup with a single command; changes made after that backup are lost."
+	},
+	"about":
+	{
+		"title": "About this demo",
+		"intro": "Task Manager is a collaborative project and task manager, built at 42 by Eraad, khderdou, ksupinsk and nratajcz for the ft_transcendence project. This copy is a local demo: explore it freely.",
+		"featuresTitle": "What you can do",
+		"features":
+		{
+			"projects": "Create projects and invite members as Owner, Editor or Viewer.",
+			"tasks": "Follow tasks by status, with a description, attached files and a banner image.",
+			"discussion": "Comment on tasks and talk with your team on each project's message wall.",
+			"search": "Search tasks and projects with filters, sorting and pages.",
+			"gamification": "Unlock achievements, earn XP, level up and collect badges.",
+			"api": "Connect other tools through the public API with a personal API key.",
+			"privacy": "Download a copy of your data or delete your account at any time.",
+			"languages": "Use the app in English, French or Spanish."
+		},
+		"stackTitle": "How it is built",
+		"stackBody": "A React 19 interface (Vite, Tailwind CSS) talks to a FastAPI backend (Python, SQLAlchemy) backed by PostgreSQL 17. nginx serves everything over HTTPS, and the whole stack runs in Docker Compose with automatic backups.",
+		"limitsTitle": "Demo limits",
+		"limits":
+		{
+			"local": "It runs only on this computer (https://localhost); it is not an online service.",
+			"certificate": "The HTTPS certificate is self-signed, so your browser shows a warning the first time.",
+			"google": "“Continue with Google” works only if this copy has been given its own Google credentials.",
+			"email": "Emails (data download and account deletion confirmations) land in a local test inbox and are never delivered.",
+			"refresh": "Project pages refresh every 15 seconds, so other members' changes are not instant.",
+			"api": "API keys and data import/export are managed through the API documentation (/docs), without a screen of their own.",
+			"reset": "Demo data can be reset at any time: do not store anything important."
+		}
 	},
 	"legal":
 	{
-		"updated": "Last updated: August 27, 2026",
+		"updated": "Last updated: September 25, 2026",
 		"privacy":
 		{
 			"title": "Privacy Policy",
-			"updated": "Last updated: September 24, 2026",
+			"updated": "Last updated: September 25, 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Data we collect",
-					"body": "When you create an account, we collect your username, email address and password. If you sign in with Google, we receive your Google account ID, email address and profile picture instead of a password. We also store what you create in Task Manager: projects, tasks, comments, messages, files and API keys, plus your progress (XP, achievements and badges)."
+					"body": "When you create an account, we collect your username, email address and password. If you sign in with Google, we receive your Google account ID, email address and profile picture instead of a password. We also store what you create in Task Manager: projects, tasks, comments, messages, files and API keys, plus your progress (XP, achievements and badges). Your browser keeps your sign-in token and your language choice in its local storage. Signing in with Google also sets a cookie that lasts 10 minutes and only protects that sign-in. We use no advertising or tracking cookies."
 				},
 				"use":
 				{
@@ -274,7 +305,7 @@
 				"retention":
 				{
 					"title": "5. Data retention",
-					"body": "We keep your data for as long as your account exists. Backup copies may remain for a short time after it is deleted."
+					"body": "We keep your data for as long as your account exists. Automatic backups keep the latest copies of the database and files (by default one per hour, for 24 hours), so deleted data can remain in them for about a day."
 				}
 			},
 			"rights":
@@ -284,7 +315,7 @@
 				"items":
 				{
 					"access": "access and download your data from your Profile page;",
-					"rectification": "correct your username and display name from your Profile page (contact an administrator to change your email);",
+					"rectification": "correct your username from your Profile page (contact an administrator to change your email);",
 					"erasure": "delete your account from your Profile page;",
 					"objection": "object to or restrict the use of your data by contacting an administrator."
 				},
@@ -301,12 +332,49 @@
 		"terms":
 		{
 			"title": "Terms of Service",
-			"section1Title": "1. Purpose",
-			"section1Body": "By creating an account, you agree to these terms of service.",
-			"section2Title": "2. User account",
-			"section2Body": "You are responsible for keeping the information used to sign in to your account confidential, as well as for all activity carried out from it. You are also required to provide accurate information when creating your account.",
-			"section3Title": "3. Acceptable use",
-			"section3Body": "You must use the platform in a fully lawful manner, without storing or sharing illegal content. You must also not compromise the security of the platform."
+			"sections":
+			{
+				"purpose":
+				{
+					"title": "1. Purpose",
+					"body": "Task Manager is a collaborative project and task manager built by students at 42 for the ft_transcendence project. This copy is a demo that runs on your own computer. By creating an account, you accept these terms."
+				},
+				"account":
+				{
+					"title": "2. Your account",
+					"body": "You are responsible for keeping the information used to sign in to your account confidential, and for all activity carried out from it. Provide accurate information when you create it. You can delete your account at any time from your Profile page."
+				},
+				"use":
+				{
+					"title": "3. Acceptable use",
+					"body": "Use the platform lawfully: do not store or share illegal, hateful or harmful content. Do not try to access projects you are not a member of, to break the platform's security or to overload it; sign-in and public API requests are rate limited."
+				},
+				"content":
+				{
+					"title": "4. Your content",
+					"body": "What you create (projects, tasks, comments, messages and files) stays yours. Every member of a project can see its content; the project owner decides who joins and with which role (Owner, Editor or Viewer). Files must use an allowed format and stay within the size limit."
+				},
+				"api":
+				{
+					"title": "5. Public API and API keys",
+					"body": "An API key gives access to your data through the public API. Keep it as secret as a password and revoke any key you think has leaked. Excessive use can be limited."
+				},
+				"moderation":
+				{
+					"title": "6. Moderation",
+					"body": "Administrators can ban or delete an account that breaks these terms. A banned account can no longer sign in or use its API keys."
+				},
+				"liability":
+				{
+					"title": "7. Availability and liability",
+					"body": "Task Manager is a student project provided as is, with no guarantee of availability. Data may be reset at any time: keep your own copy (Profile → My data → Download my data). Automatic backups exist, but they are not a promise of recovery."
+				},
+				"changes":
+				{
+					"title": "8. Changes to these terms",
+					"body": "These terms may change. The date at the top shows the latest version; using Task Manager after a change means you accept it."
+				}
+			}
 		}
 	},
 	"gdpr":
@@ -325,7 +393,6 @@
 		"cancel": "Cancel",
 		"deleting": "Deleting...",
 		"editTitle": "Edit my profile",
-		"displayName": "Display name",
 		"save": "Save",
 		"saving": "Saving...",
 		"saved": "Profile updated.",
@@ -352,6 +419,7 @@
 		"unlockedOn": "Unlocked on {{date}}",
 		"locked": "Locked",
 		"count": "Counted: {{count}}",
+		"unlockedCount": "{{unlocked}} / {{total}} unlocked",
 		"rewardXp": "+{{xp}} XP",
 		"badges":
 		{

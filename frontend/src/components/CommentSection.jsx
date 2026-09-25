@@ -80,6 +80,7 @@ function CommentSection({ taskId, currentUserId, isOwner })
 				<ul>
 					{comments.map((comment) => (
 						<li key={comment.id}>
+							<strong>{comment.author_username}</strong>
 							<p>{comment.content}</p>
 							{(comment.author_id === currentUserId || isOwner) && (
 								<button onClick={() => handleDelete(comment.id)}>{t("comments.delete")}</button>

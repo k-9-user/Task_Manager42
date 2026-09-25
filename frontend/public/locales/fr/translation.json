@@ -4,7 +4,7 @@
 		"projects": "Projets",
 		"login": "Se connecter",
 		"logout": "Déconnexion",
-		"search": "Rechercher",
+		"search": "Recherche",
 		"profile": "Profil",
 		"achievements": "Succès",
 		"users": "Gestion utilisateurs",
@@ -102,7 +102,6 @@
 		"edit": "Modifier",
 		"save": "Enregistrer",
 		"cancel": "Annuler",
-		"displayName": "Nom affiché",
 		"confirmBan": "Bannir {{username}} ? Son accès est coupé immédiatement, jusqu'à sa réactivation."
 	},
 	"projects":
@@ -159,6 +158,7 @@
 		"delete": "Supprimer",
 		"hintTypes": "Formats acceptés : {{types}}",
 		"hintSize": "Taille max : {{max}} Mo",
+		"limits": "Formats et taille",
 		"progress": "Progression de l'envoi",
 		"pick": "+ Ajouter un fichier",
 		"upload": "Ajouter le fichier",
@@ -232,6 +232,7 @@
 		"lastBackup": "Dernière sauvegarde :",
 		"never": "aucune pour l'instant",
 		"backupCount": "{{count}} conservées",
+		"backupEvery": "toutes les {{minutes}} min",
 		"backupState":
 		{
 			"ok": "OK",
@@ -240,21 +241,51 @@
 			"missing": "Aucune sauvegarde"
 		},
 		"backupTitle": "Sauvegardes et reprise après sinistre",
-		"backupBody": "Vos projets, tâches et fichiers joints sont sauvegardés automatiquement à intervalles réguliers, et les copies les plus récentes sont conservées. En cas d'incident, le service peut être rétabli à partir de la dernière sauvegarde en quelques minutes."
+		"backupBody": "La base de données et les fichiers envoyés sont sauvegardés automatiquement, et les sauvegardes les plus récentes sont conservées. Après un incident, un administrateur restaure la dernière sauvegarde en une seule commande ; les modifications faites après cette sauvegarde sont perdues."
+	},
+	"about":
+	{
+		"title": "À propos de cette démo",
+		"intro": "Task Manager est un gestionnaire collaboratif de projets et de tâches, réalisé à 42 par Eraad, khderdou, ksupinsk et nratajcz pour le projet ft_transcendence. Cette copie est une démo locale : explorez-la librement.",
+		"featuresTitle": "Ce que vous pouvez faire",
+		"features":
+		{
+			"projects": "Créer des projets et inviter des membres comme Propriétaire, Éditeur ou Lecteur.",
+			"tasks": "Suivre les tâches par statut, avec une description, des fichiers joints et une bannière.",
+			"discussion": "Commenter les tâches et échanger avec votre équipe sur le mur de messages de chaque projet.",
+			"search": "Rechercher des tâches et des projets avec des filtres, un tri et une pagination.",
+			"gamification": "Débloquer des succès, gagner de l'XP, monter de niveau et collectionner des badges.",
+			"api": "Connecter d'autres outils via l'API publique, avec une clé API personnelle.",
+			"privacy": "Télécharger une copie de vos données ou supprimer votre compte à tout moment.",
+			"languages": "Utiliser l'application en français, en anglais ou en espagnol."
+		},
+		"stackTitle": "Comment c'est construit",
+		"stackBody": "Une interface React 19 (Vite, Tailwind CSS) dialogue avec un backend FastAPI (Python, SQLAlchemy) et une base PostgreSQL 17. nginx sert le tout en HTTPS, et l'ensemble tourne dans Docker Compose avec des sauvegardes automatiques.",
+		"limitsTitle": "Limites de la démo",
+		"limits":
+		{
+			"local": "Elle tourne uniquement sur cet ordinateur (https://localhost) ; ce n'est pas un service en ligne.",
+			"certificate": "Le certificat HTTPS est auto-signé : votre navigateur affiche un avertissement la première fois.",
+			"google": "« Continuer avec Google » ne fonctionne que si cette copie a reçu ses propres identifiants Google.",
+			"email": "Les emails (confirmations de téléchargement des données et de suppression du compte) arrivent dans une boîte de test locale et ne sont jamais envoyés.",
+			"refresh": "Les pages de projet se rafraîchissent toutes les 15 secondes : les changements des autres membres ne sont pas instantanés.",
+			"api": "Les clés API et l'import/export des données se gèrent via la documentation de l'API (/docs), sans écran dédié.",
+			"reset": "Les données de démo peuvent être réinitialisées à tout moment : n'y stockez rien d'important."
+		}
 	},
 	"legal":
 	{
-		"updated": "Dernière mise à jour : 27 août 2026",
+		"updated": "Dernière mise à jour : 25 septembre 2026",
 		"privacy":
 		{
 			"title": "Politique de confidentialité",
-			"updated": "Dernière mise à jour : 24 septembre 2026",
+			"updated": "Dernière mise à jour : 25 septembre 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Données collectées",
-					"body": "Lors de la création de votre compte, nous collectons votre nom d'utilisateur, votre adresse email et votre mot de passe. Si vous vous connectez avec Google, nous recevons l'identifiant de votre compte Google, votre adresse email et votre photo de profil, sans mot de passe. Nous conservons aussi ce que vous créez dans Task Manager : projets, tâches, commentaires, messages, fichiers et clés API, ainsi que votre progression (XP, succès et badges)."
+					"body": "Lors de la création de votre compte, nous collectons votre nom d'utilisateur, votre adresse email et votre mot de passe. Si vous vous connectez avec Google, nous recevons l'identifiant de votre compte Google, votre adresse email et votre photo de profil, sans mot de passe. Nous conservons aussi ce que vous créez dans Task Manager : projets, tâches, commentaires, messages, fichiers et clés API, ainsi que votre progression (XP, succès et badges). Votre navigateur conserve votre jeton de connexion et votre choix de langue dans son stockage local. La connexion avec Google dépose aussi un cookie valable 10 minutes, qui sert uniquement à sécuriser cette connexion. Nous n'utilisons aucun cookie publicitaire ni de suivi."
 				},
 				"use":
 				{
@@ -274,7 +305,7 @@
 				"retention":
 				{
 					"title": "5. Conservation",
-					"body": "Nous conservons vos données tant que votre compte existe. Des copies de sauvegarde peuvent subsister peu de temps après sa suppression."
+					"body": "Nous conservons vos données tant que votre compte existe. Les sauvegardes automatiques gardent les dernières copies de la base de données et des fichiers (par défaut une par heure, pendant 24 heures) : des données supprimées peuvent donc y rester environ un jour."
 				}
 			},
 			"rights":
@@ -284,7 +315,7 @@
 				"items":
 				{
 					"access": "accéder à vos données et les télécharger depuis votre page Profil ;",
-					"rectification": "corriger votre nom d'utilisateur et votre nom affiché depuis votre page Profil (pour changer d'email, contactez un administrateur) ;",
+					"rectification": "corriger votre nom d'utilisateur depuis votre page Profil (pour changer d'email, contactez un administrateur) ;",
 					"erasure": "supprimer votre compte depuis votre page Profil ;",
 					"objection": "vous opposer à l'utilisation de vos données ou demander sa limitation en contactant un administrateur."
 				},
@@ -301,12 +332,49 @@
 		"terms":
 		{
 			"title": "Conditions d'utilisation",
-			"section1Title": "1. Objet",
-			"section1Body": "En créant un compte, vous acceptez les présentes conditions d'utilisation.",
-			"section2Title": "2. Compte d'utilisateur",
-			"section2Body": "Vous êtes responsable de la confidentialité des informations permettant de vous connecter à votre compte, ainsi que de toutes les activités effectuées depuis celui-ci. Vous êtes également tenu de fournir des informations exactes lors de la création de votre compte.",
-			"section3Title": "3. Utilisation",
-			"section3Body": "Vous êtes tenu d'utiliser la plateforme de manière entièrement légale, sans stocker ni partager de contenu illégal. Vous ne devez pas non plus compromettre la sécurité de la plateforme."
+			"sections":
+			{
+				"purpose":
+				{
+					"title": "1. Objet",
+					"body": "Task Manager est un gestionnaire collaboratif de projets et de tâches, réalisé par des étudiants de 42 pour le projet ft_transcendence. Cette copie est une démo qui tourne sur votre propre ordinateur. En créant un compte, vous acceptez les présentes conditions."
+				},
+				"account":
+				{
+					"title": "2. Votre compte",
+					"body": "Vous êtes responsable de la confidentialité des informations qui permettent de vous connecter, ainsi que de toutes les activités effectuées depuis votre compte. Fournissez des informations exactes lors de sa création. Vous pouvez le supprimer à tout moment depuis votre page Profil."
+				},
+				"use":
+				{
+					"title": "3. Utilisation",
+					"body": "Utilisez la plateforme de manière légale : ne stockez ni ne partagez de contenu illégal, haineux ou dangereux. N'essayez pas d'accéder aux projets dont vous n'êtes pas membre, de contourner la sécurité de la plateforme ou de la surcharger ; les connexions et les requêtes à l'API publique sont limitées."
+				},
+				"content":
+				{
+					"title": "4. Vos contenus",
+					"body": "Ce que vous créez (projets, tâches, commentaires, messages et fichiers) vous appartient. Tous les membres d'un projet voient son contenu ; le propriétaire du projet décide qui le rejoint et avec quel rôle (Propriétaire, Éditeur ou Lecteur). Les fichiers doivent respecter les formats acceptés et la taille maximale."
+				},
+				"api":
+				{
+					"title": "5. API publique et clés API",
+					"body": "Une clé API donne accès à vos données via l'API publique. Gardez-la aussi secrète qu'un mot de passe et révoquez toute clé qui aurait pu fuiter. Un usage excessif peut être limité."
+				},
+				"moderation":
+				{
+					"title": "6. Modération",
+					"body": "Les administrateurs peuvent bannir ou supprimer un compte qui ne respecte pas ces conditions. Un compte banni ne peut plus se connecter ni utiliser ses clés API."
+				},
+				"liability":
+				{
+					"title": "7. Disponibilité et responsabilité",
+					"body": "Task Manager est un projet étudiant fourni en l'état, sans garantie de disponibilité. Les données peuvent être réinitialisées à tout moment : gardez votre propre copie (Profil → Mes données → Télécharger mes données). Des sauvegardes automatiques existent, mais elles ne garantissent pas une restauration."
+				},
+				"changes":
+				{
+					"title": "8. Modification des conditions",
+					"body": "Ces conditions peuvent évoluer. La date en haut de la page indique la dernière version ; utiliser Task Manager après un changement vaut acceptation."
+				}
+			}
 		}
 	},
 	"gdpr":
@@ -325,7 +393,6 @@
 		"cancel": "Annuler",
 		"deleting": "Suppression...",
 		"editTitle": "Modifier mon profil",
-		"displayName": "Nom affiché",
 		"save": "Enregistrer",
 		"saving": "Enregistrement...",
 		"saved": "Profil mis à jour.",
@@ -352,6 +419,7 @@
 		"unlockedOn": "Débloqué le {{date}}",
 		"locked": "Verrouillé",
 		"count": "Comptés : {{count}}",
+		"unlockedCount": "{{unlocked}} / {{total}} débloqués",
 		"rewardXp": "+{{xp}} XP",
 		"badges":
 		{

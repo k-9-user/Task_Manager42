@@ -58,9 +58,16 @@ function FileUpload({ types, upload, onUploaded, pickLabel, sendLabel })
 	return (
 		<div className="upload-block">
 			<input ref={fileInputRef} type="file" accept={acceptAttr(types)} onChange={handleFileChange} hidden />
-			<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-				{pickLabel}
-			</button>
+			<div className="upload-actions">
+				<button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+					{pickLabel}
+				</button>
+				<details className="upload-hint">
+					<summary>{t("attachments.limits")}</summary>
+					<small>{t("attachments.hintTypes", { types: typesLabel(types) })}</small>
+					<small>{t("attachments.hintSize", { max: MAX_UPLOAD_SIZE_MB })}</small>
+				</details>
+			</div>
 			{file && <span>{file.name}</span>}
 			{file && (
 				<button type="button" onClick={handleUpload} disabled={uploading}>
@@ -73,10 +80,6 @@ function FileUpload({ types, upload, onUploaded, pickLabel, sendLabel })
 					<span>{progress}%</span>
 				</div>
 			)}
-			<div className="upload-hint">
-				<small>{t("attachments.hintTypes", { types: typesLabel(types) })}</small>
-				<small>{t("attachments.hintSize", { max: MAX_UPLOAD_SIZE_MB })}</small>
-			</div>
 			{error && <p className="error">{error}</p>}
 		</div>
 	);

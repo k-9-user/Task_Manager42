@@ -94,6 +94,7 @@ function Status()
 							<p className="m-0 text-xs text-gray-500">
 								{t("status.lastBackup")} {lastBackup}
 								{backups?.count > 0 && ` · ${t("status.backupCount", { count: backups.count })}`}
+								{backups?.interval_minutes > 0 && ` · ${t("status.backupEvery", { minutes: backups.interval_minutes })}`}
 							</p>
 						</div>
 						<span className={BACKUP_STATE_COLORS[backupState] ?? "text-red-600"}>

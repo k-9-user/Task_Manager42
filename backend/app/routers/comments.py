@@ -32,6 +32,18 @@ DatabaseSession = Annotated[Session, Depends(get_db)]
 AuthenticatedUser = Annotated[User, Depends(get_current_user)]
 
 
+def _serialize_comment(comment: Comment) -> CommentResponse:
+    return CommentResponse(
+        id=comment.id,
+        task_id=comment.task_id,
+        author_id=comment.author_id,
+        author_username=comment.author.username,
+        content=comment.content,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+    )
+
+
 def _task_project_id_or_404(db: Session, task_id: uuid.UUID) -> uuid.UUID:
     project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
     if project_id is None:
@@ -59,7 +71,7 @@ def list_comments(
 
     return SuccessEnvelope(
         data=CommentListResponse(
-            comments=[CommentResponse.model_validate(c) for c in comments]
+            comments=[_serialize_comment(c) for c in comments]
         )
     )
 
@@ -85,7 +97,7 @@ def create_comment(
     db.commit()
     db.refresh(comment)
 
-    return SuccessEnvelope(data=CommentData(comment=CommentResponse.model_validate(comment)))
+    return SuccessEnvelope(data=CommentData(comment=_serialize_comment(comment)))
 
 
 @router.delete(

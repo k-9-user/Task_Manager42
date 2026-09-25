@@ -8,13 +8,14 @@
 	gap: 1.5rem;
 	align-items: center;
 	justify-content: center;
+	padding-bottom: 5rem;
 	background: var(--page-gradient);
 }
 
 .register-language {
 	position: absolute;
-	top: 1.25rem;
-	right: 1.5rem;
+	bottom: 1.25rem;
+	left: 1.5rem;
 }
 
 .register-page h1 {

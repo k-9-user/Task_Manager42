@@ -59,14 +59,13 @@ function Login()
 		}
 	}
 	return (
-		<div className="relative flex min-h-screen flex-col items-center justify-center bg-[image:var(--page-gradient)] p-6 font-sans">
-			<div className="absolute right-6 top-5">
+		<div className="relative flex min-h-screen flex-col items-center justify-center bg-[image:var(--page-gradient)] p-6 pb-20 font-sans">
+			<div className="absolute bottom-5 left-6">
 				<LanguageSwitcher />
 			</div>
 			<div className="w-full max-w-[400px] overflow-hidden rounded-2xl bg-brand-surface shadow-[0_20px_45px_rgba(46,16,101,0.45)]">
-				<div className="flex flex-col items-center gap-1.5 bg-gradient-to-br from-brand-primary-darker to-brand-primary-dark px-8 pb-5 pt-9 text-center">
-					<span className="text-4xl leading-none">📋</span>
-					<h1 className="m-0 mt-1.5 text-xl font-semibold tracking-wide text-white">Task Manager</h1>
+				<div className="flex flex-col items-center gap-1.5 bg-gradient-to-br from-brand-primary-darker to-brand-primary-dark px-8 py-6 text-center">
+					<h1 className="m-0 text-xl font-semibold tracking-wide text-white">Task Manager</h1>
 					<p className="m-0 text-sm text-brand-primary-light">{t("login.subtitle")}</p>
 				</div>
 				<form className="flex flex-col gap-5 bg-brand-surface p-8" onSubmit={handleSubmit}>
@@ -100,6 +99,9 @@ function Login()
 					</a>
 					<p className="m-0 text-center text-sm text-[#6b21a8]">
 						{t("login.noAccount")} <Link to="/register" className="font-bold text-brand-primary no-underline hover:underline">{t("login.register")}</Link>
+					</p>
+					<p className="m-0 text-center text-sm">
+						<Link to="/about" className="text-brand-primary no-underline hover:underline">{t("about.title")}</Link>
 					</p>
 				</form>
 			</div>

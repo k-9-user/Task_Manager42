@@ -18,6 +18,7 @@ class CommentResponse(BaseModel):
     id: uuid.UUID
     task_id: uuid.UUID
     author_id: uuid.UUID
+    author_username: str
     content: str
     created_at: datetime
     updated_at: datetime

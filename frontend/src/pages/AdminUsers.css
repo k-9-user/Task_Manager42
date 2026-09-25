@@ -77,12 +77,6 @@
 	color: var(--color-brand-primary-dark);
 }
 
-.admin-display-name {
-	display: block;
-	font-size: 0.8rem;
-	color: #6b6375;
-}
-
 .admin-edit {
 	display: flex;
 	flex-direction: column;

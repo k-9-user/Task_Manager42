@@ -117,24 +117,18 @@ function AdminUsers ()
 	function startEdit(user)
 	{
 		setError("");
-		setEditing({ id: user.id, username: user.username, display_name: user.display_name ?? "" });
+		setEditing({ id: user.id, username: user.username });
 	}
 
 	async function handleSave(user)
 	{
 		const username = editing.username.trim();
-		const displayName = editing.display_name.trim() || null;
 		if (!isValidUsername(username))
 		{
 			setError(t("gdpr.usernameInvalid"));
 			return ;
 		}
-		const fields = {};
-		if (username !== user.username)
-			fields.username = username;
-		if (displayName !== user.display_name)
-			fields.display_name = displayName;
-		if (Object.keys(fields).length === 0)
+		if (username === user.username)
 		{
 			setEditing(null);
 			return ;
@@ -143,7 +137,7 @@ function AdminUsers ()
 
 		try
 		{
-			const data = await updateUser(user.id, fields);
+			const data = await updateUser(user.id, { username });
 			setUsers(users.map((u) => (u.id === user.id ? data.user : u)));
 			setEditing(null);
 		}
@@ -210,19 +204,11 @@ function AdminUsers ()
 												aria-label={t("login.username")}
 												onChange={(e) => setEditing({ ...editing, username: e.target.value })}
 											/>
-											<input
-												value={editing.display_name}
-												maxLength={100}
-												placeholder={t("admin.displayName")}
-												aria-label={t("admin.displayName")}
-												onChange={(e) => setEditing({ ...editing, display_name: e.target.value })}
-											/>
 										</div>
 									) : (
 										<>
 											<span>{user.username}</span>
 											{isSelf && <span className="self-badge">{t("admin.you")}</span>}
-											{user.display_name && <span className="admin-display-name">{user.display_name}</span>}
 										</>
 									)}
 								</td>

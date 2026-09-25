@@ -12,8 +12,8 @@ function Profile() {
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
+	const [editing, setEditing] = useState(false);
 	const [username, setUsername] = useState("");
-	const [displayName, setDisplayName] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState("");
 	const [saved, setSaved] = useState(false);
@@ -26,8 +26,6 @@ function Profile() {
 			{
 				const data = await getMe();
 				setUser(data.user);
-				setUsername(data.user.username);
-				setDisplayName(data.user.display_name ?? "");
 			}
 			catch (err) {
 				setError(err.message);
@@ -44,24 +42,34 @@ function Profile() {
 		.catch(() => {});
 	}, []);
 
+	function startEdit()
+	{
+		setUsername(user.username);
+		setSaved(false);
+		setSaveError("");
+		setEditing(true);
+	}
+
 	async function handleSave(e)
 	{
 		e.preventDefault();
-		setSaved(false);
 		setSaveError("");
 		if (!isValidUsername(username))
 		{
 			setSaveError(t("gdpr.usernameInvalid"));
 			return ;
 		}
+		if (username === user.username)
+		{
+			setEditing(false);
+			return ;
+		}
 		setSaving(true);
 		try
 		{
-			const updated = await updateMe({
-				username,
-				display_name: displayName.trim() || null,
-			});
+			const updated = await updateMe({ username });
 			setUser(updated);
+			setEditing(false);
 			setSaved(true);
 		}
 		catch (err)
@@ -89,32 +97,37 @@ function Profile() {
 						<p className="profile-username">{user.username}</p>
 						<p className="profile-email">{user.email}</p>
 					</div>
+					{!editing && (
+						<button type="button" className="profile-edit-button" onClick={startEdit}>
+							{t("gdpr.editTitle")}
+						</button>
+					)}
 				</div>
-			</header>
-			{progress && <ProgressCard data={progress} />}
-			<form className="profile-edit" onSubmit={handleSave} noValidate>
-				<h2>{t("gdpr.editTitle")}</h2>
-				<label htmlFor="profile-username">{t("login.username")}</label>
-				<input
-					id="profile-username"
-					maxLength={50}
-					value={username}
-					onChange={(e) => setUsername(e.target.value)}
-					required
-				/>
-				<label htmlFor="profile-display-name">{t("gdpr.displayName")}</label>
-				<input
-					id="profile-display-name"
-					maxLength={100}
-					value={displayName}
-					onChange={(e) => setDisplayName(e.target.value)}
-				/>
-				<button type="submit" disabled={saving}>
-					{saving ? t("gdpr.saving") : t("gdpr.save")}
-				</button>
 				{saved && <p className="profile-saved" role="status">{t("gdpr.saved")}</p>}
-				{saveError && <p className="error" role="alert">{saveError}</p>}
-			</form>
+			</header>
+			{editing && (
+				<form className="profile-edit" onSubmit={handleSave} noValidate>
+					<label htmlFor="profile-username">{t("login.username")}</label>
+					<input
+						id="profile-username"
+						maxLength={50}
+						value={username}
+						onChange={(e) => setUsername(e.target.value)}
+						required
+						autoFocus
+					/>
+					<div className="profile-edit-actions">
+						<button type="button" className="profile-edit-cancel" onClick={() => setEditing(false)} disabled={saving}>
+							{t("gdpr.cancel")}
+						</button>
+						<button type="submit" disabled={saving}>
+							{saving ? t("gdpr.saving") : t("gdpr.save")}
+						</button>
+					</div>
+					{saveError && <p className="error" role="alert">{saveError}</p>}
+				</form>
+			)}
+			{progress && <ProgressCard data={progress} />}
 			<GdprPanel user={user} />
 		</div>
 	);

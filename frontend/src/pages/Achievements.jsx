@@ -51,11 +51,16 @@ function Achievements()
 				</ul>
 			</section>
 			{data.tracks.map((track) => (
-				<section key={track.key} className="achievements-section">
-					<div className="track-header">
+				<details key={track.key} className="achievements-section">
+					<summary className="track-header">
 						<h2>{t(`gamification.tracks.${track.key}.name`)}</h2>
-						<span className="track-count">{t("gamification.count", { count: track.count })}</span>
-					</div>
+						<span className="track-count">
+							{t("gamification.count", { count: track.count })} · {t("gamification.unlockedCount", {
+								unlocked: track.achievements.filter((achievement) => achievement.unlocked_at).length,
+								total: track.achievements.length,
+							})}
+						</span>
+					</summary>
 					<ul className="tier-list">
 						{track.achievements.map((achievement, index) => {
 							const goal = t(`gamification.tracks.${track.key}.goal`, { count: achievement.threshold });
@@ -82,7 +87,7 @@ function Achievements()
 							);
 						})}
 					</ul>
-				</section>
+				</details>
 			))}
 			<section className="achievements-section">
 				<h2>{t("gamification.rulesTitle")}</h2>

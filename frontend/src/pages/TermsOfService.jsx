@@ -1,5 +1,8 @@
+import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import './Legal.css';
+
+const SECTIONS = ["purpose", "account", "use", "content", "api", "moderation", "liability", "changes"];
 
 function TermsOfService ()
 {
@@ -9,12 +12,12 @@ function TermsOfService ()
 		<div className="legal-page">
 			<h1>{t("legal.terms.title")}</h1>
 			<p><em>{t("legal.updated")}</em></p>
-			<h2>{t("legal.terms.section1Title")}</h2>
-			<p>{t("legal.terms.section1Body")}</p>
-			<h2>{t("legal.terms.section2Title")}</h2>
-			<p>{t("legal.terms.section2Body")}</p>
-			<h2>{t("legal.terms.section3Title")}</h2>
-			<p>{t("legal.terms.section3Body")}</p>
+			{SECTIONS.map((section) => (
+				<Fragment key={section}>
+					<h2>{t(`legal.terms.sections.${section}.title`)}</h2>
+					<p>{t(`legal.terms.sections.${section}.body`)}</p>
+				</Fragment>
+			))}
 		</div>
 	);
 }

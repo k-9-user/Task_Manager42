@@ -4,7 +4,7 @@
 		"projects": "Proyectos",
 		"login": "Iniciar sesión",
 		"logout": "Cerrar sesión",
-		"search": "Buscar",
+		"search": "Búsqueda",
 		"profile": "Perfil",
 		"achievements": "Logros",
 		"users": "Gestión de usuarios",
@@ -102,7 +102,6 @@
 		"edit": "Editar",
 		"save": "Guardar",
 		"cancel": "Cancelar",
-		"displayName": "Nombre visible",
 		"confirmBan": "¿Banear a {{username}}? Pierde el acceso de inmediato hasta que se le reactive."
 	},
 	"projects":
@@ -159,6 +158,7 @@
 		"delete": "Eliminar",
 		"hintTypes": "Formatos permitidos: {{types}}",
 		"hintSize": "Tamaño máx.: {{max}} MB",
+		"limits": "Formatos y tamaño",
 		"progress": "Progreso de la subida",
 		"pick": "+ Añadir un archivo",
 		"upload": "Añadir el archivo",
@@ -232,6 +232,7 @@
 		"lastBackup": "Última copia:",
 		"never": "ninguna todavía",
 		"backupCount": "{{count}} conservadas",
+		"backupEvery": "cada {{minutes}} min",
 		"backupState":
 		{
 			"ok": "OK",
@@ -240,21 +241,51 @@
 			"missing": "Sin copia"
 		},
 		"backupTitle": "Copias de seguridad y recuperación ante desastres",
-		"backupBody": "Tus proyectos, tareas y archivos adjuntos se respaldan automáticamente a intervalos regulares, y se conservan las copias más recientes. Si ocurre un incidente, el servicio puede restablecerse a partir de la última copia en pocos minutos."
+		"backupBody": "La base de datos y los archivos subidos se guardan automáticamente, y se conservan las copias más recientes. Tras un incidente, un administrador restaura la última copia con un solo comando; los cambios hechos después de esa copia se pierden."
+	},
+	"about":
+	{
+		"title": "Acerca de esta demo",
+		"intro": "Task Manager es un gestor colaborativo de proyectos y tareas, creado en 42 por Eraad, khderdou, ksupinsk y nratajcz para el proyecto ft_transcendence. Esta copia es una demo local: explórala con libertad.",
+		"featuresTitle": "Qué puedes hacer",
+		"features":
+		{
+			"projects": "Crear proyectos e invitar a miembros como Propietario, Editor o Lector.",
+			"tasks": "Seguir las tareas por estado, con una descripción, archivos adjuntos y un banner.",
+			"discussion": "Comentar las tareas y hablar con tu equipo en el muro de mensajes de cada proyecto.",
+			"search": "Buscar tareas y proyectos con filtros, orden y paginación.",
+			"gamification": "Desbloquear logros, ganar XP, subir de nivel y coleccionar insignias.",
+			"api": "Conectar otras herramientas a través de la API pública con una clave API personal.",
+			"privacy": "Descargar una copia de tus datos o eliminar tu cuenta en cualquier momento.",
+			"languages": "Usar la aplicación en español, inglés o francés."
+		},
+		"stackTitle": "Cómo está hecho",
+		"stackBody": "Una interfaz React 19 (Vite, Tailwind CSS) se comunica con un backend FastAPI (Python, SQLAlchemy) y una base de datos PostgreSQL 17. nginx lo sirve todo por HTTPS, y el conjunto funciona en Docker Compose con copias de seguridad automáticas.",
+		"limitsTitle": "Límites de la demo",
+		"limits":
+		{
+			"local": "Solo funciona en este ordenador (https://localhost); no es un servicio en línea.",
+			"certificate": "El certificado HTTPS es autofirmado, así que tu navegador muestra un aviso la primera vez.",
+			"google": "«Continuar con Google» solo funciona si esta copia tiene sus propias credenciales de Google.",
+			"email": "Los correos (confirmaciones de descarga de datos y de eliminación de la cuenta) llegan a un buzón de prueba local y nunca se envían.",
+			"refresh": "Las páginas de proyecto se actualizan cada 15 segundos, así que los cambios de otros miembros no son instantáneos.",
+			"api": "Las claves API y la importación/exportación de datos se gestionan desde la documentación de la API (/docs), sin pantalla propia.",
+			"reset": "Los datos de la demo pueden restablecerse en cualquier momento: no guardes nada importante."
+		}
 	},
 	"legal":
 	{
-		"updated": "Última actualización: 27 de agosto de 2026",
+		"updated": "Última actualización: 25 de septiembre de 2026",
 		"privacy":
 		{
 			"title": "Política de privacidad",
-			"updated": "Última actualización: 24 de septiembre de 2026",
+			"updated": "Última actualización: 25 de septiembre de 2026",
 			"sections":
 			{
 				"collect":
 				{
 					"title": "1. Datos que recopilamos",
-					"body": "Al crear tu cuenta, recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña. Si inicias sesión con Google, recibimos el identificador de tu cuenta de Google, tu correo electrónico y tu foto de perfil, sin contraseña. También guardamos lo que creas en Task Manager: proyectos, tareas, comentarios, mensajes, archivos y claves API, además de tu progreso (XP, logros e insignias)."
+					"body": "Al crear tu cuenta, recopilamos tu nombre de usuario, tu correo electrónico y tu contraseña. Si inicias sesión con Google, recibimos el identificador de tu cuenta de Google, tu correo electrónico y tu foto de perfil, sin contraseña. También guardamos lo que creas en Task Manager: proyectos, tareas, comentarios, mensajes, archivos y claves API, además de tu progreso (XP, logros e insignias). Tu navegador guarda tu token de sesión y tu idioma en su almacenamiento local. Iniciar sesión con Google también crea una cookie que dura 10 minutos y solo protege ese inicio de sesión. No usamos cookies publicitarias ni de seguimiento."
 				},
 				"use":
 				{
@@ -274,7 +305,7 @@
 				"retention":
 				{
 					"title": "5. Conservación",
-					"body": "Conservamos tus datos mientras tu cuenta exista. Pueden quedar copias de seguridad durante poco tiempo después de eliminarla."
+					"body": "Conservamos tus datos mientras tu cuenta exista. Las copias de seguridad automáticas guardan las últimas copias de la base de datos y de los archivos (por defecto, una por hora durante 24 horas), así que los datos eliminados pueden seguir en ellas alrededor de un día."
 				}
 			},
 			"rights":
@@ -284,7 +315,7 @@
 				"items":
 				{
 					"access": "acceder a tus datos y descargarlos desde tu página de Perfil;",
-					"rectification": "corregir tu nombre de usuario y tu nombre visible desde tu página de Perfil (para cambiar tu correo, contacta con un administrador);",
+					"rectification": "corregir tu nombre de usuario desde tu página de Perfil (para cambiar tu correo, contacta con un administrador);",
 					"erasure": "eliminar tu cuenta desde tu página de Perfil;",
 					"objection": "oponerte al uso de tus datos o pedir que se limite contactando con un administrador."
 				},
@@ -301,12 +332,49 @@
 		"terms":
 		{
 			"title": "Condiciones de uso",
-			"section1Title": "1. Objeto",
-			"section1Body": "Al crear una cuenta, aceptas las presentes condiciones de uso.",
-			"section2Title": "2. Cuenta de usuario",
-			"section2Body": "Eres responsable de la confidencialidad de la información que permite acceder a tu cuenta, así como de todas las actividades realizadas desde ella. También debes proporcionar información exacta al crear tu cuenta.",
-			"section3Title": "3. Uso de la plataforma",
-			"section3Body": "Debes utilizar la plataforma de manera totalmente legal, sin almacenar ni compartir contenido ilegal. Tampoco debes comprometer la seguridad de la plataforma."
+			"sections":
+			{
+				"purpose":
+				{
+					"title": "1. Objeto",
+					"body": "Task Manager es un gestor colaborativo de proyectos y tareas, creado por estudiantes de 42 para el proyecto ft_transcendence. Esta copia es una demo que funciona en tu propio ordenador. Al crear una cuenta, aceptas estas condiciones."
+				},
+				"account":
+				{
+					"title": "2. Tu cuenta",
+					"body": "Eres responsable de la confidencialidad de la información que permite acceder a tu cuenta y de todas las actividades realizadas desde ella. Proporciona información exacta al crearla. Puedes eliminarla en cualquier momento desde tu página de Perfil."
+				},
+				"use":
+				{
+					"title": "3. Uso aceptable",
+					"body": "Usa la plataforma de forma legal: no almacenes ni compartas contenido ilegal, de odio o dañino. No intentes acceder a proyectos de los que no eres miembro, vulnerar la seguridad de la plataforma ni sobrecargarla; los inicios de sesión y las peticiones a la API pública están limitados."
+				},
+				"content":
+				{
+					"title": "4. Tu contenido",
+					"body": "Lo que creas (proyectos, tareas, comentarios, mensajes y archivos) sigue siendo tuyo. Todos los miembros de un proyecto ven su contenido; el propietario del proyecto decide quién entra y con qué rol (Propietario, Editor o Lector). Los archivos deben tener un formato permitido y no superar el tamaño máximo."
+				},
+				"api":
+				{
+					"title": "5. API pública y claves API",
+					"body": "Una clave API da acceso a tus datos a través de la API pública. Guárdala tan en secreto como una contraseña y revoca cualquier clave que creas que se ha filtrado. Un uso excesivo puede limitarse."
+				},
+				"moderation":
+				{
+					"title": "6. Moderación",
+					"body": "Los administradores pueden banear o eliminar una cuenta que no respete estas condiciones. Una cuenta baneada ya no puede iniciar sesión ni usar sus claves API."
+				},
+				"liability":
+				{
+					"title": "7. Disponibilidad y responsabilidad",
+					"body": "Task Manager es un proyecto de estudiantes que se ofrece tal cual, sin garantía de disponibilidad. Los datos pueden restablecerse en cualquier momento: guarda tu propia copia (Perfil → Mis datos → Descargar mis datos). Existen copias de seguridad automáticas, pero no garantizan una recuperación."
+				},
+				"changes":
+				{
+					"title": "8. Cambios en estas condiciones",
+					"body": "Estas condiciones pueden cambiar. La fecha de arriba indica la última versión; usar Task Manager después de un cambio supone aceptarla."
+				}
+			}
 		}
 	},
 	"gdpr":
@@ -325,7 +393,6 @@
 		"cancel": "Cancelar",
 		"deleting": "Eliminando...",
 		"editTitle": "Editar mi perfil",
-		"displayName": "Nombre visible",
 		"save": "Guardar",
 		"saving": "Guardando...",
 		"saved": "Perfil actualizado.",
@@ -352,6 +419,7 @@
 		"unlockedOn": "Desbloqueado el {{date}}",
 		"locked": "Bloqueado",
 		"count": "Contados: {{count}}",
+		"unlockedCount": "{{unlocked}} / {{total}} desbloqueados",
 		"rewardXp": "+{{xp}} XP",
 		"badges":
 		{
