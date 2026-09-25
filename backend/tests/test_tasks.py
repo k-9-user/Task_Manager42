@@ -125,47 +125,6 @@ def test_create_task_assignee_member_ok(client, make_user):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/projects/{id}/tasks
-# ---------------------------------------------------------------------------
-
-
-def test_list_tasks_filter_by_status(client, db_session):
-    project = _create_project_via_api(client)
-    project_id = uuid.UUID(project["id"])
-
-    todo_resp = client.post(f"/api/projects/{project['id']}/tasks", json={"title": "Todo"})
-    done_task_id = uuid.UUID(
-        client.post(f"/api/projects/{project['id']}/tasks", json={"title": "Done"}).json()[
-            "data"
-        ]["task"]["id"]
-    )
-    db_session.query(Task).filter(Task.id == done_task_id).update(
-        {"status": TaskStatus.DONE}
-    )
-    db_session.commit()
-
-    response = client.get(f"/api/projects/{project['id']}/tasks", params={"status": "done"})
-    titles = [t["title"] for t in response.json()["data"]["tasks"]]
-
-    assert titles == ["Done"]
-    assert response.json()["data"]["total"] == 1
-
-
-def test_list_tasks_as_viewer_allowed(client, make_user, db_session, login_as):
-    project = _create_project_via_api(client)
-    client.post(f"/api/projects/{project['id']}/tasks", json={"title": "Une tache"})
-
-    viewer = make_user()
-    _add_member(db_session, uuid.UUID(project["id"]), viewer.id, ProjectRole.VIEWER)
-
-    login_as(viewer)
-    response = client.get(f"/api/projects/{project['id']}/tasks")
-
-    assert response.status_code == 200
-    assert response.json()["data"]["total"] == 1
-
-
-# ---------------------------------------------------------------------------
 # PUT /api/tasks/{id}
 # ---------------------------------------------------------------------------
 

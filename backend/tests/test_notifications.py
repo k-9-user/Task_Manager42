@@ -240,25 +240,3 @@ def test_notification_content_escapes_html(client, make_user, login_as):
 
     assert "<script>" not in content
     assert "&lt;script&gt;" in content
-
-
-def test_no_notification_for_inactive_account(client, make_user, db_session):
-    project = _create_project_via_api(client)
-    stale_member = make_user()
-    db_session.query(type(stale_member)).filter(
-        type(stale_member).id == stale_member.id
-    ).update({"updated_at": datetime.now(timezone.utc) - timedelta(days=200)})
-    db_session.commit()
-
-    response = client.post(
-        f"/api/projects/{project['id']}/members",
-        json={"user_id": str(stale_member.id), "role": "viewer"},
-    )
-    assert response.status_code == 201
-
-    count = (
-        db_session.query(Notification)
-        .filter(Notification.user_id == stale_member.id)
-        .count()
-    )
-    assert count == 0

@@ -9,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, select, text
 
-from app.auth.project_permissions import lock_user_projects_for_write
+from app.services.accounts import lock_user_projects_for_write
 from app.main import app
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole

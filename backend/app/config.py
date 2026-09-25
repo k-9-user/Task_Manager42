@@ -12,7 +12,7 @@ from app.utils.validators import (
     has_unsafe_url_characters,
     is_safe_https_url,
     normalize_email,
-    validate_username,
+    strip_text,
 )
 
 
@@ -148,7 +148,7 @@ class BootstrapSettings(PasswordSettings):
     )
     _username_validator = field_validator(
         "bootstrap_admin_username", mode="before"
-    )(validate_username)
+    )(strip_text)
 
     @field_validator("bootstrap_admin_password")
     @classmethod

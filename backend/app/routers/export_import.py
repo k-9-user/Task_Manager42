@@ -1,8 +1,6 @@
 import csv
 import io
 import json
-from datetime import date, datetime
-from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
@@ -17,18 +15,20 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.auth.dependencies import get_current_user
-from app.auth.project_permissions import lock_project_for_write
+from app.auth.project_permissions import lock_project_for_write, visible_project_ids
+from app.database import get_db
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
 from app.models.user import User
-from app.schemas.task import TaskImportRecord
+from app.schemas.common import SuccessEnvelope
+from app.schemas.project import ProjectResponse
+from app.schemas.task import TaskImportRecord, TaskSummary
 
 
 router = APIRouter(tags=["Export / Import"])
@@ -94,10 +94,10 @@ def export_data(
         content = json.dumps(
             {
                 "projects": [
-                    _serialize_project_with_tasks(
-                        project,
-                        tasks_by_project.get(project.id, []),
-                    )
+                    {
+                        **_json(ProjectResponse, project),
+                        "tasks": [_json(TaskSummary, task) for task in tasks_by_project[project.id]],
+                    }
                     for project in projects
                 ]
             },
@@ -148,34 +148,25 @@ async def import_data(
     ],
     db: DatabaseSession,
     current_user: AuthenticatedUser,
-) -> dict[str, Any]:
+) -> SuccessEnvelope:
     import_format = _validate_import_file(file)
     raw_content = await _read_import_file(file)
     records = _parse_import_records(raw_content, import_format)
 
     try:
         validated_records = _validate_task_import_records(records)
-        project_ids = sorted({record.project_id for record in validated_records})
-        project_cache = {
-            project_id: lock_project_for_write(
+        for project_id in sorted({record.project_id for record in validated_records}):
+            lock_project_for_write(
                 db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
             )
-            for project_id in project_ids
-        }
-        validated_tasks = [
-            _build_imported_task(db, record, current_user.id, project_cache)
-            for record in validated_records
-        ]
+        validated_tasks = [_build_imported_task(db, record) for record in validated_records]
         db.add_all(validated_tasks)
         db.commit()
     except Exception:
         db.rollback()
         raise
 
-    return {
-        "success": True,
-        "data": {"imported_count": len(validated_tasks)},
-    }
+    return SuccessEnvelope(data={"imported_count": len(validated_tasks)})
 
 
 def _load_visible_export_data(
@@ -185,7 +176,7 @@ def _load_visible_export_data(
     projects = list(
         db.scalars(
             select(Project)
-            .where(_project_access_filter(user_id))
+            .where(Project.id.in_(visible_project_ids(user_id)))
             .order_by(Project.created_at.asc(), Project.id.asc())
         ).all()
     )
@@ -203,39 +194,8 @@ def _load_visible_export_data(
     return projects, tasks_by_project
 
 
-def _project_access_filter(user_id: UUID):
-    member_project_ids = select(ProjectMember.project_id).where(
-        ProjectMember.user_id == user_id
-    )
-    return Project.id.in_(member_project_ids)
-
-
-def _serialize_project_with_tasks(
-    project: Project,
-    tasks: list[Task],
-) -> dict[str, Any]:
-    return {
-        "id": _serialize_value(project.id),
-        "name": project.name,
-        "description": project.description,
-        "owner_id": _serialize_value(project.owner_id),
-        "created_at": _serialize_value(project.created_at),
-        "tasks": [_serialize_task(task) for task in tasks],
-    }
-
-
-def _serialize_task(task: Task) -> dict[str, Any]:
-    return {
-        "id": _serialize_value(task.id),
-        "project_id": _serialize_value(task.project_id),
-        "title": task.title,
-        "description": task.description,
-        "status": _serialize_value(task.status),
-        "assignee_id": _serialize_value(task.assignee_id),
-        "due_date": _serialize_value(task.due_date),
-        "created_at": _serialize_value(task.created_at),
-        "updated_at": _serialize_value(task.updated_at),
-    }
+def _json(schema: type[BaseModel], row: Any) -> dict[str, Any]:
+    return schema.model_validate(row).model_dump(mode="json")
 
 
 def _serialize_csv(
@@ -246,37 +206,26 @@ def _serialize_csv(
     writer = csv.DictWriter(output, fieldnames=CSV_COLUMNS)
     writer.writeheader()
     for project in projects:
-        for task in tasks_by_project.get(project.id, []):
+        for task in tasks_by_project[project.id]:
+            row = _json(TaskSummary, task)
             writer.writerow(
                 {
                     key: _safe_csv_cell(value)
                     for key, value in {
-                        "project_id": _serialize_value(project.id),
+                        "project_id": row["project_id"],
                         "project_name": project.name,
-                        "task_id": _serialize_value(task.id),
-                        "title": task.title,
-                        "description": task.description or "",
-                        "status": _serialize_value(task.status),
-                        "assignee_id": _serialize_value(task.assignee_id) or "",
-                        "due_date": _serialize_value(task.due_date) or "",
-                        "created_at": _serialize_value(task.created_at),
-                        "updated_at": _serialize_value(task.updated_at),
+                        "task_id": row["id"],
+                        "title": row["title"],
+                        "description": row["description"] or "",
+                        "status": row["status"],
+                        "assignee_id": row["assignee_id"] or "",
+                        "due_date": row["due_date"] or "",
+                        "created_at": row["created_at"],
+                        "updated_at": row["updated_at"],
                     }.items()
                 }
             )
     return output.getvalue()
-
-
-def _serialize_value(value: Any) -> Any:
-    if value is None:
-        return None
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, (date, datetime)):
-        return value.isoformat()
-    return value
 
 
 def _safe_csv_cell(value: Any) -> Any:
@@ -422,16 +371,8 @@ def _normalize_csv_empty_values(record: dict[str, Any]) -> dict[str, Any]:
     return normalized
 
 
-def _build_imported_task(
-    db: Session,
-    record: TaskImportRecord,
-    user_id: UUID,
-    project_cache: dict[UUID, Project],
-) -> Task:
+def _build_imported_task(db: Session, record: TaskImportRecord) -> Task:
     project_id = record.project_id
-    if project_id not in project_cache:
-        project_cache[project_id] = _get_writable_project(db, project_id, user_id)
-
     if record.assignee_id is not None and db.scalar(
         select(ProjectMember.id).where(
             ProjectMember.project_id == project_id,
@@ -447,12 +388,6 @@ def _build_imported_task(
         status=record.status,
         assignee_id=record.assignee_id,
         due_date=record.due_date,
-    )
-
-
-def _get_writable_project(db: Session, project_id: UUID, user_id: UUID) -> Project:
-    return lock_project_for_write(
-        db, project_id, user_id, ProjectRole.OWNER, ProjectRole.EDITOR,
     )
 
 

@@ -1,28 +1,22 @@
 import html
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
-from app.auth.project_permissions import lock_project_for_write
+from app.auth.project_permissions import lock_project_for_write, lock_task_for_write
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task, TaskStatus
-from app.routers.projects import _get_membership_or_404, _user_is_notifiable
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
-from app.schemas.task import TaskCreate, TaskData, TaskListResponse, TaskResponse, TaskUpdate
+from app.schemas.task import TaskCreate, TaskData, TaskResponse, TaskUpdate
 from app.services.gamification import Track, record_activity
 from app.services.uploads import remove_files, task_files
 
 router = APIRouter(tags=["tasks"])
-
-PAGE_SIZE = 20
 
 
 def _assert_valid_assignee(db: Session, project_id: uuid.UUID, assignee_id: uuid.UUID) -> None:
@@ -49,12 +43,6 @@ def _notify(
     task_id: uuid.UUID,
     project_id: uuid.UUID,
 ) -> None:
-    """Ne crée rien si le destinataire est inactif depuis 6 mois (cf
-    `_user_is_notifiable`)."""
-
-    if not _user_is_notifiable(db, user_id):
-        return
-
     db.add(
         Notification(
             user_id=user_id,
@@ -64,50 +52,6 @@ def _notify(
             related_project_id=project_id,
         )
     )
-
-
-# ---------------------------------------------------------------------------
-# GET /api/projects/{id}/tasks
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/api/projects/{project_id}/tasks", response_model=SuccessEnvelope[TaskListResponse]
-)
-def list_tasks(
-    project_id: uuid.UUID,
-    status_filter: Optional[TaskStatus] = Query(default=None, alias="status"),
-    page: int = Query(default=1, ge=1),
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    """N'importe quel membre (owner/editor/viewer) peut lister les tâches —
-    lecture seule, pas de restriction de rôle ici."""
-
-    _get_membership_or_404(db, project_id, current_user.id)
-
-    query = db.query(Task).filter(Task.project_id == project_id)
-    if status_filter is not None:
-        query = query.filter(Task.status == status_filter)
-
-    total = query.count()
-    tasks = (
-        query.order_by(Task.created_at.desc())
-        .offset((page - 1) * PAGE_SIZE)
-        .limit(PAGE_SIZE)
-        .all()
-    )
-
-    return SuccessEnvelope(
-        data=TaskListResponse(
-            tasks=[TaskResponse.model_validate(t) for t in tasks], total=total
-        )
-    )
-
-
-# ---------------------------------------------------------------------------
-# POST /api/projects/{id}/tasks
-# ---------------------------------------------------------------------------
 
 
 @router.post(
@@ -158,11 +102,6 @@ def create_task(
     return SuccessEnvelope(data=TaskData(task=TaskResponse.model_validate(task)))
 
 
-# ---------------------------------------------------------------------------
-# PUT /api/tasks/{id}
-# ---------------------------------------------------------------------------
-
-
 @router.put("/api/tasks/{task_id}", response_model=SuccessEnvelope[TaskData])
 def update_task(
     task_id: uuid.UUID,
@@ -170,19 +109,10 @@ def update_task(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
-    if project_id is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
-
-    lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
+    task = lock_task_for_write(
+        db, task_id, current_user.id, ProjectRole.OWNER, ProjectRole.EDITOR,
         not_found_detail="Tâche introuvable", forbidden_detail="Permission refusée",
     )
-    task = db.scalar(
-        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
-    )
-    if task is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -229,11 +159,6 @@ def update_task(
     return SuccessEnvelope(data=TaskData(task=TaskResponse.model_validate(task)))
 
 
-# ---------------------------------------------------------------------------
-# DELETE /api/tasks/{id}
-# ---------------------------------------------------------------------------
-
-
 @router.delete("/api/tasks/{task_id}", response_model=SimpleSuccessResponse)
 def delete_task(
     task_id: uuid.UUID,
@@ -241,19 +166,10 @@ def delete_task(
     current_user=Depends(get_current_user),
     settings: Settings = Depends(get_settings),
 ):
-    project_id = db.scalar(select(Task.project_id).where(Task.id == task_id))
-    if project_id is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
-
-    lock_project_for_write(
-        db, project_id, current_user.id, ProjectRole.OWNER,
+    task = lock_task_for_write(
+        db, task_id, current_user.id, ProjectRole.OWNER,
         not_found_detail="Tâche introuvable", forbidden_detail="Permission refusée",
     )
-    task = db.scalar(
-        select(Task).where(Task.id == task_id).execution_options(populate_existing=True)
-    )
-    if task is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tâche introuvable")
 
     files = task_files(db, settings, Task.id == task.id)
     db.delete(task)

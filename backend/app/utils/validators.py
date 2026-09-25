@@ -76,30 +76,22 @@ def escape_like_pattern(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def validate_username(value: Any) -> Any:
+def strip_text(value: Any) -> Any:
     if not isinstance(value, str):
         return value
     return value.strip()
 
 
-def validate_display_name(value: Any) -> Any:
+def clean_text(value: Any) -> Any:
+    """Strip a free-text field and refuse it when empty or holding control characters."""
+
     if not isinstance(value, str):
         return value
 
-    display_name = value.strip()
-    if not display_name or has_control_characters(display_name):
-        raise ValueError("display_name must contain printable characters")
-    return display_name
-
-
-def validate_status_reason(value: Any) -> Any:
-    if not isinstance(value, str):
-        return value
-
-    reason = value.strip()
-    if not reason or has_control_characters(reason):
-        raise ValueError("reason must contain printable characters")
-    return reason
+    text = value.strip()
+    if not text or has_control_characters(text):
+        raise ValueError("text must contain printable characters")
+    return text
 
 
 def validate_avatar(value: Any) -> Any:

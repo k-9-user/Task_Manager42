@@ -91,7 +91,6 @@ def test_router_exposes_exact_attachment_routes():
         ("GET", "/api/attachments/{attachment_id}"),
         ("DELETE", "/api/attachments/{attachment_id}"),
         ("POST", "/api/tasks/{task_id}/banner"),
-        ("DELETE", "/api/tasks/{task_id}/banner"),
         ("GET", "/api/tasks/{task_id}/banner/file"),
     }
 
@@ -907,7 +906,7 @@ def test_upload_only_takes_project_lock_after_writing_file(
     project = _create_project(db, current_user, "Short upload lock project")
     task = _create_task(db, project, "Short upload lock task")
     original_write = attachments._write_uploaded_file
-    original_lock = attachments.lock_project_for_write
+    original_lock = attachments.lock_task_for_write
     lock_calls = 0
 
     async def observed_write(*args, **kwargs):
@@ -920,7 +919,7 @@ def test_upload_only_takes_project_lock_after_writing_file(
         return original_lock(*args, **kwargs)
 
     monkeypatch.setattr(attachments, "_write_uploaded_file", observed_write)
-    monkeypatch.setattr(attachments, "lock_project_for_write", observed_lock)
+    monkeypatch.setattr(attachments, "lock_task_for_write", observed_lock)
 
     response = _upload(client, task, filename="staged.pdf")
 

@@ -9,11 +9,6 @@ from app.schemas.common import StrictRequest
 from app.schemas.project import ProjectMemberResponse, ProjectResponse
 
 
-# ---------------------------------------------------------------------------
-# Task — requêtes entrantes
-# ---------------------------------------------------------------------------
-
-
 class TaskCreate(StrictRequest):
     """Body attendu pour POST /api/projects/{id}/tasks.
 
@@ -37,6 +32,26 @@ class TaskUpdate(StrictRequest):
     status: Optional[TaskStatus] = None
     assignee_id: Optional[uuid.UUID] = None
     due_date: Optional[date] = None
+
+
+class PublicTaskCreate(StrictRequest):
+    """Minimal request body for the public task creation contract."""
+
+    project_id: uuid.UUID
+    title: str = Field(min_length=1, max_length=255)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, title: str) -> str:
+        if not title.strip():
+            raise ValueError("title must not be empty")
+        return title
+
+
+class PublicTaskUpdate(StrictRequest):
+    """Fields that the public API is allowed to update on a task."""
+
+    status: TaskStatus | None = None
 
 
 class TaskImportRecord(StrictRequest):
@@ -63,46 +78,28 @@ class TaskImportRecord(StrictRequest):
         return title
 
 
-# ---------------------------------------------------------------------------
-# Task — réponses sortantes
-# ---------------------------------------------------------------------------
-
-
-class TaskResponse(BaseModel):
-    """Représentation d'une tâche renvoyée par l'API (clé "task" dans les réponses)."""
+class TaskSummary(BaseModel):
+    """A task without its banner, as the public API, search and export return it."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     project_id: uuid.UUID
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     status: TaskStatus
-    assignee_id: Optional[uuid.UUID] = None
-    due_date: Optional[date] = None
-    banner_url: Optional[str] = None
+    assignee_id: uuid.UUID | None = None
+    due_date: date | None = None
     created_at: datetime
     updated_at: datetime
 
 
-class TaskListResponse(BaseModel):
-    """Réponse de GET /api/projects/{id}/tasks → `{tasks: [...], total: N}`.
-
-    `total` = nombre total de tâches correspondant au filtre (avant pagination),
-    pas `len(tasks)`.
-    """
-
-    tasks: list[TaskResponse]
-    total: int
+class TaskResponse(TaskSummary):
+    banner_url: str | None = None
 
 
 class TaskData(BaseModel):
     task: TaskResponse
-
-
-# ---------------------------------------------------------------------------
-# GET /api/projects/{id} -> {project, members, tasks}
-# ---------------------------------------------------------------------------
 
 
 class ProjectDetailResponse(BaseModel):

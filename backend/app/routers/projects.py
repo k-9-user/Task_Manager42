@@ -1,20 +1,18 @@
 import html
 import uuid
-from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth.dependencies import get_current_user
-from app.auth.project_permissions import lock_project_for_write
+from app.auth.project_permissions import get_membership_or_404, lock_project_for_write
 from app.config import Settings, get_settings
 from app.database import get_db
 from app.models.notification import Notification, NotificationType
 from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
-from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project import (
     ProjectCreate,
@@ -50,61 +48,6 @@ def _serialize_member(member: ProjectMember, rank: Rank) -> ProjectMemberRespons
     )
 
 
-# ---------------------------------------------------------------------------
-# Helpers de permission — réutilisés par routers/tasks.py également.
-# ---------------------------------------------------------------------------
-
-
-def _get_membership_or_404(
-    db: Session, project_id: uuid.UUID, user_id: uuid.UUID
-) -> ProjectMember:
-    """Renvoie l'appartenance (avec son rôle) de `user_id` au projet `project_id`."""
-
-    membership = (
-        db.query(ProjectMember)
-        .filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == user_id,
-        )
-        .first()
-    )
-    if membership is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Projet introuvable"
-        )
-    return membership
-
-
-def _require_role(membership: ProjectMember, *allowed: ProjectRole) -> None:
-    """Lève 403 si le rôle du membre n'est pas dans `allowed`."""
-
-    if membership.role not in allowed:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Permission refusée"
-        )
-
-
-NOTIFICATION_INACTIVITY_THRESHOLD = timedelta(days=182)  # ~6 mois
-
-
-def _user_is_notifiable(db: Session, user_id: uuid.UUID) -> bool:
-    """Return false when the user's profile has not been updated for six months.
-
-    ``User.updated_at`` is only a proxy for activity; logins and normal usage do
-    not refresh it.
-    """
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        return False
-    return datetime.now(timezone.utc) - user.updated_at <= NOTIFICATION_INACTIVITY_THRESHOLD
-
-
-# ---------------------------------------------------------------------------
-# GET /api/projects
-# ---------------------------------------------------------------------------
-
-
 @router.get("", response_model=SuccessEnvelope[ProjectListResponse])
 def list_projects(
     db: Session = Depends(get_db),
@@ -121,11 +64,6 @@ def list_projects(
         .all()
     )
     return SuccessEnvelope(data=ProjectListResponse(projects=projects))
-
-
-# ---------------------------------------------------------------------------
-# POST /api/projects
-# ---------------------------------------------------------------------------
 
 
 @router.post(
@@ -155,18 +93,13 @@ def create_project(
     return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
-# ---------------------------------------------------------------------------
-# GET /api/projects/{id}
-# ---------------------------------------------------------------------------
-
-
 @router.get("/{project_id}", response_model=SuccessEnvelope[ProjectDetailResponse])
 def get_project(
     project_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    _get_membership_or_404(db, project_id, current_user.id)
+    get_membership_or_404(db, project_id, current_user.id)
 
     project = (
         db.query(Project)
@@ -185,14 +118,9 @@ def get_project(
         data=ProjectDetailResponse(
             project=ProjectResponse.model_validate(project),
             members=[_serialize_member(m, ranks[m.user_id]) for m in project.members],
-            tasks=[t for t in project.tasks],
+            tasks=project.tasks,
         )
     )
-
-
-# ---------------------------------------------------------------------------
-# PUT /api/projects/{id}
-# ---------------------------------------------------------------------------
 
 
 @router.put("/{project_id}", response_model=SuccessEnvelope[ProjectData])
@@ -217,11 +145,6 @@ def update_project(
     return SuccessEnvelope(data=ProjectData(project=ProjectResponse.model_validate(project)))
 
 
-# ---------------------------------------------------------------------------
-# DELETE /api/projects/{id}
-# ---------------------------------------------------------------------------
-
-
 @router.delete("/{project_id}", response_model=SimpleSuccessResponse)
 def delete_project(
     project_id: uuid.UUID,
@@ -240,11 +163,6 @@ def delete_project(
     remove_files(files)
 
     return SimpleSuccessResponse()
-
-
-# ---------------------------------------------------------------------------
-# POST /api/projects/{id}/members
-# ---------------------------------------------------------------------------
 
 
 @router.post(
@@ -276,27 +194,21 @@ def add_member(
             detail="Utilisateur introuvable ou déjà membre de ce projet",
         )
 
-    if _user_is_notifiable(db, payload.user_id):
-        db.add(
-            Notification(
-                user_id=payload.user_id,
-                type=NotificationType.PROJECT_INVITE,
-                content=f"Tu as été ajouté au projet « {html.escape(project.name)} »",
-                related_task_id=None,
-                related_project_id=project_id,
-            )
+    db.add(
+        Notification(
+            user_id=payload.user_id,
+            type=NotificationType.PROJECT_INVITE,
+            content=f"Tu as été ajouté au projet « {html.escape(project.name)} »",
+            related_task_id=None,
+            related_project_id=project_id,
         )
+    )
     record_activity(db, current_user.id, Track.COLLABORATORS, payload.user_id)
     db.commit()
     db.refresh(new_member)
 
     rank = ranks_for(db, [new_member.user_id])[new_member.user_id]
     return SuccessEnvelope(data=ProjectMemberData(member=_serialize_member(new_member, rank)))
-
-
-# ---------------------------------------------------------------------------
-# DELETE /api/projects/{id}/members/{user_id}
-# ---------------------------------------------------------------------------
 
 
 @router.delete("/{project_id}/members/{user_id}", response_model=SimpleSuccessResponse)

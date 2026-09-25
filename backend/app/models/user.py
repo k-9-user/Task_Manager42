@@ -18,7 +18,6 @@ from app.database import Base
 
 
 DEFAULT_AVATAR_URL = "/static/default-avatar.png"
-ADMIN_INVARIANT_LOCK_KEY = 0x544D3432
 
 
 class UserRole(str, enum.Enum):

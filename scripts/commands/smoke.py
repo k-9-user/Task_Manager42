@@ -16,7 +16,6 @@ OPENAPI_OPERATIONS = {
     "/api/export": "get", "/api/import": "post",
     "/api/tasks/{task_id}/attachments": "post", "/api/attachments/{attachment_id}": "delete",
     "/api/auth/oauth/google/exchange": "post", "/api/api-keys": "post",
-    "/api/api-keys/{key_id}/rotate": "post",
 }
 
 

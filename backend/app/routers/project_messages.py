@@ -6,11 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import get_membership_or_404
 from app.database import get_db
 from app.models.project_member import ProjectRole
 from app.models.project_message import ProjectMessage
 from app.models.user import User
-from app.routers.projects import _get_membership_or_404
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.schemas.project_message import (
     ProjectMessageCreate,
@@ -46,7 +46,7 @@ def list_project_messages(
     db: DatabaseSession,
     current_user: AuthenticatedUser,
 ):
-    _get_membership_or_404(db, project_id, current_user.id)
+    get_membership_or_404(db, project_id, current_user.id)
 
     messages = db.scalars(
         select(ProjectMessage)
@@ -72,7 +72,7 @@ def create_project_message(
     db: DatabaseSession,
     current_user: AuthenticatedUser,
 ):
-    _get_membership_or_404(db, project_id, current_user.id)
+    get_membership_or_404(db, project_id, current_user.id)
 
     message = ProjectMessage(
         project_id=project_id, author_id=current_user.id, content=payload.content
@@ -103,7 +103,7 @@ def delete_project_message(
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
 
-    membership = _get_membership_or_404(db, message.project_id, current_user.id)
+    membership = get_membership_or_404(db, message.project_id, current_user.id)
 
     if message.author_id != current_user.id and membership.role != ProjectRole.OWNER:
         raise HTTPException(

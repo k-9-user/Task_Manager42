@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -20,15 +19,5 @@ class ApiKeyData(BaseModel):
     api_key: IssuedApiKey
 
 
-class ApiKeyResponse(BaseModel):
-    success: Literal[True] = True
-    data: ApiKeyData
-
-
 class ApiKeyListData(BaseModel):
     api_keys: list[ApiKeyMetadata]
-
-
-class ApiKeyListResponse(BaseModel):
-    success: Literal[True] = True
-    data: ApiKeyListData

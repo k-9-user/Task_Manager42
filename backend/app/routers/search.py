@@ -1,17 +1,19 @@
-from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
 from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import visible_project_ids
+from app.database import get_db
 from app.models.project import Project
-from app.models.project_member import ProjectMember
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.schemas.common import SuccessEnvelope
+from app.schemas.project import ProjectResponse
+from app.schemas.task import TaskSummary
 from app.utils.validators import escape_like_pattern
 
 
@@ -87,8 +89,8 @@ def search_tasks(
         int,
         Query(ge=1, le=100, description="Tasks returned per page, up to 100."),
     ] = 20,
-) -> dict[str, Any]:
-    filters = [_project_access_filter(current_user.id)]
+) -> SuccessEnvelope:
+    filters = [Task.project_id.in_(visible_project_ids(current_user.id))]
 
     normalized_query = q.strip() if q is not None else ""
     if normalized_query:
@@ -106,11 +108,7 @@ def search_tasks(
     if project_id is not None:
         filters.append(Task.project_id == project_id)
 
-    filtered_tasks = (
-        select(Task)
-        .join(Project, Task.project_id == Project.id)
-        .where(*filters)
-    )
+    filtered_tasks = select(Task).where(*filters)
     total = db.scalar(
         select(func.count()).select_from(filtered_tasks.subquery())
     ) or 0
@@ -122,13 +120,9 @@ def search_tasks(
         .limit(limit)
     ).all()
 
-    return {
-        "success": True,
-        "data": {
-            "tasks": [_serialize_task(task) for task in tasks],
-            "total": total,
-        },
-    }
+    return SuccessEnvelope(
+        data={"tasks": [TaskSummary.model_validate(task) for task in tasks], "total": total}
+    )
 
 
 @router.get(
@@ -165,8 +159,8 @@ def search_projects(
         int,
         Query(ge=1, le=100, description="Projects returned per page, up to 100."),
     ] = 20,
-) -> dict[str, Any]:
-    filters = [_project_access_filter(current_user.id)]
+) -> SuccessEnvelope:
+    filters = [Project.id.in_(visible_project_ids(current_user.id))]
 
     normalized_query = q.strip() if q is not None else ""
     if normalized_query:
@@ -185,47 +179,9 @@ def search_projects(
         .limit(limit)
     ).all()
 
-    return {
-        "success": True,
-        "data": {
-            "projects": [_serialize_project(project) for project in projects],
+    return SuccessEnvelope(
+        data={
+            "projects": [ProjectResponse.model_validate(project) for project in projects],
             "total": total,
-        },
-    }
-
-
-def _project_access_filter(user_id: UUID):
-    member_project_ids = select(ProjectMember.project_id).where(
-        ProjectMember.user_id == user_id
+        }
     )
-    return Project.id.in_(member_project_ids)
-
-
-def _serialize_project(project: Project) -> dict[str, Any]:
-    return {
-        "id": project.id,
-        "name": project.name,
-        "description": project.description,
-        "owner_id": project.owner_id,
-        "created_at": project.created_at,
-    }
-
-
-def _serialize_task(task: Task) -> dict[str, Any]:
-    return {
-        "id": task.id,
-        "project_id": task.project_id,
-        "title": task.title,
-        "description": task.description,
-        "status": _enum_value(task.status),
-        "assignee_id": task.assignee_id,
-        "due_date": task.due_date,
-        "created_at": task.created_at,
-        "updated_at": task.updated_at,
-    }
-
-
-def _enum_value(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    return value

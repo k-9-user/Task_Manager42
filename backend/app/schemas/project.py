@@ -8,11 +8,6 @@ from app.models.project_member import ProjectRole
 from app.schemas.common import StrictRequest
 
 
-# ---------------------------------------------------------------------------
-# Project — requêtes entrantes
-# ---------------------------------------------------------------------------
-
-
 class ProjectCreate(StrictRequest):
     """Body attendu pour POST /api/projects."""
 
@@ -25,11 +20,6 @@ class ProjectUpdate(StrictRequest):
 
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     description: Optional[str] = Field(default=None, max_length=5000)
-
-
-# ---------------------------------------------------------------------------
-# Project — réponses sortantes
-# ---------------------------------------------------------------------------
 
 
 class ProjectResponse(BaseModel):
@@ -52,11 +42,6 @@ class ProjectListResponse(BaseModel):
 
 class ProjectData(BaseModel):
     project: ProjectResponse
-
-
-# ---------------------------------------------------------------------------
-# Project members
-# ---------------------------------------------------------------------------
 
 
 class ProjectMemberCreate(StrictRequest):
@@ -83,7 +68,3 @@ class ProjectMemberResponse(BaseModel):
 
 class ProjectMemberData(BaseModel):
     member: ProjectMemberResponse
-
-
-class ProjectMemberListResponse(BaseModel):
-    members: list[ProjectMemberResponse]

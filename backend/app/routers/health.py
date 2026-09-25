@@ -81,16 +81,7 @@ def _backup_status(path: Path, now: datetime) -> BackupStatus:
     )
 
 
-@router.get(
-    "/health",
-    summary="Check application health",
-    response_model=HealthResponse,
-    responses={
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "description": "Database unavailable",
-        }
-    },
-)
+@router.get("/health", summary="Check application health", response_model=HealthResponse)
 def health_check(
     db: Annotated[Session, Depends(get_db)],
 ) -> HealthResponse:

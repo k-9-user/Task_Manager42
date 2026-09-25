@@ -9,7 +9,7 @@ from app.auth.security import hash_password, verify_password_and_update
 from app.config import BootstrapSettings, ConfigurationError, get_bootstrap_settings
 from app.database import SessionLocal
 from app.models.user import User, UserRole, UserStatus
-from app.utils.locks import lock_admin_invariants
+from app.services.accounts import lock_admin_invariants
 
 
 logger = logging.getLogger(__name__)

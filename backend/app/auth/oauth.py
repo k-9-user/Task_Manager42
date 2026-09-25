@@ -1,6 +1,6 @@
 import logging
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -12,6 +12,7 @@ from app.utils.validators import (
     USERNAME_MAX_LENGTH,
     has_unsafe_url_characters,
     is_safe_https_url,
+    normalize_email,
 )
 
 
@@ -20,12 +21,6 @@ GOOGLE_DISCOVERY_URL = (
     "https://accounts.google.com/.well-known/openid-configuration"
 )
 GOOGLE_SCOPE = "openid email profile"
-
-_GOOGLE_SETTING_NAMES = (
-    "oauth_google_client_id",
-    "oauth_google_client_secret",
-    "oauth_google_redirect_uri",
-)
 _ALLOWED_USERNAME_CHARACTER = re.compile(r"[a-z0-9._-]")
 _UNSAFE_USERNAME_CHARACTERS = re.compile(r"[^a-z0-9._-]+")
 
@@ -52,12 +47,7 @@ class GoogleClaims(BaseModel):
             raise ValueError("sub must be an ASCII string")
         return value
 
-    @field_validator("email", mode="before")
-    @classmethod
-    def normalize_email(cls, value: Any) -> Any:
-        if not isinstance(value, str):
-            raise ValueError("email must be a string")
-        return value.strip().lower()
+    _email_normalizer = field_validator("email", mode="before")(normalize_email)
 
     @field_validator("email_verified", mode="before")
     @classmethod
@@ -84,51 +74,25 @@ class GoogleClaims(BaseModel):
         return picture
 
 
-def _setting_text(settings: object, name: str) -> str:
-    value = getattr(settings, name, None)
-    reveal = getattr(value, "get_secret_value", None)
-    if callable(reveal):
-        value = reveal()
-    if not isinstance(value, str):
-        return ""
-    return value.strip()
-
-
-def is_google_oauth_configured(settings: object) -> bool:
-    """Return whether all values needed for Google OAuth are present."""
-
-    return all(_setting_text(settings, name) for name in _GOOGLE_SETTING_NAMES)
-
-
 @lru_cache
 def get_google_oauth_client() -> Any:
     """Return the process-wide configured Google OIDC client."""
 
     settings = get_settings()
-    if not is_google_oauth_configured(settings):
+    client_id = settings.oauth_google_client_id.strip()
+    client_secret = settings.oauth_google_client_secret.get_secret_value().strip()
+    if not (client_id and client_secret and settings.oauth_google_redirect_uri):
         raise RuntimeError("Google OAuth is not configured")
 
     registry = OAuth()
     registry.register(
         GOOGLE_CLIENT_NAME,
-        client_id=_setting_text(settings, "oauth_google_client_id"),
-        client_secret=_setting_text(settings, "oauth_google_client_secret"),
+        client_id=client_id,
+        client_secret=client_secret,
         server_metadata_url=GOOGLE_DISCOVERY_URL,
-        client_kwargs={
-            "scope": GOOGLE_SCOPE,
-            "code_challenge_method": "S256",
-        },
+        client_kwargs={"scope": GOOGLE_SCOPE, "code_challenge_method": "S256"},
     )
-    client = registry.create_client(GOOGLE_CLIENT_NAME)
-    if client is None:
-        raise RuntimeError("Google OAuth client is not registered")
-    return client
-
-
-def validate_google_claims(claims: Mapping[str, Any]) -> GoogleClaims:
-    """Validate identity fields from an Authlib-verified provider response."""
-
-    return GoogleClaims.model_validate(dict(claims))
+    return registry.create_client(GOOGLE_CLIENT_NAME)
 
 
 def google_username_candidates(email: str) -> Iterator[str]:

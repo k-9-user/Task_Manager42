@@ -13,7 +13,6 @@ def test_lifecycle_routes_require_jwt(client):
         ("POST", "/api/api-keys"),
         ("GET", "/api/api-keys"),
         ("DELETE", "/api/api-keys/00000000-0000-0000-0000-000000000001"),
-        ("POST", "/api/api-keys/00000000-0000-0000-0000-000000000001/rotate"),
     )
     for method, path in requests:
         assert client.request(method, path).status_code == 401
@@ -32,9 +31,6 @@ def test_banned_user_cannot_manage_api_keys(
     assert client.get("/api/api-keys", headers=auth_headers(user)).status_code == 403
     assert client.delete(
         f"/api/api-keys/{api_key.id}", headers=auth_headers(user),
-    ).status_code == 403
-    assert client.post(
-        f"/api/api-keys/{api_key.id}/rotate", headers=auth_headers(user),
     ).status_code == 403
     db_session.expire_all()
     assert db_session.get(ApiKey, api_key.id) is not None
@@ -76,29 +72,6 @@ def test_key_owner_is_hidden_from_other_users(client, user_factory, auth_headers
     assert client.delete(
         f"/api/api-keys/{issued['id']}", headers=auth_headers(stranger),
     ).status_code == 404
-    assert client.post(
-        f"/api/api-keys/{issued['id']}/rotate", headers=auth_headers(stranger),
-    ).status_code == 404
-
-
-def test_rotate_atomically_replaces_key(client, user_factory, auth_headers):
-    user = user_factory()
-    old = client.post("/api/api-keys", headers=auth_headers(user)).json()["data"]["api_key"]
-
-    response = client.post(
-        f"/api/api-keys/{old['id']}/rotate", headers=auth_headers(user),
-    )
-
-    assert response.status_code == 200
-    new = response.json()["data"]["api_key"]
-    assert new["id"] != old["id"]
-    assert new["key"] != old["key"]
-    assert client.get(
-        "/api/v1/public/projects", headers={"X-API-Key": old["key"]},
-    ).status_code == 401
-    assert client.get(
-        "/api/v1/public/projects", headers={"X-API-Key": new["key"]},
-    ).status_code == 200
 
 
 def test_revoke_invalidates_key(client, user_factory, auth_headers):

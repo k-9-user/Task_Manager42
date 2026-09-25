@@ -26,7 +26,6 @@ def test_real_app_registers_all_feature_routes():
         ("POST", "/api/api-keys"),
         ("GET", "/api/api-keys"),
         ("DELETE", "/api/api-keys/{key_id}"),
-        ("POST", "/api/api-keys/{key_id}/rotate"),
         ("GET", "/api/users/me"),
         ("GET", "/health"),
         ("GET", "/api/projects"),
@@ -36,7 +35,6 @@ def test_real_app_registers_all_feature_routes():
         ("DELETE", "/api/projects/{project_id}"),
         ("POST", "/api/projects/{project_id}/members"),
         ("DELETE", "/api/projects/{project_id}/members/{user_id}"),
-        ("GET", "/api/projects/{project_id}/tasks"),
         ("POST", "/api/projects/{project_id}/tasks"),
         ("PUT", "/api/tasks/{task_id}"),
         ("DELETE", "/api/tasks/{task_id}"),
@@ -123,7 +121,7 @@ def test_real_jwt_project_task_flow_enforces_membership(client, db_session):
         "user_id": outsider.json()["data"]["user"]["id"], "role": "viewer",
     })
     assert invited.status_code == 201, invited.text
-    visible = client.get(tasks_url, headers=outsider_headers)
+    visible = client.get(f"/api/projects/{project['id']}", headers=outsider_headers)
     assert visible.status_code == 200
     assert [item["id"] for item in visible.json()["data"]["tasks"]] == [task["id"]]
     assert client.put(task_url, headers=outsider_headers, json={"status": "done"}).status_code == 403

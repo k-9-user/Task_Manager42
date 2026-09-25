@@ -453,4 +453,4 @@ def test_oauth_failures_do_not_log_secrets(
     assert response.status_code == 303
     assert response.headers["location"] == "/login?oauth=failed"
     assert secret not in caplog.text
-    assert "category=protocol_or_claims" in caplog.text
+    assert "google_oauth_failed error=OAuthError" in caplog.text

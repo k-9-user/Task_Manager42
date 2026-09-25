@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
 from pydantic import (
@@ -22,12 +22,11 @@ from app.utils.validators import (
     USERNAME_MAX_LENGTH,
     USERNAME_MIN_LENGTH,
     USERNAME_PATTERN,
+    clean_text,
     has_control_characters,
     normalize_email,
+    strip_text,
     validate_avatar,
-    validate_display_name,
-    validate_status_reason,
-    validate_username,
 )
 
 
@@ -47,7 +46,7 @@ class UserRegister(StrictRequest):
     password: SecretStr = Field(json_schema_extra=_document_password_limits)
 
     _email_normalizer = field_validator("email", mode="before")(normalize_email)
-    _username_validator = field_validator("username", mode="before")(validate_username)
+    _username_validator = field_validator("username", mode="before")(strip_text)
 
     @field_validator("password")
     @classmethod
@@ -67,9 +66,7 @@ class UserLogin(StrictRequest):
     identifier: str = Field(min_length=1, max_length=254)
     password: SecretStr = Field(min_length=1)
 
-    _identifier_validator = field_validator("identifier", mode="before")(
-        validate_username
-    )
+    _identifier_validator = field_validator("identifier", mode="before")(strip_text)
 
 
 class UserUpdate(StrictRequest):
@@ -90,11 +87,9 @@ class UserUpdate(StrictRequest):
         max_length=DISPLAY_NAME_MAX_LENGTH,
     )
 
-    _username_validator = field_validator("username", mode="before")(validate_username)
+    _username_validator = field_validator("username", mode="before")(strip_text)
     _avatar_validator = field_validator("avatar", mode="before")(validate_avatar)
-    _display_name_validator = field_validator("display_name", mode="before")(
-        validate_display_name
-    )
+    _display_name_validator = field_validator("display_name", mode="before")(clean_text)
 
     @model_validator(mode="after")
     def require_update(self) -> "UserUpdate":
@@ -126,18 +121,8 @@ class AuthData(BaseModel):
     token: str
 
 
-class AuthResponse(BaseModel):
-    success: Literal[True] = True
-    data: AuthData
-
-
 class UserData(BaseModel):
     user: UserResponse
-
-
-class CurrentUserResponse(BaseModel):
-    success: Literal[True] = True
-    data: UserData
 
 
 class UserRoleUpdate(StrictRequest):
@@ -157,10 +142,8 @@ class AdminUserUpdate(StrictRequest):
         max_length=DISPLAY_NAME_MAX_LENGTH,
     )
 
-    _username_validator = field_validator("username", mode="before")(validate_username)
-    _display_name_validator = field_validator("display_name", mode="before")(
-        validate_display_name
-    )
+    _username_validator = field_validator("username", mode="before")(strip_text)
+    _display_name_validator = field_validator("display_name", mode="before")(clean_text)
 
     @model_validator(mode="after")
     def require_update(self) -> "AdminUserUpdate":
@@ -177,30 +160,10 @@ class UserStatusUpdate(StrictRequest):
         max_length=STATUS_REASON_MAX_LENGTH,
     )
 
-    _reason_validator = field_validator("reason", mode="before")(
-        validate_status_reason
-    )
+    _reason_validator = field_validator("reason", mode="before")(clean_text)
 
 
 class UsersData(BaseModel):
     users: list[UserResponse]
     total: int = Field(ge=0)
 
-
-class UsersResponse(BaseModel):
-    success: Literal[True] = True
-    data: UsersData
-
-
-class DeleteData(BaseModel):
-    pass
-
-
-class DeleteResponse(BaseModel):
-    success: Literal[True] = True
-    data: DeleteData
-
-
-class ErrorResponse(BaseModel):
-    success: Literal[False] = False
-    error: str

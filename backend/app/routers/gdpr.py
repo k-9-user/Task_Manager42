@@ -2,7 +2,7 @@ import json
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import Settings, get_settings
@@ -16,13 +16,17 @@ from app.models.project import Project
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.project_message import ProjectMessage
 from app.models.task import Task
-from app.models.user import User, UserRole, UserStatus
+from app.models.user import UserStatus
 from app.models.user_activity import UserActivity
 from app.schemas.common import SimpleSuccessResponse, StrictRequest
-from app.services.accounts import ensure_not_bootstrap_admin, hand_off_projects
+from app.services.accounts import (
+    ensure_another_active_admin,
+    ensure_not_bootstrap_admin,
+    hand_off_projects,
+    lock_and_reload,
+)
 from app.services.gamification import build_summary
 from app.services.uploads import remove_files
-from app.utils.locks import lock_admin_invariants
 from app.utils.mailer import send_mail
 
 router = APIRouter(prefix="/api/gdpr", tags=["gdpr"])
@@ -38,10 +42,6 @@ def _fmt_dt(value: datetime | None) -> str | None:
 
 def _fmt_date(value: date | None) -> str | None:
     return value.isoformat() if value is not None else None
-
-
-def _enum_value(value):
-    return getattr(value, "value", value)
 
 
 def _compact(row: dict) -> dict:
@@ -82,11 +82,6 @@ def _gamification_export(summary: dict, history: list[UserActivity]) -> dict | N
             if achievement["unlocked_at"] is not None
         ],
     })
-
-
-# ---------------------------------------------------------------------------
-# GET /api/gdpr/export
-# ---------------------------------------------------------------------------
 
 
 @router.get("/export")
@@ -177,7 +172,7 @@ def export_my_data(
             "email": current_user.email,
             "username": current_user.username,
             "display_name": current_user.display_name,
-            "role": _enum_value(current_user.role),
+            "role": current_user.role.value,
             "sign_in": current_user.oauth_provider or "password",
             "avatar_url": current_user.avatar_url,
             "member_since": _fmt_dt(current_user.created_at),
@@ -187,7 +182,7 @@ def export_my_data(
             _compact({
                 "name": m.project.name,
                 "description": m.project.description,
-                "your_role": _enum_value(m.role),
+                "your_role": m.role.value,
                 "owner": m.project.owner_id == user_id,
                 "joined_at": _fmt_dt(m.joined_at),
             })
@@ -206,7 +201,7 @@ def export_my_data(
                 "title": t.title,
                 "description": t.description,
                 "project": t.project.name,
-                "status": _enum_value(t.status),
+                "status": t.status.value,
                 "due_date": _fmt_date(t.due_date),
             })
             for t in assigned_tasks
@@ -244,7 +239,7 @@ def export_my_data(
         ],
         "notifications": [
             {
-                "type": _enum_value(n.type),
+                "type": n.type.value,
                 "text": n.content,
                 "read": n.read,
                 "received_at": _fmt_dt(n.created_at),
@@ -277,11 +272,6 @@ def export_my_data(
     )
 
 
-# ---------------------------------------------------------------------------
-# DELETE /api/gdpr/account
-# ---------------------------------------------------------------------------
-
-
 class GDPRDeleteRequest(StrictRequest):
     confirm: bool
     confirm_username: str
@@ -308,38 +298,16 @@ def delete_my_account(
             detail="Confirmation requise (confirm: true) pour supprimer le compte",
         )
 
-    lock_admin_invariants(db)
-    current_user = db.scalar(
-        select(User)
-        .where(User.id == current_user.id)
-        .execution_options(populate_existing=True)
-    )
-    if current_user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    current_user = lock_and_reload(db, current_user)
     if current_user.status == UserStatus.BANNED:
-        raise HTTPException(status_code=403, detail="Account is banned")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is banned")
     ensure_not_bootstrap_admin(current_user)
     if payload.confirm_username != current_user.username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username confirmation does not match",
         )
-    if current_user.role == UserRole.ADMIN:
-        active_admins = db.scalar(
-            select(func.count()).select_from(User).where(
-                User.role == UserRole.ADMIN,
-                User.status == UserStatus.ACTIVE,
-            )
-        ) or 0
-        if active_admins <= 1:
-            raise HTTPException(
-                status_code=409,
-                detail="At least one active administrator is required",
-            )
+    ensure_another_active_admin(db, current_user, "At least one active administrator is required")
 
     files = hand_off_projects(db, current_user.id, settings)
 

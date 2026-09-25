@@ -1,13 +1,3 @@
-"""Router FastAPI pour les commentaires de tâche.
-
-Un commentaire est un fil de discussion texte attaché à une tâche, en plus
-des attachments (fichiers). N'importe quel membre du projet (owner, editor ou
-viewer) peut lire et écrire des commentaires : ce n'est pas une modification
-de la tâche elle-même, donc pas soumis à la même restriction owner/editor que
-`update_task`. Seul l'auteur du commentaire (ou le owner du projet, pour
-modération) peut le supprimer.
-"""
-
 import uuid
 from typing import Annotated
 
@@ -16,12 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
+from app.auth.project_permissions import get_membership_or_404
 from app.database import get_db
 from app.models.comment import Comment
 from app.models.project_member import ProjectMember, ProjectRole
 from app.models.task import Task
 from app.models.user import User
-from app.routers.projects import _get_membership_or_404
 from app.schemas.comment import CommentCreate, CommentData, CommentListResponse, CommentResponse
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.services.gamification import Track, record_activity
@@ -61,7 +51,7 @@ def list_comments(
     current_user: AuthenticatedUser,
 ):
     project_id = _task_project_id_or_404(db, task_id)
-    _get_membership_or_404(db, project_id, current_user.id)
+    get_membership_or_404(db, project_id, current_user.id)
 
     comments = db.scalars(
         select(Comment)
@@ -88,7 +78,7 @@ def create_comment(
     current_user: AuthenticatedUser,
 ):
     project_id = _task_project_id_or_404(db, task_id)
-    _get_membership_or_404(db, project_id, current_user.id)
+    get_membership_or_404(db, project_id, current_user.id)
 
     comment = Comment(task_id=task_id, author_id=current_user.id, content=payload.content)
     db.add(comment)
@@ -114,7 +104,7 @@ def delete_comment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
     project_id = _task_project_id_or_404(db, comment.task_id)
-    membership = _get_membership_or_404(db, project_id, current_user.id)
+    membership = get_membership_or_404(db, project_id, current_user.id)
 
     if comment.author_id != current_user.id and membership.role != ProjectRole.OWNER:
         raise HTTPException(
