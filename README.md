@@ -371,8 +371,8 @@ removes deleted items immediately.
   only use the confirmed `make reset-db` path for disposable local data. Fresh
   databases and the isolated test database use `initial_schema` successfully.
 - **Google OAuth:** no provider credentials are committed, and the feature returns a
-  controlled unavailable response until a local client is configured. This audit did
-  not perform a live provider login.
+  controlled unavailable response until a local client is configured. Local Google
+  credentials are required to enable provider login.
 - **API-key lifecycle:** keys can be issued, listed, and revoked. There is no in-place
   rotation route; revoke the old key and issue a new one.
 - **Rate limiting:** public-API windows are in process memory. They reset on backend

@@ -391,8 +391,8 @@ def _resolve_import_projects(
 ) -> tuple[dict[UUID, UUID], set[UUID]]:
     """Map every referenced project to a writable one, creating it when there is none.
 
-    A project the caller cannot write to — absent here, or owned by somebody else — is
-    recreated from the exported name, so an export stays importable across accounts.
+    A missing or non-writable source project is recreated from its exported name so
+    exports remain portable across accounts.
     """
 
     names: dict[UUID, str] = {}

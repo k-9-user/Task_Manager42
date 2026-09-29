@@ -79,6 +79,6 @@ def validate_config(values, secret_values):
 
 
 def validate_env(values):
-    """Compatibility entry point used by older callers and tests."""
+    """Validate .env values together with the configured secret files."""
 
     validate_config(values, read_secret_files())

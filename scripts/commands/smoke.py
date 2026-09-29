@@ -36,7 +36,7 @@ def smoke():
         raise ValueError("Frontend response has no header/body separator")
 
     def frontend_nonce():
-        """Prove the CSP nonce pipeline end to end."""
+        """Validate the CSP nonce pipeline end to end."""
 
         headers, body = get("/", with_headers=True)
         require("VITE_CSP_NONCE" not in body, "nginx did not substitute the Vite CSP nonce placeholder")
@@ -51,7 +51,7 @@ def smoke():
         return declared.group(1)
 
     def docs_scripts():
-        """Prove every script on /docs is allowed by the /docs CSP."""
+        """Validate that the /docs CSP allows every page script."""
 
         headers, body = get("/docs", with_headers=True)
         policy = re.search(r"(?im)^content-security-policy:.*$", headers)
