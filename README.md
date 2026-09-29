@@ -1,195 +1,186 @@
 # Task Manager 42
 
-*This project has been created as part of the 42 curriculum by Eraad, khderdou, ksupinsk, nratajcz.*
+*Created as part of the 42 curriculum by Eraad, khderdou, ksupinsk, and nratajcz.*
 
-Task Manager 42 is a collaborative project/task-management web application built
-with React, FastAPI and PostgreSQL. Users create projects, invite members with
-owner/editor/viewer permissions, create and assign tasks with deadlines, track
-progress on a Kanban-style board, attach files and banners to tasks, message
-their team per project, search across projects and tasks, and manage their
-personal data (export/deletion) in line with GDPR. Administrators can manage
-every account's role and status. A public, API-key-authenticated endpoint lets
-external tools create and manage tasks without the web UI.
+## Overview
 
-## Team
+Task Manager 42 is a collaborative project and task-management application. Users
+create projects, invite members with owner/editor/viewer permissions, assign and
+track tasks, attach private files, exchange project messages, search their visible
+work, and export or import data. Administrators can manage accounts, while external
+clients can use a documented API protected by per-user API keys.
 
-| Login | Role(s) | Main area of ownership |
-|---|---|---|
-| **Eraad** | Tech Lead, Backend (Auth & Security) | Docker/Compose setup, database bootstrap, JWT auth, password hashing (Argon2), Google OAuth, admin permissions & roles, HTTPS/nginx reverse proxy, health check, rate limiting |
-| **khderdou** | Project Manager, Backend (Projects & Tasks) | Projects/tasks/members CRUD, role-based permissions, GDPR export & account deletion, notifications backend, project message wall, sprint coordination (backlog, syncs) |
-| **ksupinsk** | Backend (Public API & Data) | Public API with API-key auth & rate limiting, advanced search (filters/sort/pagination), file attachments & task banners, CSV/JSON export & import |
-| **nratajcz** | Frontend | React app structure & routing, all pages/components, i18n (FR/EN/ES), responsive layout, legal pages, design pass |
+The application is a localhost development stack built around React, FastAPI,
+PostgreSQL, and nginx. Docker Compose orchestrates the services, but the Make wrapper
+is the supported entry point because it supplies validated configuration such as the
+absolute `DATA_DIR`.
 
-## Project management
+## Features
 
-- **Branching**: one long-lived branch per person (previously labelled `A`/`B`/`C`/`D`
-  during planning, now mapped 1:1 to the logins above), merged regularly into a shared
-  integration branch, with a final branch cut for submission.
-- **Commit convention**: `[SCOPE] description` (e.g. `[auth] add JWT token generation`).
-- **Coordination**: the team agreed the API routes, database schema and environment
-  variables up front, so the four areas above (auth, projects/tasks, public API/data,
-  frontend) could be built in parallel against a stable interface. Each area's
-  four-week task breakdown made explicit "who is waiting on whom" (e.g. the frontend
-  could not start wiring a page until the corresponding backend route was confirmed
-  testable).
-- **Backlog & syncs**: GitHub Issues for the backlog; two short weekly syncs (in
-  person / video call) to unblock dependencies between areas.
-- **Module scope**: the module list below was fixed at the start and tracked against
-  a 14-point minimum throughout, rather than chased opportunistically.
+- Email/username login, Argon2 password hashing, JWT sessions, and optional Google
+  OAuth 2.0/OIDC.
+- Project and task CRUD with owner, editor, and viewer authorization.
+- Administrator account listing, editing, role changes, bans, unbans, and deletion.
+- Project messages, task comments, notifications, and persistent gamification.
+- API-key-protected public task/project API with per-key rate limiting.
+- Task and project search with text filters, status/project filters, allow-listed
+  sorting, deterministic tie-breaking, totals, and pagination.
+- Private task attachments and banners with client/server validation, upload
+  progress, authenticated preview/download, and deletion.
+- Deterministic JSON/CSV export and validated JSON/CSV bulk import.
+- GDPR data export and confirmed account deletion with locally captured email
+  notifications.
+- Database-aware health checks, a status page, scheduled backups, and confirmed
+  database/upload restoration.
 
-## Why this project
+## Technology Choices
 
-A task manager was chosen over a more novelty-driven idea (e.g. a game) because it
-needs genuine multi-user collaboration (a hard requirement), maps naturally onto a
-relational schema (`users` → `projects` → `tasks` → `attachments`/`comments`), and
-cleanly supports a varied, coherent set of modules (permissions, public API, search,
-file upload) without a heavy technical dependency such as real-time synchronization.
-
-## Technologies used
-
-| Choice | Why |
+| Technology | Role and rationale |
 |---|---|
-| **React** (Vite) | Most widely used frontend framework; large ecosystem; easy to structure into reusable components |
-| **Tailwind CSS** | Utility-first styling solution used across the frontend (sidebar, auth pages, project list, etc.) instead of hand-rolled CSS only |
-| **FastAPI** | Lightweight, high-performance Python backend framework; generates OpenAPI/Swagger docs automatically, which the public-API module relies on |
-| **PostgreSQL** | Robust relational database; well suited to the users↔projects↔tasks relational model |
-| **SQLAlchemy (ORM)** | Avoids hand-written SQL, parameterizes every query against injection, speeds up iteration |
-| **Alembic** | Versioned, reviewable database migrations |
-| **Docker Compose** | Identical local environment for everyone on the team; the whole stack starts with one command |
-| **JWT** (PyJWT) | Stateless authentication that also underpins the public API-key story |
-| **Argon2** (pwdlib/argon2-cffi) | Modern, memory-hard password hashing (not reversible encryption) |
-| **nginx** | Single HTTPS entry point, reverse proxy, per-request CSP nonce, rate limiting on auth routes |
-| **i18next** | Full FR/EN/ES translation of all visible UI text, including legal pages |
+| React + Vite | Component-based frontend with fast local development and a clear service/UI boundary |
+| Tailwind CSS + component CSS | Responsive styling with reusable layout primitives and focused component rules |
+| FastAPI + Pydantic | Typed request validation, dependency-based authorization, and generated OpenAPI documentation |
+| PostgreSQL 17 | Relational integrity for users, memberships, projects, tasks, and dependent records |
+| SQLAlchemy + Alembic | ORM queries, explicit relationships/constraints, and versioned schema setup |
+| nginx | One TLS entry point, reverse proxying, HTTP redirect, CSP, and security headers |
+| Docker Compose | Reproducible application, database, backup, test, and mail-catcher services |
+| Mailpit | Safe local capture of GDPR operation emails without external delivery |
 
-## Database schema
+## Database Model
 
-All entity IDs are UUIDs. See [`db_install`](backend/alembic/versions/db_install.py)
-plus the migrations that followed it for the exact DDL.
+All primary and relationship identifiers are UUIDs. The current authoritative DDL is
+`backend/alembic/versions/initial_schema.py`.
 
-| Table | Key fields and relationships |
+| Table | Purpose and important relationships |
 |---|---|
-| `users` | Unique email/username, nullable display name, password hash or OAuth identity, global role/status, avatar URL, timestamps |
-| `projects` | Name/description, `owner_id -> users`, creation time |
-| `project_members` | Unique project/user pair, owner/editor/viewer role; canonical project authorization |
-| `tasks` | `project_id`, title/description/status, nullable assignee and due date, optional banner image, timestamps |
-| `attachments` | Task/uploader references, file name/URL, timestamp; restrictive parent deletion |
-| `comments` | Per-task discussion thread: task/author references, content, timestamps |
-| `project_messages` | Per-project team message wall: project/author references, content, timestamp |
-| `api_keys` | User reference, unique SHA-256 key hash, timestamp |
-| `oauth_handoffs` | One-time hashed OAuth browser handoff with user and expiry |
-| `notifications` | Recipient, type/content/read flag, nullable task/project context, timestamp |
+| `users` | Unique email/username, Argon2 hash or Google identity, global role/status, profile fields |
+| `projects` | Project metadata and canonical owner reference |
+| `project_members` | Unique project/user membership with owner/editor/viewer role |
+| `tasks` | Project task, optional assignee/due date/banner, status, timestamps |
+| `attachments` | Task attachment metadata and nullable uploader reference; bytes remain on private storage |
+| `comments` | Authored task discussion |
+| `project_messages` | Authored project message wall |
+| `notifications` | Recipient, notification type/content/read state, optional task/project context |
+| `api_keys` | User relationship and unique key hash; never the raw API key |
+| `user_activities` | Deduplicated actions used by gamification tracks |
+| `user_achievements` | Persistent unlocked achievements and awarded XP |
+| `user_badges` | Persistent level badge awards |
 
-Project/member/task relations support cascades; deleted assignees and notification
-context can become null. Attachments intentionally restrict referenced-parent
-deletion. Project owner references and owner memberships must remain consistent.
-Five PostgreSQL enums encode global role, account status, project role, task
-status and current notification type.
+Foreign keys cascade or null dependent references according to ownership semantics.
+Unique constraints protect membership, API-key, identity, activity, achievement, and
+badge invariants.
 
-## Features and who built them
+## Feature Ownership
 
-| Feature | Owner(s) |
+| Area | Contributor(s) |
 |---|---|
-| Docker Compose stack, TLS/nginx, Make wrapper (setup/check/up/down/backup/...) | Eraad |
-| Email/password auth, JWT, Argon2 hashing, Google OAuth | Eraad |
-| Admin: list/rename/ban/unban/role-change/delete any user | Eraad (backend) + nratajcz (frontend) |
-| Health check endpoint + user-facing status page + backups | Eraad |
-| Projects & tasks CRUD, members with owner/editor/viewer roles | khderdou |
-| Project message wall (per-project team chat) | khderdou (backend) + nratajcz (frontend) |
-| GDPR data export and confirmed account deletion (Profile → My data, confirmation emails) | khderdou |
-| Notifications (task assignment/status change) | khderdou |
-| Public API with API-key auth and rate limiting | ksupinsk |
-| Advanced search (tasks and projects: text, filters, sort, pagination) | ksupinsk (backend) + nratajcz (frontend) |
-| File attachments and task banners | ksupinsk (backend) + nratajcz (frontend) |
-| CSV/JSON export and import | ksupinsk |
-| React app, routing, all pages, Tailwind design pass | nratajcz |
-| FR/EN/ES translations (including legal pages) | nratajcz |
-| Privacy Policy / Terms of Service | nratajcz |
+| Compose, Make workflow, TLS/nginx, auth, OAuth, admin, health/backups | Eraad |
+| Projects, tasks, memberships, GDPR, notifications, project messages | khderdou |
+| API keys/public API, rate limiting, search, attachments, import/export | ksupinsk |
+| React pages/components, routing, UI design, locale catalogs, legal pages | nratajcz |
+| Admin and collaborative feature UI integration | Backend owner(s) + nratajcz |
 
-## Modules (14 points required)
+Repository history shows feature work integrated into `Final` through reviewed topic
+branches and merge commits. The team coordinated around shared API routes, database
+relationships, environment variables, and frontend response envelopes so backend and
+frontend work could converge without separate contracts.
 
-| Category | Module | Type | Pts | Owner |
-|---|---|---|---|---|
-| Web | Framework (frontend + backend) | Major | 2 | nratajcz + Eraad |
-| Web | ORM | Minor | 1 | Eraad |
-| Web | Public API | Major | 2 | ksupinsk |
-| Web | Advanced search (filters + sort + pagination) | Minor | 1 | ksupinsk |
-| Web | File upload | Minor | 1 | ksupinsk |
-| User Management | Advanced permissions (owner/editor/viewer + admin) | Major | 2 | Eraad |
-| User Management | OAuth (Google) | Minor | 1 | Eraad |
-| Accessibility | Multi-language support (FR/EN/ES, all visible text) | Minor | 1 | nratajcz |
-| Data & Analytics | Export/import (CSV/JSON) | Minor | 1 | ksupinsk |
-| Data & Analytics | GDPR (export + confirmed deletion + confirmation emails) | Minor | 1 | khderdou |
-| DevOps | Health check + status page + backups + disaster recovery | Minor | 1 | Eraad |
-| **Total** | | | **14** | |
+## 42 Modules
 
-Notes on two modules, for transparency at defense time:
+The authoritative scoring source used for this table is the official subject PDF
+stored in this repository's history at commit `50d4dd0`, path
+`docs/transcendence.pdf` (PDF creation date: 2026-04-08). It requires **14 points**:
+a major module is worth 2 points and a minor module is worth 1 point.
 
-- **OAuth**: CSRF-safe Authlib flow, token-free browser handoff, cancellation/error
-  handling (see `backend/app/routers/auth.py` and `backend/app/auth/oauth.py`),
-  verified end to end with a real Google Cloud OAuth Client ID/Secret. Those
-  credentials are never committed — `.env`/`secrets/oauth_google_client_secret`
-  ship blank; each environment configures its own (see `make setup`). Without
-  them, the button shows a clean `503 Google OAuth unavailable` instead of a
-  broken redirect.
-- **Health check / status / backups / DR**: `GET /health` checks the database
-  connection; `/status` in the frontend polls it and shows component state; `make
-  backup` dumps the database (`pg_dump`, timestamped, last 7 kept, see
-  `scripts/build/commands.py`) to `data/backups/`. Disaster recovery is a manual
-  restore of the most recent dump (`docker compose exec -T db psql -U <user> <db> <
-  data/backups/<file>.sql` after `make up`) — there is no automated restore drill.
+Only complete modules are included in the confirmed total.
 
-No bonus modules are claimed.
+| Category | Module | Value | Implemented feature | Status |
+|---|---|---:|---|---|
+| Web | Framework for frontend and backend | 2 | React/Vite frontend and FastAPI backend | IMPLEMENTED |
+| Web | Public API | 2 | Five documented API-key routes, rate limiting, membership authorization | IMPLEMENTED |
+| User Management | Advanced permissions | 2 | Admin user CRUD/roles/status plus role-dependent views and actions | IMPLEMENTED |
+| User Management | Organization system | 2 | Project CRUD, membership add/remove, owner/editor/viewer actions | IMPLEMENTED |
+| Web | ORM | 1 | SQLAlchemy models and PostgreSQL persistence | IMPLEMENTED |
+| Web | Advanced search | 1 | Filters, safe sorting, pagination, totals, task and project search | IMPLEMENTED |
+| Web | File upload and management | 1 | Multiple types, size/type checks, progress, private access, preview, deletion | IMPLEMENTED |
+| User Management | Remote authentication | 1 | Google OAuth 2.0/OIDC flow with a one-time browser handoff | IMPLEMENTED |
+| Data and Analytics | Data export and import | 1 | JSON/CSV export and validated bulk import | IMPLEMENTED |
+| Data and Analytics | GDPR compliance | 1 | Readable export, confirmed deletion, operation emails | IMPLEMENTED |
+| DevOps | Health/status/backups/disaster recovery | 1 | Health/status routes, scheduled database+upload backups, confirmed restore | IMPLEMENTED |
+| Gaming and user experience | Gamification | 1 | Persistent achievements, badges, XP/levels, rules, progress, and unlock feedback | IMPLEMENTED |
+| Accessibility and Internationalization | Multiple languages | 1 | FR/EN/ES catalogs and switcher; notification bodies remain English-only | PARTIALLY IMPLEMENTED |
+| Web | Complete notification system | 1 | Assignment, task-status, and project-invite notifications only | PARTIALLY IMPLEMENTED |
 
-## Individual contributions
+Confirmed arithmetic: **4 major modules × 2 + 8 minor modules × 1 = 16 points**.
 
-- **Eraad** — Project bootstrap (Compose, Dockerfiles, Make wrapper, TLS); the full
-  auth stack (register/login, JWT issuance, Argon2 hashing, Google OAuth); admin
-  user management endpoints and the last-administrator/last-active-administrator
-  invariants; nginx reverse proxy, CSP, rate limiting; `/health` and its
-  status/backup follow-through.
-- **khderdou** — Projects, tasks and project-members endpoints with role
-  enforcement; GDPR export/deletion; notifications backend; project message wall;
-  sprint planning and cross-team coordination (backlog, syncs, shared API contract).
-- **ksupinsk** — Public API (`/api/v1/public/*`) with API-key issuance/rotation and
-  rate limiting; advanced search with allow-listed sort fields; task attachments
-  and banners; CSV/JSON export/import.
-- **nratajcz** — The React application end to end: routing, every page and shared
-  component, the Tailwind-based visual design, FR/EN/ES translations, responsive
-  layout, and the legal pages.
+**CONFIRMED POINT REQUIREMENT SATISFIED: 16 / 14 points.**
 
-## Resources
+The two partial modules are not included in that total. Google OAuth needs local
+provider credentials for a live demonstration; credentials are intentionally not
+committed.
 
-- [FastAPI documentation](https://fastapi.tiangolo.com/)
-- [SQLAlchemy 2.0 documentation](https://docs.sqlalchemy.org/en/20/)
-- [Alembic documentation](https://alembic.sqlalchemy.org/)
-- [React documentation](https://react.dev/)
-- [Tailwind CSS documentation](https://tailwindcss.com/docs)
-- [i18next / react-i18next documentation](https://www.i18next.com/)
-- [JWT.io — Introduction to JSON Web Tokens](https://jwt.io/introduction)
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Docker Compose documentation](https://docs.docker.com/compose/)
+## Architecture
 
-**AI usage**: the team used an AI assistant as a learning aid while
-working with technologies and concepts that were new to some or all members —
-FastAPI/SQLAlchemy/Alembic on the backend, React/Tailwind on the frontend, and
-Python's testing ecosystem (pytest) for writing and understanding the test suite.
-It was used to explain unfamiliar concepts, get oriented in a new language/framework,
-and help write and reason about tests, always under team review — every change was
-read, run and understood by the team before being kept.
+```text
+Browser / API client
+        |
+        v
+nginx on https://localhost
+  |-- /              -> React/Vite frontend
+  |-- /api, /health  -> FastAPI
+  |                      |-- PostgreSQL
+  |                      `-- private upload directory
+  `-- /docs, /openapi.json
 
----
+Mailpit <- GDPR operation email
+Backup service -> database dump + upload archive under data/backups
+```
 
-### Prerequisites
+- **Frontend:** React 19, Vite, Tailwind CSS, and i18next.
+- **Gateway:** unprivileged nginx terminates TLS, redirects HTTP, applies security
+  headers/CSP, and proxies frontend/backend traffic.
+- **Backend:** FastAPI, Pydantic, SQLAlchemy, Alembic, JWT, and Authlib.
+- **Database:** PostgreSQL 17. The current schema is defined by
+  `backend/alembic/versions/initial_schema.py`.
+- **Storage:** PostgreSQL and uploads are bind-backed under the ignored `data/`
+  directory. Upload bytes are never served by nginx or an unrestricted FastAPI
+  static mount.
 
-- Docker with Compose v2 supporting `up --wait`, and a running Docker daemon.
-- Make and Python 3 (the local wrapper uses only the standard library).
-- OpenSSL supporting `req -addext` and `x509 -ext`, plus curl.
-- Latest stable Google Chrome for eventual mandatory browser verification.
-- Free local ports 80 and 443; network access for container images/dependency downloads.
+## Security
 
-Run the following commands from the repository root. Application runtimes are containerized: Python 3.12, Node 24 and PostgreSQL 17. A host Node/Python backend environment is not needed for the container workflow. The root `package.json` is not the frontend application; its package lives in `frontend/`.
+- nginx exposes only `127.0.0.1:80` and `127.0.0.1:443`; HTTP redirects to HTTPS.
+- Local TLS certificates are generated by `make setup` and validated by `make check`.
+- Passwords use salted Argon2 hashes. Protected browser routes use bearer JWTs, and
+  banned users are rejected when credentials are resolved.
+- API keys have a `tm42_` prefix, are returned only when issued, and are stored as
+  SHA-256 hashes. Lists expose metadata rather than raw keys.
+- Project membership is checked before reads, counts, pagination, downloads, and
+  writes. Outsiders generally receive a non-disclosing 404.
+- Attachment storage names are generated UUIDs. Downloads re-resolve the current
+  task/project membership and reject traversal, absolute-path, nested-path, and
+  symlink escapes.
+- CSV export uses the standard CSV writer and prefixes cells whose first meaningful
+  character is `=`, `+`, `-`, or `@`. Database values and JSON exports are unchanged.
+- Runtime secrets live in ignored regular files under `secrets/`; `.env`, TLS private
+  keys, persistent data, and uploads are ignored. `make check` validates file types,
+  permissions, placeholders, secret independence, and configuration consistency.
+- The frontend uses a nonce-based CSP. `/docs` has a separate policy for Swagger UI,
+  while API and OpenAPI responses retain the strict default policy.
 
-### Development quickstart
+## Requirements
+
+- Docker Engine with Compose v2 and a running daemon.
+- GNU Make and Python 3 (the host-side wrapper uses the standard library only).
+- OpenSSL, curl, and free local ports 80, 443, and 8025.
+- Network access on the first build for container images and dependencies.
+- A current browser for final interactive verification.
+
+Application runtimes are containerized (Python 3.12, Node 24, PostgreSQL 17). A host
+backend virtual environment or host `npm install` is not required.
+
+## Setup
+
+Run these commands from the repository root:
 
 ```sh
 make setup
@@ -198,80 +189,218 @@ make up
 make smoke
 ```
 
-`make setup` creates non-secret `.env` configuration plus independent ignored files under `secrets/` for the database URL/password, JWT and OAuth signing, optional Google client secret, and bootstrap-admin password. On a legacy install it validates and migrates existing `.env` secret values before atomically rewriting `.env`; it also migrates the exact former `:8443` local URLs to the default HTTPS port. Other new-format configuration and certificates are preserved; mixed/custom URLs and missing or conflicting secret files are refused rather than guessed or regenerated. Never commit credentials or private keys.
+`make setup` creates or migrates the ignored `.env`, independent secret files, local
+TLS certificate/key, and required data directories. Existing valid secrets and TLS
+material are preserved. It is safe to run again when new non-secret configuration
+keys are added.
 
-The wrapper accepts plain `KEY=value` entries in `.env`: no quotes, interpolation, inline comments, duplicates or undocumented keys. Secret files contain exactly one value without a newline. `make check` verifies the private directory, regular non-symlink files, permissions, placeholders, secret independence, Google pairing, and consistency between `database_url`, `postgres_password`, and non-secret `POSTGRES_*` values. Host variables cannot override checked configuration or secrets.
+`make check` validates tools, Docker, `.env`, secret files, TLS, local URLs, and the
+resolved Compose configuration without printing secret values. `make up` repeats the
+checks, builds the application images, applies migrations, validates/bootstrap the
+first administrator, and waits for healthy services.
 
-`make check` validates local tools, daemon, configuration, secrets, local URLs, certificate validity/SAN/key matching and Compose configuration. `make up` performs checks, builds and starts the development stack with the frontend enabled by default. Migrations and administrator bootstrap must complete before the backend starts; nginx waits for backend and frontend health.
+Do **not** replace this workflow with raw `docker compose up --build`. The Compose file
+requires `DATA_DIR`, which is deliberately fixed and supplied by `scripts/make.py`.
 
-Compose builds two local application images, `task-manager-back:latest` and `task-manager-front:latest`. This localhost-only stack has no development/production image variants.
+Google OAuth is disabled when both local Google values are empty. To enable it, set a
+local Google client ID and the HTTPS callback URL in `.env`, place the matching client
+secret in `secrets/oauth_google_client_secret`, register
+`https://localhost/api/auth/oauth/google/callback` with the provider, and rerun
+`make check`. Never commit provider credentials.
 
-**Use localhost only.** The canonical address is **https://localhost**. Only nginx publishes application ports, on `127.0.0.1:80` and `127.0.0.1:443`; its unprivileged container listens internally on 8080/8443. The Mailpit mail catcher publishes its inbox on `127.0.0.1:8025`: it **captures** every GDPR confirmation email and delivers none to real addresses (Gmail and others never receive them). Read them in the Mailpit inbox; nothing leaves the machine. HTTP redirects to HTTPS while preserving the request URI. Do not publish direct database/backend/frontend ports or turn this development stack into an Internet service. A one-shot service creates the configured first administrator after migrations; local and Google registrations always create ordinary users. Read the local bootstrap password from `secrets/bootstrap_admin_password` without sharing or committing it.
-
-Existing databases are accepted only when their first account exactly matches the configured active administrator and bootstrap password. Otherwise startup fails without modifying users. For disposable incompatible development data, review `BOOTSTRAP_ADMIN_*`, obtain explicit approval, run `make reset-db`, then start the stack again. Reset is never automatic. Because the database now persists on the host, this matters beyond first boot: editing `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_USERNAME` or `secrets/bootstrap_admin_password` after the first start blocks every later `make up` until the matching credentials are restored or the database is explicitly reset.
-
-### Persistent data
-
-The database cluster and uploaded attachments live on the host under `data/` at the repository root: `data/postgres` for PostgreSQL and `data/uploads` for attachments. Both are Compose named volumes bound to those directories, which the Make wrapper creates (mode 0700) before every Compose call — Compose requires an absolute, pre-existing bind path and never creates one. `data/backups` holds `make backup` dumps. `data/` is git-ignored; never commit it. The data survives `make down`, a container crash and a Docker daemon restart, and `make up` picks it straight back up. Only `make reset-db`, `make fclean` and `make re` erase database/upload data, each behind a typed confirmation that lists the directories. `DATA_DIR` is fixed to `<repo>/data` by the wrapper and is intentionally not an `.env` key; a host `DATA_DIR` cannot redirect the stack, and a bare `docker compose` command fails rather than binding an unintended path. The frontend dependency volume stays inside Docker: it is rebuilt at image build and does not belong on the host.
-
-`db`, `backend`, `frontend` and `nginx` restart automatically on a non-zero exit, capped at five attempts. The coverage is narrower than it sounds: a restart policy reacts to process exit only, so a hung or `unhealthy` container whose main process is still alive is not restarted; Docker also ignores the policy for anything stopped by hand, including `docker stop` and `docker kill`; and a PostgreSQL immediate shutdown exits 0, which `on-failure` does not act on. PostgreSQL stops with `SIGINT` (fast shutdown) so `make down` checkpoints cleanly; after a real crash, WAL replay at startup is the only automatic repair, and uploads have no equivalent. See `scripts/README.md` for the details.
+## Usage
 
 | Address | Purpose |
 |---|---|
-| https://localhost | Frontend application |
-| https://localhost/status | User-facing health/status page |
-| https://localhost/docs | Swagger UI for the real API |
-| https://localhost/openapi.json | Generated API specification |
-| https://localhost/health | Backend/database health JSON |
-| http://localhost:8025 | Mailpit inbox (captured GDPR confirmation emails, never delivered outside) |
+| `https://localhost` | React application |
+| `https://localhost/status` | Component and backup status |
+| `https://localhost/docs` | Swagger UI |
+| `https://localhost/openapi.json` | Generated OpenAPI 3.1 specification |
+| `https://localhost/health` | Backend/database health |
+| `http://localhost:8025` | Mailpit inbox for locally captured emails |
 
-The frontend is served under a nonce-based Content-Security-Policy: nginx mints a unique nonce per request and Vite stamps it on the tags it generates, via `html.cspNonce` in `frontend/vite.config.js`. `script-src` never allows `'unsafe-inline'`, and the strict nonce-free policy stays on `/api/`, `/health`, `/docs` and `/openapi.json`. If a script is ever blocked, add the nonce to the tag rather than relaxing `script-src` — a blocked inline script renders a blank page while nginx and Vite both log a clean 200. See `scripts/README.md`.
+The generated certificate is local, so the browser may require an explicit trust
+decision. Mailpit captures GDPR emails; the development stack does not deliver them
+to real recipients.
 
-`make smoke` makes read-only HTTPS requests for health, the frontend root and representative OpenAPI paths. It does **not** create users, authenticate, test browser JavaScript, validate every route or prove feature completion. Its TLS client uses the generated certificate explicitly with `--cacert`, rather than disabling verification. It also verifies the frontend CSP nonce pipeline end to end, but curl enforces no policy and runs no script, so only a browser can prove the page renders.
+Useful lifecycle commands:
 
-### Commands and tests
-
-| Command | Behavior |
+| Command | Effect |
 |---|---|
-| `make setup` | Create or migrate local env/secret files and create missing TLS files |
-| `make check` | Validate local prerequisites/configuration/TLS/Compose |
-| `make up` | Check, build and start default development services |
-| `make down` | Stop/remove Compose services while preserving all data under `data/` |
-| `make clean` | Alias of `make down`; preserve data and images |
-| `make fclean` | After typed confirmation, remove project containers, local app images and all project volumes, and erase `data/` |
-| `make re` | Check configuration, then confirmed `fclean`, rebuild and start an empty stack |
-| `make logs` | Follow service logs; avoid sharing secrets from application output |
-| `make ps` | Show Compose services including the test profile |
-| `make smoke` | Check read-only HTTPS health/frontend/OpenAPI; no account mutations |
-| `make backup` | Dump the development database to `data/backups/` (timestamped, last 7 kept) |
-| `make test` | Build backend test image and run pytest against isolated test storage |
-| `make test TESTS='tests/test_health.py'` | Pass selected pytest arguments through the wrapper |
-| `make reset-db` | Explicitly confirmed deletion of development DB only, including `data/postgres` |
+| `make up` | Check, build, migrate, and start the stack |
+| `make down` | Stop/remove containers while preserving `data/` |
+| `make ps` | Show project services |
+| `make logs` | Follow service logs |
+| `make smoke` | Read-only TLS, health, frontend, CSP, and OpenAPI smoke checks |
+| `make backup` | Create a database and upload backup immediately |
+| `make restore` | Confirm and restore the newest complete backup |
+| `make restore BACKUP=<name>` | Confirm and restore a selected complete backup |
+| `make reset-db` | Confirm and delete only the development database |
+| `make fclean` | Confirm and remove project containers/images/volumes and all `data/` |
 
-`make fclean` and `make re` permanently delete the development database,
-uploaded files and frontend dependency volume, emptying `data/postgres` and
-`data/uploads` on the host. They verify Compose project labels, verify that each
-host directory is the one Compose resolved and lies inside `data/`, and require
-typing the target name before running. They preserve source files, `.env`,
-secret files, TLS certificates and pulled PostgreSQL/Nginx images.
+Scheduled backups run every 60 minutes and retain 24 complete backups by default.
+Each backup contains a PostgreSQL dump and a flat upload archive. Restore validates
+both, loads a staging database, and only then switches the live database. Destructive
+commands require typed confirmation.
 
-### Google OAuth and API keys
+## API Documentation
 
-Google sign-in starts from `/login`. The provider callback stores no bearer token
-in a URL: it creates a short-lived Secure/HttpOnly handoff, redirects to the
-frontend, and the frontend exchanges that handoff once with
-`POST /api/auth/oauth/google/exchange`. This requires a real Google OAuth Client
-ID/Secret to be configured (see the Modules section above); without one, the
-backend returns a clean `503` instead of attempting the redirect.
+FastAPI generates the OpenAPI document from the composed application. The generated
+specification is the source of truth for request and response schemas:
 
-Authenticated users can issue and manage public-API credentials through
-`POST/GET /api/api-keys`, `DELETE /api/api-keys/{id}` and
-`POST /api/api-keys/{id}/rotate`. Issue and rotate responses show the raw key
-once. Lists expose metadata only; the database stores only SHA-256 hashes.
-Revocation and rotation invalidate the old key immediately. Public API calls use
-`X-API-Key`; browser clients are not supported, so that header is intentionally
-excluded from CORS.
+- `GET /openapi.json` returns the specification.
+- `GET /docs` renders Swagger UI through nginx's route-specific CSP.
 
-The test profile uses PostgreSQL 17 on an isolated internal network with tmpfs storage, no published DB port and fixed **test-only** credentials. `DATABASE_URL` and `TEST_DATABASE_URL` both target `taskmanager_test` on `test-db`. Fixtures guard the database name/host/credentials before destructive operations, run the initial Alembic migration and truncate only the dedicated test data. Development data/uploads are not mounted into tests. Do not override test URLs to the development DB.
+The public API uses `X-API-Key` and returns the common success envelope
+`{"success": true, "data": ...}`. Error responses use
+`{"success": false, "error": "..."}`.
 
-Tests rebuild the backend image to include edits; `TESTS` is parsed as arguments, not shell code. The wrapper removes the test DB container after the run, including pytest failure. Do not run concurrent test invocations within the same Compose project. SQLite tests do not replace PostgreSQL integration tests.
+## Testing
+
+Backend tests use an isolated PostgreSQL 17 service with tmpfs storage and no
+development data or upload mounts:
+
+```sh
+make test
+make test TESTS='tests/test_public_api.py tests/test_search.py tests/test_attachments.py tests/test_export_import.py'
+python3 scripts/test.py -v
+git diff --check
+```
+
+The frontend image can be checked without installing Node on the host:
+
+```sh
+docker build -t task-manager-front:latest frontend
+docker run --rm task-manager-front:latest npm run lint -- src
+docker run --rm task-manager-front:latest npm run build
+```
+
+The backend image can be compiled without importing host dependencies:
+
+```sh
+docker build -t task-manager-back:latest backend
+docker run --rm --entrypoint python task-manager-back:latest -m compileall -q app tests
+```
+
+Run `make up` before `make smoke`. The smoke test is intentionally read-only and does
+not replace authenticated API tests or a real browser walkthrough.
+
+## Project Structure
+
+```text
+backend/
+  app/                 FastAPI app, routers, auth, models, schemas, services
+  alembic/             current database schema migration
+  tests/               PostgreSQL integration tests
+frontend/
+  public/locales/      English, French, and Spanish catalogs
+  src/                 React pages, components, services, and styles
+nginx/                 TLS reverse-proxy and CSP configuration
+backup/                scheduled backup and safe restore implementation
+scripts/               Make command implementation and host-side unit tests
+secrets/README.md      secret-file contract (never real values)
+docker-compose.yml     service definitions; invoked through Make
+Makefile               supported operator entry point
+```
+
+## API / Person C Features
+
+### API keys and public API
+
+Authenticated users can issue, list, and revoke keys:
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/api/api-keys` | Issue a key; raw value shown once |
+| `GET` | `/api/api-keys` | List key IDs and creation times |
+| `DELETE` | `/api/api-keys/{key_id}` | Revoke a key immediately |
+
+Public calls send `X-API-Key`:
+
+| Method | Route | Access |
+|---|---|---|
+| `GET` | `/api/v1/public/tasks` | Any current project member |
+| `POST` | `/api/v1/public/tasks` | Project owner or editor |
+| `PUT` | `/api/v1/public/tasks/{task_id}` | Project owner or editor |
+| `DELETE` | `/api/v1/public/tasks/{task_id}` | Project owner |
+| `GET` | `/api/v1/public/projects` | Any current project member |
+
+Task and project lists use `created_at DESC, id DESC`. The rate limiter is a
+60-request/60-second fixed window per API key and returns 429 with `Retry-After`.
+
+### Advanced search
+
+- `GET /api/search/tasks` searches visible task titles/descriptions and supports
+  status/project filters, allow-listed sort fields/direction, and pagination.
+- `GET /api/search/projects` searches visible project names with safe sorting and
+  pagination.
+- Both default to page 1 and limit 20, cap limit at 100, compute `total` before
+  pagination, escape SQL wildcard characters, and apply an `id DESC` tie-breaker.
+
+### Attachments
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/api/tasks/{task_id}/attachments` | Owner/editor upload |
+| `GET` | `/api/tasks/{task_id}/attachments` | Member metadata listing |
+| `GET` | `/api/attachments/{attachment_id}` | Authenticated member preview/download |
+| `DELETE` | `/api/attachments/{attachment_id}` | Owner/editor deletion |
+
+Listings expose only `id`, safe filename, content type, and creation time. The
+frontend uses an authenticated blob request for preview/download, so protected files
+remain usable without a public upload URL. It reloads metadata after upload and
+removes deleted items immediately.
+
+### Import and export
+
+- `GET /api/export?format=json|csv` exports all visible projects or one selected
+  project in deterministic order.
+- `POST /api/import` accepts a JSON or CSV file, validates every record, and commits
+  the bulk import once validation succeeds.
+- Strict task schemas reject unknown fields and invalid title, description, status,
+  date, or UUID values. Nested JSON task project IDs must match their parent project.
+- Existing writable projects accept imports; a source project that is not writable
+  is recreated as a new project owned by the importer when the file supplies its
+  name.
+
+## Known Limitations
+
+- **Legacy database revisions:** `Final` consolidated the Alembic history into
+  `initial_schema`. A database stamped with a removed legacy revision (for example
+  `add_project_messages`) cannot be upgraded in place. Back up valuable data first;
+  only use the confirmed `make reset-db` path for disposable local data. Fresh
+  databases and the isolated test database use `initial_schema` successfully.
+- **Google OAuth:** no provider credentials are committed, and the feature returns a
+  controlled unavailable response until a local client is configured. This audit did
+  not perform a live provider login.
+- **API-key lifecycle:** keys can be issued, listed, and revoked. There is no in-place
+  rotation route; revoke the old key and issue a new one.
+- **Rate limiting:** public-API windows are in process memory. They reset on backend
+  restart and are not shared across multiple backend processes.
+- **Import authorization semantics:** a viewer or outsider importing an exported
+  project with a name receives a new owned project rather than a rejection. Assignees
+  that cannot belong to that newly created project are cleared.
+- **Internationalization:** the three locale catalogs have matching keys, but stored
+  notification bodies are currently generated in English, so the official complete
+  multi-language module is not claimed.
+- **Notifications:** only project invites, task assignments, and task-status changes
+  generate notifications; the official all-create/update/delete notification module
+  is not claimed.
+- **Frontend lint script:** unscoped `npm run lint` also scans `node_modules` in the
+  image and reports dependency parse errors. Use `npm run lint -- src`; application
+  source is clean.
+- Automated tests do not replace a final browser walkthrough of file-picker,
+  preview/download, OAuth, responsive layout, and language behavior.
+
+## Team
+
+| Login | Existing repository role | Main contribution area |
+|---|---|---|
+| **Eraad** | Tech lead; backend auth/security | Compose/Make/TLS, JWT and Argon2 auth, Google OAuth, administrator management, health/backups |
+| **khderdou** | Project manager; backend projects/tasks | Projects, tasks, memberships, GDPR, notifications, project messages, coordination |
+| **ksupinsk** | Backend public API/data | API keys, public API/rate limiting, search, attachments, CSV/JSON import/export |
+| **nratajcz** | Frontend | React application, routing/pages/components, design, FR/EN/ES catalogs, legal pages |
+
+The team used feature branches and shared API/database contracts to coordinate work.
+AI tools were used as learning and review aids for unfamiliar framework, security,
+and testing concepts; retained changes were reviewed and tested by the team.
