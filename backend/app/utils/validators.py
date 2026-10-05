@@ -82,6 +82,12 @@ def strip_text(value: Any) -> Any:
     return value.strip()
 
 
+def reject_null(value: Any) -> Any:
+    if value is None:
+        raise ValueError("value must not be null")
+    return value
+
+
 def clean_text(value: Any) -> Any:
     """Strip a free-text field and refuse it when empty or holding control characters."""
 

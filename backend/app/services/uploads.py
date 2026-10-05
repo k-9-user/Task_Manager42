@@ -1,5 +1,7 @@
 """Stored upload files: safe paths on disk and cleanup after task deletions."""
 
+import csv
+import io
 import logging
 from pathlib import Path, PurePosixPath
 
@@ -18,6 +20,45 @@ logger = logging.getLogger(__name__)
 
 def upload_root(settings: Settings) -> Path:
     return Path(settings.upload_dir).expanduser().resolve()
+
+
+def validate_upload_content(stored_path: Path, content_type: str) -> None:
+    """Recognize allowed formats without claiming complete image/PDF integrity."""
+
+    signatures = {
+        "image/png": b"\x89PNG\r\n\x1a\n",
+        "image/jpeg": b"\xff\xd8\xff",
+        "application/pdf": b"%PDF-",
+    }
+    with stored_path.open("rb") as source:
+        header = source.read(8)
+    if not header:
+        raise ValueError("Empty upload")
+    if content_type in signatures:
+        if not header.startswith(signatures[content_type]):
+            raise ValueError("Invalid file signature")
+        return
+
+    text = stored_path.read_text(encoding="utf-8-sig")
+    if not text or any(
+        (ord(character) < 32 and character not in "\t\r\n") or ord(character) == 127
+        for character in text
+    ):
+        raise ValueError("Invalid text file")
+    if content_type == "text/csv":
+        columns = None
+        try:
+            for row in csv.reader(io.StringIO(text, newline=""), strict=True):
+                if not row:
+                    continue
+                if columns is None:
+                    columns = len(row)
+                elif len(row) != columns:
+                    raise ValueError("Inconsistent CSV columns")
+        except csv.Error as error:
+            raise ValueError("Invalid CSV") from error
+        if columns is None:
+            raise ValueError("Empty CSV")
 
 
 def safe_stored_path(file_url: str, upload_directory: Path) -> Path | None:

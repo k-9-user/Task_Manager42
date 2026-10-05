@@ -3,6 +3,13 @@ import { API_URL, authHeaders, endSession, notifyActivity, translateError } from
 
 export const MAX_UPLOAD_SIZE_MB = Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+const MIME_EXTENSIONS = {
+	"application/pdf": [".pdf"],
+	"image/jpeg": [".jpg", ".jpeg"],
+	"image/png": [".png"],
+	"text/csv": [".csv"],
+	"text/plain": [".txt"],
+};
 
 export const ATTACHMENT_TYPES = {
 	mimes: ["application/pdf", "image/jpeg", "image/png", "text/csv", "text/plain"],
@@ -29,8 +36,11 @@ export function validateFile(file, types)
 	const name = file.name.toLowerCase();
 	const extension = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
 
-	if (!types.extensions.includes(extension) || !types.mimes.includes(file.type))
+	if (!types.extensions.includes(extension) || !types.mimes.includes(file.type)
+		|| !MIME_EXTENSIONS[file.type]?.includes(extension))
 		return "attachments.errors.type";
+	if (file.size === 0)
+		return "attachments.errors.empty";
 	if (file.size > MAX_UPLOAD_BYTES)
 		return "attachments.errors.size";
 	return null;

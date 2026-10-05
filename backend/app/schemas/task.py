@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.models.task import TaskStatus
 from app.schemas.common import StrictRequest
 from app.schemas.project import ProjectMemberResponse, ProjectResponse
+from app.utils.validators import reject_null, strip_text
 
 
 class TaskCreate(StrictRequest):
@@ -16,6 +17,8 @@ class TaskCreate(StrictRequest):
     description: str | None = Field(default=None, max_length=5000)
     assignee_id: uuid.UUID | None = None
     due_date: date | None = None
+
+    _title_validator = field_validator("title", mode="before")(strip_text)
 
 
 class TaskUpdate(StrictRequest):
@@ -27,6 +30,9 @@ class TaskUpdate(StrictRequest):
     assignee_id: uuid.UUID | None = None
     due_date: date | None = None
 
+    _title_validator = field_validator("title", mode="before")(strip_text)
+    _required_fields_validator = field_validator("title", "status")(reject_null)
+
 
 class PublicTaskCreate(StrictRequest):
     """Minimal request body for the public task creation contract."""
@@ -34,18 +40,15 @@ class PublicTaskCreate(StrictRequest):
     project_id: uuid.UUID
     title: str = Field(min_length=1, max_length=255)
 
-    @field_validator("title")
-    @classmethod
-    def validate_title(cls, title: str) -> str:
-        if not title.strip():
-            raise ValueError("title must not be empty")
-        return title
+    _title_validator = field_validator("title", mode="before")(strip_text)
 
 
 class PublicTaskUpdate(StrictRequest):
     """Fields that the public API is allowed to update on a task."""
 
     status: TaskStatus | None = None
+
+    _required_status_validator = field_validator("status")(reject_null)
 
 
 class TaskImportRecord(StrictRequest):

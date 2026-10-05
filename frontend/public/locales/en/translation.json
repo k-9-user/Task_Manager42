@@ -154,7 +154,8 @@
 		"hide": "Hide comments",
 		"delete": "Delete",
 		"placeholder": "Write a comment...",
-		"submit": "Comment"
+		"submit": "Comment",
+		"refreshError": "Could not refresh comments. Retrying shortly."
 	},
 	"attachments":
 	{
@@ -172,6 +173,7 @@
 		"errors":
 		{
 			"type": "File type not allowed",
+			"empty": "Empty files are not allowed",
 			"size": "File too large (max {{max}} MB)",
 			"upload": "Upload error"
 		}

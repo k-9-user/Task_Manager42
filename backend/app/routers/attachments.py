@@ -24,7 +24,12 @@ from app.models.task import Task
 from app.models.user import User
 from app.schemas.common import SimpleSuccessResponse, SuccessEnvelope
 from app.services.gamification import Track, record_activity
-from app.services.uploads import UPLOAD_URL_PREFIX, safe_stored_path, upload_root
+from app.services.uploads import (
+    UPLOAD_URL_PREFIX,
+    safe_stored_path,
+    upload_root,
+    validate_upload_content,
+)
 from app.utils.validators import has_control_characters
 
 
@@ -258,12 +263,22 @@ async def _stage_upload(
 
     original_filename = file.filename or fallback_name
     _validate_original_filename(original_filename)
+    if Path(original_filename).suffix.lower() not in ATTACHMENT_EXTENSIONS[file.content_type]:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=type_error)
     upload_directory = upload_root(settings)
     upload_directory.mkdir(parents=True, exist_ok=True)
-    stored_path = upload_directory / _generate_stored_filename(
-        original_filename, file.content_type
-    )
-    await _write_uploaded_file(file, stored_path, settings.max_upload_size_mb * 1024 * 1024)
+    stored_path = upload_directory / _generate_stored_filename(original_filename)
+    try:
+        await _write_uploaded_file(file, stored_path, settings.max_upload_size_mb * 1024 * 1024)
+        validate_upload_content(stored_path, file.content_type)
+    except ValueError as error:
+        stored_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=type_error
+        ) from error
+    except BaseException:
+        stored_path.unlink(missing_ok=True)
+        raise
     return original_filename, stored_path
 
 
@@ -275,10 +290,9 @@ def _validate_original_filename(filename: str) -> None:
         )
 
 
-def _generate_stored_filename(original_filename: str, content_type: str) -> str:
-    extensions = ATTACHMENT_EXTENSIONS[content_type]
+def _generate_stored_filename(original_filename: str) -> str:
     suffix = Path(original_filename).suffix.lower()
-    return f"{uuid.uuid4().hex}{suffix if suffix in extensions else extensions[0]}"
+    return f"{uuid.uuid4().hex}{suffix}"
 
 
 async def _write_uploaded_file(

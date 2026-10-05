@@ -154,7 +154,8 @@
 		"hide": "Masquer les commentaires",
 		"delete": "Supprimer",
 		"placeholder": "Écrire un commentaire...",
-		"submit": "Commenter"
+		"submit": "Commenter",
+		"refreshError": "Impossible d'actualiser les commentaires. Nouvelle tentative bientôt."
 	},
 	"attachments":
 	{
@@ -172,6 +173,7 @@
 		"errors":
 		{
 			"type": "Type de fichier non autorisé",
+			"empty": "Les fichiers vides ne sont pas autorisés",
 			"size": "Fichier trop volumineux ({{max}} Mo max)",
 			"upload": "Erreur d'upload"
 		}

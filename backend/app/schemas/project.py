@@ -1,20 +1,26 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.project_member import ProjectRole
 from app.schemas.common import StrictRequest
+from app.utils.validators import reject_null, strip_text
 
 
 class ProjectCreate(StrictRequest):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
 
+    _name_validator = field_validator("name", mode="before")(strip_text)
+
 
 class ProjectUpdate(StrictRequest):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
+
+    _name_validator = field_validator("name", mode="before")(strip_text)
+    _required_name_validator = field_validator("name")(reject_null)
 
 
 class ProjectResponse(BaseModel):
